@@ -1,0 +1,558 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		019296F87B70DD1207F944BC /* PromptGIFMessagesExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3CF268589DE57975A52D338B /* PromptGIFMessagesExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0318E80076A22DF34AB7E9DA /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F61B00D9E64B7AB311AA570 /* AppShellView.swift */; };
+		0D9FBB6619EC2068998C428F /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D041F3E1E779CD425C9DF980 /* MessagesViewController.swift */; };
+		11EFCF2EC32EA58EFC3B8126 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2299F6739D8461985CA00074 /* Assets.xcassets */; };
+		127E0B97A6AFDBE17610254C /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C48391046ADB61C4FDADDDE /* WebKit.framework */; };
+		16E59D24227459149DBC66B9 /* PhotosUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714CB00703B5897033B06CB7 /* PhotosUI.framework */; };
+		247F6BA38E6E57228DA60335 /* PromptGIFApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD24FAE2A3E8EDFF57E65E37 /* PromptGIFApp.swift */; };
+		28ACAF47512BBD18F325DED9 /* MessagesAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD6B4EFCB29B1521B13CC0A0 /* MessagesAppView.swift */; };
+		3403BC353E53E1E0E6232B83 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 716A307EEF8ADD3B23B91DEB /* UIKit.framework */; };
+		37E759E00E42750224A39FF6 /* PromptGIFCore in Frameworks */ = {isa = PBXBuildFile; productRef = AF660354D7FACB475515BE79 /* PromptGIFCore */; };
+		3DC3E9964B68031A3DBD0ADB /* PromptGIFCore in Frameworks */ = {isa = PBXBuildFile; productRef = E3DCEFB9C36071DED0CC72F6 /* PromptGIFCore */; };
+		5611A42165BF74AB7B2B80FC /* Messages.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 99522A614D784E043459BAD7 /* Messages.framework */; };
+		5939258931607E0CB4E300A5 /* MessagesComposerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B99CA6E9541153353FDFEB /* MessagesComposerModel.swift */; };
+		FAA8CC719400BFDD78D71345 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7B1C9D002AE27AE4BFE777A1 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		08F8C662C6F50A5C42B920C5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B15A70E82A4A1CC926DB2769 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 120DA3421892E81879D4B46F;
+			remoteInfo = PromptGIFMessagesExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		27D6869A5F92343B0E67DCC0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				019296F87B70DD1207F944BC /* PromptGIFMessagesExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0F61B00D9E64B7AB311AA570 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
+		226A3354AB8423D1DBD672E5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2299F6739D8461985CA00074 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		25B99CA6E9541153353FDFEB /* MessagesComposerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesComposerModel.swift; sourceTree = "<group>"; };
+		3CF268589DE57975A52D338B /* PromptGIFMessagesExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PromptGIFMessagesExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		70AC3E3711457B6CC4377821 /* PromptGIFCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PromptGIFCore; path = Packages/PromptGIFCore; sourceTree = SOURCE_ROOT; };
+		714CB00703B5897033B06CB7 /* PhotosUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PhotosUI.framework; path = System/Library/Frameworks/PhotosUI.framework; sourceTree = SDKROOT; };
+		716A307EEF8ADD3B23B91DEB /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		74E074C191B70AAE641A01BA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7B1C9D002AE27AE4BFE777A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		864B676A8E7A3FA415823597 /* PromptGIFMessages.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PromptGIFMessages.entitlements; sourceTree = "<group>"; };
+		99522A614D784E043459BAD7 /* Messages.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Messages.framework; path = System/Library/Frameworks/Messages.framework; sourceTree = SDKROOT; };
+		9C48391046ADB61C4FDADDDE /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		A83F71324D913470A0A892B5 /* PromptGIF.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PromptGIF.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AD6B4EFCB29B1521B13CC0A0 /* MessagesAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesAppView.swift; sourceTree = "<group>"; };
+		BD24FAE2A3E8EDFF57E65E37 /* PromptGIFApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptGIFApp.swift; sourceTree = "<group>"; };
+		C2CD9DE3CE8CCEF9BE7B8652 /* PromptGIF.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PromptGIF.entitlements; sourceTree = "<group>"; };
+		D041F3E1E779CD425C9DF980 /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1DDF18A26406B11333231178 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				37E759E00E42750224A39FF6 /* PromptGIFCore in Frameworks */,
+				5611A42165BF74AB7B2B80FC /* Messages.framework in Frameworks */,
+				16E59D24227459149DBC66B9 /* PhotosUI.framework in Frameworks */,
+				3403BC353E53E1E0E6232B83 /* UIKit.framework in Frameworks */,
+				127E0B97A6AFDBE17610254C /* WebKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		89EF60B2378962A11C23F926 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3DC3E9964B68031A3DBD0ADB /* PromptGIFCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		48C022287765172FD0AE296C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A83F71324D913470A0A892B5 /* PromptGIF.app */,
+				3CF268589DE57975A52D338B /* PromptGIFMessagesExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		544CEFD484F494538A6ECE2D /* PromptGIF */ = {
+			isa = PBXGroup;
+			children = (
+				0F61B00D9E64B7AB311AA570 /* AppShellView.swift */,
+				7B1C9D002AE27AE4BFE777A1 /* Assets.xcassets */,
+				74E074C191B70AAE641A01BA /* Info.plist */,
+				C2CD9DE3CE8CCEF9BE7B8652 /* PromptGIF.entitlements */,
+				BD24FAE2A3E8EDFF57E65E37 /* PromptGIFApp.swift */,
+			);
+			path = PromptGIF;
+			sourceTree = "<group>";
+		};
+		5B600779E7A9E35931CFA04F /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				9EBED17D3C4718FA34C2495E /* PromptGIFMessages */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		8B6F8816F09EF035F4CD2229 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				70AC3E3711457B6CC4377821 /* PromptGIFCore */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		9B3E8BEDD2149B53D3DBC25E /* App */ = {
+			isa = PBXGroup;
+			children = (
+				544CEFD484F494538A6ECE2D /* PromptGIF */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		9C6D7F3644DD7F0C09035C59 = {
+			isa = PBXGroup;
+			children = (
+				9B3E8BEDD2149B53D3DBC25E /* App */,
+				5B600779E7A9E35931CFA04F /* Extensions */,
+				8B6F8816F09EF035F4CD2229 /* Packages */,
+				A267EE35244A74AC68B3CC55 /* Frameworks */,
+				48C022287765172FD0AE296C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9EBED17D3C4718FA34C2495E /* PromptGIFMessages */ = {
+			isa = PBXGroup;
+			children = (
+				2299F6739D8461985CA00074 /* Assets.xcassets */,
+				226A3354AB8423D1DBD672E5 /* Info.plist */,
+				AD6B4EFCB29B1521B13CC0A0 /* MessagesAppView.swift */,
+				25B99CA6E9541153353FDFEB /* MessagesComposerModel.swift */,
+				D041F3E1E779CD425C9DF980 /* MessagesViewController.swift */,
+				864B676A8E7A3FA415823597 /* PromptGIFMessages.entitlements */,
+			);
+			path = PromptGIFMessages;
+			sourceTree = "<group>";
+		};
+		A267EE35244A74AC68B3CC55 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				99522A614D784E043459BAD7 /* Messages.framework */,
+				714CB00703B5897033B06CB7 /* PhotosUI.framework */,
+				716A307EEF8ADD3B23B91DEB /* UIKit.framework */,
+				9C48391046ADB61C4FDADDDE /* WebKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		120DA3421892E81879D4B46F /* PromptGIFMessagesExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4E0C7F2DECFCC7D155A78567 /* Build configuration list for PBXNativeTarget "PromptGIFMessagesExtension" */;
+			buildPhases = (
+				101E648388273FDA007D7582 /* Sources */,
+				169AC04F6382951EA6C56B0D /* Resources */,
+				1DDF18A26406B11333231178 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PromptGIFMessagesExtension;
+			packageProductDependencies = (
+				AF660354D7FACB475515BE79 /* PromptGIFCore */,
+			);
+			productName = PromptGIFMessagesExtension;
+			productReference = 3CF268589DE57975A52D338B /* PromptGIFMessagesExtension.appex */;
+			productType = "com.apple.product-type.app-extension.messages";
+		};
+		C6D1B0A07323B2E3A0171A73 /* PromptGIF */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1DD50AC26978C6D852092D39 /* Build configuration list for PBXNativeTarget "PromptGIF" */;
+			buildPhases = (
+				3A61806E1689F881078148C7 /* Sources */,
+				AF4CF8BEB467FFB5E9D4D8F4 /* Resources */,
+				89EF60B2378962A11C23F926 /* Frameworks */,
+				27D6869A5F92343B0E67DCC0 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				04B2ED4716EEE1492E767F93 /* PBXTargetDependency */,
+			);
+			name = PromptGIF;
+			packageProductDependencies = (
+				E3DCEFB9C36071DED0CC72F6 /* PromptGIFCore */,
+			);
+			productName = PromptGIF;
+			productReference = A83F71324D913470A0A892B5 /* PromptGIF.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B15A70E82A4A1CC926DB2769 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = CB7DDCC2CC21CC0FE0092DB0 /* Build configuration list for PBXProject "PromptGIF" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 9C6D7F3644DD7F0C09035C59;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E1766FF7B2374AB990FE3A56 /* XCLocalSwiftPackageReference "Packages/PromptGIFCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 48C022287765172FD0AE296C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C6D1B0A07323B2E3A0171A73 /* PromptGIF */,
+				120DA3421892E81879D4B46F /* PromptGIFMessagesExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		169AC04F6382951EA6C56B0D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				11EFCF2EC32EA58EFC3B8126 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AF4CF8BEB467FFB5E9D4D8F4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FAA8CC719400BFDD78D71345 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		101E648388273FDA007D7582 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				28ACAF47512BBD18F325DED9 /* MessagesAppView.swift in Sources */,
+				5939258931607E0CB4E300A5 /* MessagesComposerModel.swift in Sources */,
+				0D9FBB6619EC2068998C428F /* MessagesViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3A61806E1689F881078148C7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0318E80076A22DF34AB7E9DA /* AppShellView.swift in Sources */,
+				247F6BA38E6E57228DA60335 /* PromptGIFApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		04B2ED4716EEE1492E767F93 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 120DA3421892E81879D4B46F /* PromptGIFMessagesExtension */;
+			targetProxy = 08F8C662C6F50A5C42B920C5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		00507D0971FC619C1073A1DE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/PromptGIF/PromptGIF.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/PromptGIF/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.ericslutz.PromptGIF;
+				PRODUCT_NAME = PromptGIF;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		1BFF91AA8CC8F30848F1C09F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
+				CODE_SIGN_ENTITLEMENTS = Extensions/PromptGIFMessages/PromptGIFMessages.entitlements;
+				INFOPLIST_FILE = Extensions/PromptGIFMessages/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.ericslutz.PromptGIF.MessagesExtension;
+				PRODUCT_NAME = PromptGIFMessagesExtension;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		63F87D51BDF96B41316F301F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A99E60CB2AE2EAFE130A8DE6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		CF4A250184BE44F74C97EA02 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
+				CODE_SIGN_ENTITLEMENTS = Extensions/PromptGIFMessages/PromptGIFMessages.entitlements;
+				INFOPLIST_FILE = Extensions/PromptGIFMessages/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.ericslutz.PromptGIF.MessagesExtension;
+				PRODUCT_NAME = PromptGIFMessagesExtension;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FE20AA278DB4F69A106E4D30 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/PromptGIF/PromptGIF.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/PromptGIF/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.ericslutz.PromptGIF;
+				PRODUCT_NAME = PromptGIF;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DD50AC26978C6D852092D39 /* Build configuration list for PBXNativeTarget "PromptGIF" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FE20AA278DB4F69A106E4D30 /* Debug */,
+				00507D0971FC619C1073A1DE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4E0C7F2DECFCC7D155A78567 /* Build configuration list for PBXNativeTarget "PromptGIFMessagesExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1BFF91AA8CC8F30848F1C09F /* Debug */,
+				CF4A250184BE44F74C97EA02 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CB7DDCC2CC21CC0FE0092DB0 /* Build configuration list for PBXProject "PromptGIF" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A99E60CB2AE2EAFE130A8DE6 /* Debug */,
+				63F87D51BDF96B41316F301F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		E1766FF7B2374AB990FE3A56 /* XCLocalSwiftPackageReference "Packages/PromptGIFCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PromptGIFCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AF660354D7FACB475515BE79 /* PromptGIFCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PromptGIFCore;
+		};
+		E3DCEFB9C36071DED0CC72F6 /* PromptGIFCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PromptGIFCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = B15A70E82A4A1CC926DB2769 /* Project object */;
+}
