@@ -6,7 +6,7 @@ import { validateGenerationRequest } from "./safety/moderation.mjs";
 
 const DEFAULT_PORT = Number(process.env.PORT ?? 8787);
 
-export function createPromptGIFServer({
+export function createGifsterServer({
   provider = new FakeProvider(),
   jobStore = new MemoryJobStore(),
   publicBaseURL = process.env.PUBLIC_BASE_URL
@@ -96,7 +96,7 @@ async function routeRequest({ request, response, provider, jobStore, publicBaseU
     }
 
     const result = await provider.getResult(job.request);
-    writeJSON(response, 200, result, "application/vnd.promptgif.frame-sequence+json");
+    writeJSON(response, 200, result, "application/vnd.gifster.frame-sequence+json");
     return;
   }
 
@@ -149,8 +149,8 @@ function writeJSON(response, statusCode, body, contentType = "application/json")
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const server = createPromptGIFServer();
+  const server = createGifsterServer();
   server.listen(DEFAULT_PORT, () => {
-    console.log(`PromptGIF backend listening on http://127.0.0.1:${DEFAULT_PORT}`);
+    console.log(`Gifster backend listening on http://127.0.0.1:${DEFAULT_PORT}`);
   });
 }

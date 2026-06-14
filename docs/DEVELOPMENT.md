@@ -13,21 +13,21 @@ The current scaffold was generated and build-checked on Xcode 26.5 with the iOS 
 
 ```bash
 xcodegen generate
-open PromptGIF.xcodeproj
+open Gifster.xcodeproj
 ```
 
-Select the `PromptGIF` scheme. Configure signing for the app and extension bundle ids:
+Select the `Gifster` scheme. Configure signing for the app and extension bundle ids:
 
-- `dev.ericslutz.PromptGIF`
-- `dev.ericslutz.PromptGIF.MessagesExtension`
+- `dev.ericslutz.Gifster`
+- `dev.ericslutz.Gifster.MessagesExtension`
 
 Update the app-group identifier if your Apple Developer account requires a different prefix.
 
 ## Run Shared Swift Tests
 
 ```bash
-cd Packages/PromptGIFCore
-swift test --scratch-path /private/tmp/promptgif-swiftpm
+cd Packages/GifsterCore
+swift test --scratch-path /private/tmp/gifster-swiftpm
 ```
 
 ## Run the Fake Backend
@@ -44,7 +44,7 @@ The backend listens at `http://127.0.0.1:8787`.
 
 1. Start the fake backend with `npm run dev`.
 2. Launch the containing app once and confirm the backend URL in Settings.
-3. Open Messages, select the PromptGIF iMessage app, and enter a prompt.
+3. Open Messages, select the Gifster iMessage app, and enter a prompt.
 4. Optionally add an image with the Photos picker.
 5. Select a caption mode.
 6. Tap Generate.

@@ -1,11 +1,11 @@
-# PromptGIF Implementation Plan
+# Gifster Implementation Plan
 
 ## Phase 1: Scaffold and Demo Loop
 
 Status: implemented in this scaffold.
 
 - Generate the Xcode project from `project.yml`.
-- Keep shared logic in `Packages/PromptGIFCore`.
+- Keep shared logic in `Packages/GifsterCore`.
 - Build the containing app with onboarding, privacy, history, and backend settings.
 - Build the Messages extension with compact and expanded SwiftUI surfaces.
 - Use PhotosPicker for user-selected images only.

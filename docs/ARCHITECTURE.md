@@ -1,6 +1,6 @@
 # Architecture Overview
 
-PromptGIF is split into five bounded areas:
+Gifster is split into five bounded areas:
 
 1. Messages extension: prompt entry, image selection, caption editing, progress, preview, and attachment insertion.
 2. Containing app: onboarding, privacy explanation, local history, clear-history control, and development settings.
@@ -48,7 +48,7 @@ The extension treats Messages as a short-lived surface:
 - The current scaffold exposes a polling loop and history restore path.
 - A production continuation should persist active job ids so a reopened extension resumes polling instead of creating duplicate jobs.
 
-Messages insertion is limited to `MSConversation.insertAttachment`. PromptGIF does not auto-send. Sticker APIs are not used in v1.
+Messages insertion is limited to `MSConversation.insertAttachment`. Gifster does not auto-send. Sticker APIs are not used in v1.
 
 ## GIF Generation Pipeline
 

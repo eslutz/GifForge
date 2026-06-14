@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { createPromptGIFServer } from "../src/server.mjs";
+import { createGifsterServer } from "../src/server.mjs";
 
 let server;
 let baseURL;
 
 before(async () => {
-  server = createPromptGIFServer({ publicBaseURL: "http://127.0.0.1:0" });
+  server = createGifsterServer({ publicBaseURL: "http://127.0.0.1:0" });
   await new Promise((resolve) => {
     server.listen(0, "127.0.0.1", resolve);
   });

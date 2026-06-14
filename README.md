@@ -1,6 +1,6 @@
-# PromptGIF
+# Gifster
 
-PromptGIF is an iOS 26.5+ iMessage app extension scaffold for generating custom animated GIFs with AI and inserting the finished GIF into Messages as a normal attachment.
+Gifster is an iOS 26.5+ iMessage app extension scaffold for generating custom animated GIFs with AI and inserting the finished GIF into Messages as a normal attachment.
 
 The v1 architecture is deliberately provider-neutral:
 
@@ -13,9 +13,9 @@ The v1 architecture is deliberately provider-neutral:
 ## Repository Layout
 
 - `project.yml` - XcodeGen project for the containing iOS app and Messages extension.
-- `App/PromptGIF` - containing app SwiftUI UI for onboarding, privacy, history, and settings.
-- `Extensions/PromptGIFMessages` - iMessage extension UI and attachment insertion flow.
-- `Packages/PromptGIFCore` - shared Swift package for planning models, backend client, image preprocessing, GIF rendering, and history.
+- `App/Gifster` - containing app SwiftUI UI for onboarding, privacy, history, and settings.
+- `Extensions/GifsterMessages` - iMessage extension UI and attachment insertion flow.
+- `Packages/GifsterCore` - shared Swift package for planning models, backend client, image preprocessing, GIF rendering, and history.
 - `Backend` - fake/demo backend with provider abstraction and job polling endpoints.
 - `docs` - product, architecture, privacy, roadmap, spike, and implementation plan.
 
@@ -23,8 +23,8 @@ The v1 architecture is deliberately provider-neutral:
 
 ```bash
 xcodegen generate
-cd Packages/PromptGIFCore
-swift test --scratch-path /private/tmp/promptgif-swiftpm
+cd Packages/GifsterCore
+swift test --scratch-path /private/tmp/gifster-swiftpm
 cd ../../Backend
 npm test
 npm start

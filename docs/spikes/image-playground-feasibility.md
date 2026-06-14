@@ -35,7 +35,7 @@ Plan as if Image Playground is not available. Treat it as a possible future enha
 1. Add an isolated spike branch and a separate `ImagePlaygroundSpikeView`.
 2. Present Image Playground from expanded Messages mode first.
 3. Record compact-mode behavior separately.
-4. Convert the returned still image into a two-frame GIF through `PromptGIFCore`.
+4. Convert the returned still image into a two-frame GIF through `GifsterCore`.
 5. Insert the GIF with attachment insertion.
 6. Test unavailable-device behavior.
 7. Document App Review risks and UX tradeoffs.

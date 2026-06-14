@@ -1,4 +1,4 @@
-name: PromptGIF
+name: Gifster
 options:
   bundleIdPrefix: dev.ericslutz
   deploymentTarget:
@@ -14,23 +14,23 @@ settings:
     GENERATE_INFOPLIST_FILE: NO
     CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED: YES
 packages:
-  PromptGIFCore:
-    path: Packages/PromptGIFCore
+  GifsterCore:
+    path: Packages/GifsterCore
 targets:
-  PromptGIF:
+  Gifster:
     type: application
     platform: iOS
     sources:
-      - App/PromptGIF
+      - App/Gifster
     resources:
-      - App/PromptGIF/Assets.xcassets
+      - App/Gifster/Assets.xcassets
     dependencies:
-      - package: PromptGIFCore
-      - target: PromptGIFMessagesExtension
+      - package: GifsterCore
+      - target: GifsterMessagesExtension
     info:
-      path: App/PromptGIF/Info.plist
+      path: App/Gifster/Info.plist
       properties:
-        CFBundleDisplayName: PromptGIF
+        CFBundleDisplayName: Gifster
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
@@ -42,48 +42,48 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
     entitlements:
-      path: App/PromptGIF/PromptGIF.entitlements
+      path: App/Gifster/Gifster.entitlements
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.ericslutz.PromptGIF
-        PRODUCT_NAME: PromptGIF
+        PRODUCT_BUNDLE_IDENTIFIER: dev.ericslutz.Gifster
+        PRODUCT_NAME: Gifster
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
-  PromptGIFMessagesExtension:
+  GifsterMessagesExtension:
     type: app-extension.messages
     platform: iOS
     sources:
-      - Extensions/PromptGIFMessages
+      - Extensions/GifsterMessages
     resources:
-      - Extensions/PromptGIFMessages/Assets.xcassets
+      - Extensions/GifsterMessages/Assets.xcassets
     dependencies:
-      - package: PromptGIFCore
+      - package: GifsterCore
       - sdk: Messages.framework
       - sdk: PhotosUI.framework
       - sdk: UIKit.framework
       - sdk: WebKit.framework
     info:
-      path: Extensions/PromptGIFMessages/Info.plist
+      path: Extensions/GifsterMessages/Info.plist
       properties:
-        CFBundleDisplayName: PromptGIF
+        CFBundleDisplayName: Gifster
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.message-payload-provider
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).MessagesViewController
     entitlements:
-      path: Extensions/PromptGIFMessages/PromptGIFMessages.entitlements
+      path: Extensions/GifsterMessages/GifsterMessages.entitlements
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.ericslutz.PromptGIF.MessagesExtension
-        PRODUCT_NAME: PromptGIFMessagesExtension
+        PRODUCT_BUNDLE_IDENTIFIER: dev.ericslutz.Gifster.MessagesExtension
+        PRODUCT_NAME: GifsterMessagesExtension
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
 schemes:
-  PromptGIF:
+  Gifster:
     build:
       targets:
-        PromptGIF: all
-        PromptGIFMessagesExtension: all
+        Gifster: all
+        GifsterMessagesExtension: all
     run:
       config: Debug
