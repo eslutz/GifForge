@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build backend
+        run: dotnet build Backend/Gifster.Backend.csproj --configuration Release
+
+      - name: Build backend tests
+        run: dotnet build Backend.Tests/Gifster.Backend.Tests.csproj --configuration Release
+
+      - name: Run backend tests
+        run: dotnet run --project Backend.Tests/Gifster.Backend.Tests.csproj --configuration Release
+
+      - name: Publish backend Native AOT
+        run: dotnet publish Backend/Gifster.Backend.csproj --configuration Release --runtime linux-x64 --self-contained true --output /tmp/gifster-backend-publish
+
+      - name: Build backend container image
+        run: docker build --file Backend/Dockerfile --tag gifster-backend:ci .
+
+  infrastructure:
+    name: Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Bicep template
+        run: az bicep build --file infra/main.bicep
+
+  ios:
+    name: iOS Project
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Regenerate Xcode project
+        run: xcodegen generate
+
+      - name: Check generated project is committed
+        run: git diff --exit-code Gifster.xcodeproj App/Gifster/Info.plist Extensions/GifsterMessages/Info.plist
+
+      - name: Run Swift package tests
+        working-directory: Packages/GifsterCore
+        run: swift test --scratch-path /tmp/gifster-swiftpm
+
+      - name: Lint plists and entitlements
+        run: |
+          plutil -lint \
+            App/Gifster/Info.plist \
+            App/Gifster/Gifster.entitlements \
+            Extensions/GifsterMessages/Info.plist \
+            Extensions/GifsterMessages/GifsterMessages.entitlements

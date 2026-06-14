@@ -10,7 +10,7 @@ Status: implemented in this scaffold.
 - Build the Messages extension with compact and expanded SwiftUI surfaces.
 - Use PhotosPicker for user-selected images only.
 - Submit all generation jobs through the backend.
-- Use the fake backend provider to return a frame sequence.
+- Use the ASP.NET Core demo provider to return a frame sequence.
 - Render captions locally and produce the final GIF with ImageIO.
 - Insert the GIF into Messages with attachment insertion.
 
@@ -23,12 +23,15 @@ Status: implemented in this scaffold.
 
 ## Phase 3: Production Backend
 
+- Deploy the ASP.NET Core Minimal API with Native AOT to Azure Container Apps.
 - Add authentication and device/app attestation as appropriate.
-- Replace the in-memory job store with durable job storage.
-- Add signed temporary download URLs.
+- Replace the in-memory job store with Azure Table Storage or Cosmos DB.
+- Add Azure Queue Storage for long-running provider orchestration.
+- Store provider outputs and signed temporary download assets in Azure Blob Storage.
 - Add provider adapter interfaces for text-to-animation, image-to-animation, and result download.
 - Add request and result retention policies.
 - Add operational logs without storing prompt or image content longer than necessary.
+- Keep `infra/main.bicep` as the source of truth for Container Apps, storage, Key Vault, managed identity, and role assignments.
 
 ## Phase 4: Real Provider Adapter
 

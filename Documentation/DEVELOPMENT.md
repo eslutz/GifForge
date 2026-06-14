@@ -5,7 +5,8 @@
 - Xcode 26.5 or later for iOS app and extension builds.
 - XcodeGen 2.45 or later.
 - Swift 6.
-- Node 24 or later for the fake backend.
+- .NET 10 SDK for the ASP.NET Core Minimal API backend.
+- Azure CLI with Bicep support for infrastructure validation/deployment.
 
 The current scaffold was generated and build-checked on Xcode 26.5 with the iOS 26.5 SDK.
 
@@ -30,24 +31,44 @@ cd Packages/GifsterCore
 swift test --scratch-path /private/tmp/gifster-swiftpm
 ```
 
-## Run the Fake Backend
+## Run Backend Tests
 
 ```bash
-cd Backend
-npm test
-npm run dev
+dotnet run --project Backend.Tests/Gifster.Backend.Tests.csproj
+```
+
+## Run the Local Backend
+
+```bash
+ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/Gifster.Backend.csproj
 ```
 
 The backend listens at `http://127.0.0.1:8787`.
 
+## Backend Deployment Direction
+
+The production backend target is ASP.NET Core Minimal API with Native AOT on Azure Container Apps. Keep the public API thin and stateless, then use Azure Queue Storage for asynchronous provider orchestration, Blob Storage for temporary media/result handoff, and Table Storage or Cosmos DB for durable job state. Store provider credentials in Container Apps secrets or Key Vault and use managed identity for Azure resource access.
+
+## Validate Infrastructure
+
+```bash
+az bicep build --file infra/main.bicep
+```
+
+Deploy with `az deployment group create` after setting the `containerImage` parameter to a pushed backend image.
+
+## CI
+
+GitHub Actions runs backend build/tests, Native AOT publish, Docker image build, Bicep compilation, XcodeGen regeneration, Swift package tests, and plist linting on pushes and pull requests.
+
 ## End-to-End Demo Flow
 
-1. Start the fake backend with `npm run dev`.
+1. Start the local backend with `ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/Gifster.Backend.csproj`.
 2. Launch the containing app once and confirm the backend URL in Settings.
 3. Open Messages, select the Gifster iMessage app, and enter a prompt.
 4. Optionally add an image with the Photos picker.
 5. Select a caption mode.
 6. Tap Generate.
-7. The extension plans a structured request, submits a fake backend job, polls until completion, downloads a fake frame sequence, renders a local GIF, and shows a preview.
+7. The extension plans a structured request, submits a backend job, polls until completion, downloads a fake frame sequence from the demo provider, renders a local GIF, and shows a preview.
 8. Tap Insert to add the GIF to the Messages compose field.
 9. Send manually from Messages.

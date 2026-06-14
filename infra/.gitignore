@@ -1,0 +1,3 @@
+*.parameters.json
+!main.parameters.example.json
+main.json

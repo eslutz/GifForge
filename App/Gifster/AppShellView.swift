@@ -2,7 +2,7 @@ import GifsterCore
 import SwiftUI
 
 @MainActor
-private let promptGIFDefaults = UserDefaults(suiteName: AppStorageDirectories.appGroupIdentifier) ?? .standard
+private let gifsterDefaults = UserDefaults(suiteName: AppStorageDirectories.appGroupIdentifier) ?? .standard
 
 struct AppShellView: View {
   @State private var history: [GenerationHistoryItem] = []
@@ -129,7 +129,7 @@ private struct HistoryView: View {
 }
 
 private struct SettingsView: View {
-  @AppStorage("backendBaseURL", store: promptGIFDefaults)
+  @AppStorage("backendBaseURL", store: gifsterDefaults)
   private var backendBaseURL = "http://127.0.0.1:8787"
 
   var body: some View {
@@ -141,7 +141,7 @@ private struct SettingsView: View {
       }
 
       Section("Development") {
-        Text("Run the fake backend locally with npm start from the Backend directory. Use your Mac LAN IP for device testing.")
+        Text("Run the local backend with dotnet run from the Backend project. Use your Mac LAN IP for device testing.")
       }
     }
     .navigationTitle("Settings")

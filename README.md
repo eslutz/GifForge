@@ -16,8 +16,11 @@ The v1 architecture is deliberately provider-neutral:
 - `App/Gifster` - containing app SwiftUI UI for onboarding, privacy, history, and settings.
 - `Extensions/GifsterMessages` - iMessage extension UI and attachment insertion flow.
 - `Packages/GifsterCore` - shared Swift package for planning models, backend client, image preprocessing, GIF rendering, and history.
-- `Backend` - fake/demo backend with provider abstraction and job polling endpoints.
+- `Backend` - ASP.NET Core Minimal API backend with Native AOT settings, provider abstraction, and job polling endpoints.
+- `Backend.Tests` - lightweight backend integration test harness.
 - `Documentation` - product, architecture, privacy, roadmap, and implementation plan.
+- `infra` - Azure Bicep templates for the Container Apps backend environment.
+- `.github/workflows` - CI for backend, infrastructure, and iOS project checks.
 
 ## Quick Start
 
@@ -25,12 +28,25 @@ The v1 architecture is deliberately provider-neutral:
 xcodegen generate
 cd Packages/GifsterCore
 swift test --scratch-path /private/tmp/gifster-swiftpm
-cd ../../Backend
-npm test
-npm start
+cd ../..
+dotnet run --project Backend.Tests/Gifster.Backend.Tests.csproj
+ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/Gifster.Backend.csproj
 ```
 
 The local backend listens at `http://127.0.0.1:8787` by default. The containing app Settings screen stores the backend URL in the shared app-group defaults used by the Messages extension.
+
+Production backend direction: ASP.NET Core Minimal API with Native AOT deployed to Azure Container Apps, with Azure Queue Storage for provider orchestration, Blob Storage for media/result handoff, and Table Storage or Cosmos DB for durable job state.
+
+## Infrastructure
+
+```bash
+az deployment group create \
+  --resource-group rg-gifster-dev \
+  --template-file infra/main.bicep \
+  --parameters @infra/main.parameters.example.json
+```
+
+See [infra/README.md](infra/README.md) for the Azure resources and deployment notes.
 
 ## Current Toolchain Note
 

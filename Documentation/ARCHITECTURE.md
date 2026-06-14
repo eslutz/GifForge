@@ -5,7 +5,7 @@ Gifster is split into five bounded areas:
 1. Messages extension: prompt entry, image selection, caption editing, progress, preview, and attachment insertion.
 2. Containing app: onboarding, privacy explanation, local history, clear-history control, and development settings.
 3. Shared Swift package: request models, prompt planning facade, backend client, image preprocessing, frame rendering, GIF encoding, and local history.
-4. Backend service: request validation, safety checks, provider credential isolation, provider abstraction, job state, and temporary result URLs.
+4. Backend service: ASP.NET Core Minimal API with Native AOT, request validation, safety checks, provider credential isolation, provider abstraction, job state, and temporary result URLs.
 5. Documentation and demo flow: fake provider, local backend, repeatable tests, and roadmap.
 
 ## AI Boundary
@@ -37,7 +37,24 @@ The app submits `POST /v1/generations` with:
 - `options` such as size, loop length, style preset, and motion intensity.
 - Optional `sourceImage` with metadata-stripped JPEG bytes encoded as base64.
 
-The backend returns a job id and status URL. The app polls `GET /v1/generations/:jobId`. On success the backend returns a temporary `downloadUrl`. The demo backend serves a frame sequence JSON result; real adapters can serve MP4 or frame-sequence assets under the same app-facing contract.
+The backend returns a job id and status URL. The app polls `GET /v1/generations/:jobId`. On success the backend returns a temporary `downloadUrl`. The demo provider serves a frame sequence JSON result; real adapters can serve MP4 or frame-sequence assets under the same app-facing contract.
+
+## Backend Runtime
+
+Gifster targets ASP.NET Core Minimal API with Native AOT on Azure Container Apps for production. The API process should stay stateless and low-memory so the consumption workload profile can scale to zero and scale out efficiently.
+
+Production Azure services should be split by responsibility:
+
+- Azure Container Apps hosts the public Minimal API and any provider worker containers.
+- Azure Queue Storage carries long-running provider orchestration work.
+- Azure Blob Storage stores provider outputs and temporary downloadable assets.
+- Azure Table Storage or Cosmos DB stores durable generation job state.
+- Azure Key Vault or Container Apps secrets hold external provider credentials.
+- Managed identity limits secret exposure and grants scoped Azure resource access.
+
+The current local backend keeps an in-memory job store and fake provider for deterministic development. Production should replace those with durable job storage and provider adapters without changing the iOS-facing API contract.
+
+The Bicep template in `infra/main.bicep` creates the Azure hosting plane and backend dependencies. The template intentionally does not create provider API secrets; those should be inserted into Key Vault out-of-band and accessed by the backend through managed identity.
 
 ## iMessage Extension Behavior
 
