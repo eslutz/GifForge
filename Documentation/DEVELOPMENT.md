@@ -72,6 +72,16 @@ scripts/validate-app-store-metadata.rb
 
 The validator checks App Store field lengths, required support/privacy URLs, no-tracking privacy claims, review-note coverage for attachment insertion and manual sending, no sticker mode, no Image Playground dependency, and privacy-policy retention/provider disclosures.
 
+## Export App Store Submission Package
+
+```bash
+scripts/export-app-store-submission-package.rb \
+  --containing-screenshots Documentation/AppStoreScreenshots/containing-app \
+  --messages-screenshots Documentation/AppStoreScreenshots/messages-extension
+```
+
+The exporter writes an ignored package under `Documentation/AppStoreSubmission/` by default. It copies public metadata, App Review notes, privacy policy text, and available screenshot PNGs into a single manual App Store Connect handoff. Use `--require-screenshots` for the final release pass; that mode fails until both containing-app screenshots and physical Messages compact/expanded screenshots are available.
+
 ## Validate Physical-Device Evidence
 
 ```bash

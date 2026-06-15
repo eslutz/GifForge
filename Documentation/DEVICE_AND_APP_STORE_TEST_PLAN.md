@@ -191,6 +191,16 @@ The script writes PNG files to `Documentation/AppStoreScreenshots/containing-app
 
 This script covers the containing app overview, seeded history, clear-history confirmation, and settings screens. Capture Messages extension screenshots separately from the physical Messages flow above because the App Store screenshot set must show the real compact/expanded iMessage extension experience.
 
+### App Store Submission Package
+
+After containing-app and Messages extension screenshots are available, assemble the manual App Store Connect handoff:
+
+```bash
+scripts/export-app-store-submission-package.rb --require-screenshots
+```
+
+The package is written under ignored `Documentation/AppStoreSubmission/` by default and includes structured metadata, App Review notes, privacy policy text, screenshot copies, and a manifest of any remaining blockers.
+
 ## Pass Criteria
 
 Gifster is ready for App Store submission only after every checklist item above is complete, evidence is attached or linked, and `Documentation/APP_STORE_READINESS.md` no longer lists unresolved release blockers.

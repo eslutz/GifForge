@@ -32,6 +32,7 @@ PROVIDER_PREFLIGHT = File.join(ROOT, "scripts", "validate-external-provider-cont
 PROVIDER_ONBOARDING_VALIDATOR = File.join(ROOT, "scripts", "validate-provider-onboarding.rb")
 SCREENSHOT_CAPTURE_SCRIPT = File.join(ROOT, "scripts", "capture-app-store-screenshots.sh")
 APP_STORE_METADATA_VALIDATOR = File.join(ROOT, "scripts", "validate-app-store-metadata.rb")
+APP_STORE_PACKAGE_EXPORTER = File.join(ROOT, "scripts", "export-app-store-submission-package.rb")
 DEPLOYMENT_EVIDENCE_COLLECTOR = File.join(ROOT, "scripts", "collect-deployment-evidence.rb")
 DEVICE_EVIDENCE_VALIDATOR = File.join(ROOT, "scripts", "validate-device-evidence.rb")
 OIDC_READINESS_AUDITOR = File.join(ROOT, "scripts", "audit-azure-oidc-readiness.rb")
@@ -472,6 +473,30 @@ def validate_app_store_metadata_tooling(errors)
   end
 end
 
+def validate_app_store_submission_package_tooling(errors)
+  unless File.executable?(APP_STORE_PACKAGE_EXPORTER)
+    errors << "#{relative(APP_STORE_PACKAGE_EXPORTER)} must be executable so App Store Connect handoff packages can be reproduced."
+    return unless File.file?(APP_STORE_PACKAGE_EXPORTER)
+  end
+
+  script = File.read(APP_STORE_PACKAGE_EXPORTER)
+  {
+    "--require-screenshots" => "final screenshot gate",
+    "Documentation/AppStoreSubmission" => "ignored default package output",
+    "APP_STORE_METADATA.md" => "metadata source",
+    "APP_REVIEW_NOTES.md" => "review notes source",
+    "PRIVACY_POLICY.md" => "privacy policy source",
+    "metadata.json" => "structured package manifest",
+    "app-review-notes.md" => "review notes export",
+    "privacy-policy.md" => "privacy policy export",
+    "01-containing-app-overview.png" => "containing-app overview screenshot",
+    "04-containing-app-settings.png" => "containing-app settings screenshot",
+    "Messages extension compact/expanded screenshots are required" => "physical Messages screenshot blocker"
+  }.each do |needle, label|
+    require_text_include(script, needle, "#{relative(APP_STORE_PACKAGE_EXPORTER)} #{label}", errors)
+  end
+end
+
 def validate_app_store_metadata_content(errors)
   return unless File.executable?(APP_STORE_METADATA_VALIDATOR)
 
@@ -627,6 +652,7 @@ validate_provider_operational_readiness(errors)
 validate_app_store_screenshot_tooling(errors)
 validate_app_store_metadata_tooling(errors)
 validate_app_store_metadata_content(errors)
+validate_app_store_submission_package_tooling(errors)
 validate_deployment_evidence_tooling(errors)
 validate_oidc_readiness_tooling(errors)
 validate_device_evidence_tooling(errors)
@@ -650,6 +676,7 @@ puts "Checked provider health mode and external-provider preflight invariants."
 puts "Checked provider onboarding evidence validation tooling."
 puts "Checked containing-app App Store screenshot capture tooling."
 puts "Checked App Store metadata validation tooling."
+puts "Checked App Store submission package tooling."
 puts "Checked deployment evidence capture tooling."
 puts "Checked Azure/GitHub OIDC readiness audit tooling."
 puts "Checked physical-device and App Store evidence validation tooling."
