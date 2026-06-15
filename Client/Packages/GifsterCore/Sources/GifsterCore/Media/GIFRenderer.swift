@@ -3,7 +3,7 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-public struct GIFFrame {
+public struct GIFFrame: @unchecked Sendable {
   public var image: CGImage
   public var duration: Double
 
