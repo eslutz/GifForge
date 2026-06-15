@@ -178,7 +178,7 @@ az deployment sub what-if \
     resourceGroupName=rg-gifster-prod \
     location=eastus \
     containerImage=ghcr.io/eslutz/gifster-backend:<commit-sha> \
-    appAttestAppIdentifier=TEAMID.dev.ericslutz.Gifster \
+    appAttestAppIdentifier=TEAMID.dev.ericslutz.gifforge \
     appAttestRootCertificatePem=placeholder \
     appAttestDemoBypassEnabled=false \
     providerAdapter=external-http \
