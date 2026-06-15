@@ -2,9 +2,9 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Gifster.Backend.Security;
+using GifForge.Backend.Security;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class AppleAppAttestVerifierTests
 {
@@ -51,7 +51,7 @@ internal sealed record AppAttestFixture(
 {
   public static AppAttestFixture Create()
   {
-    const string appIdentifier = "TEAMID.dev.ericslutz.Gifster";
+    const string appIdentifier = "TEAMID.dev.ericslutz.GifForge";
     var challenge = new AppAttestChallengeResponse(
       Guid.NewGuid().ToString("D"),
       "test-challenge",
@@ -61,7 +61,7 @@ internal sealed record AppAttestFixture(
 
     using var rootKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
     var rootRequest = new CertificateRequest(
-      "CN=Gifster Test App Attest Root",
+      "CN=GifForge Test App Attest Root",
       rootKey,
       HashAlgorithmName.SHA256
     );
@@ -106,7 +106,7 @@ internal sealed record AppAttestFixture(
   )
   {
     var request = new CertificateRequest(
-      "CN=Gifster Test App Attest Leaf",
+      "CN=GifForge Test App Attest Leaf",
       subjectKey,
       HashAlgorithmName.SHA256
     );

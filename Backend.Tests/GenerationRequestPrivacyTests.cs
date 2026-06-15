@@ -1,7 +1,7 @@
-using Gifster.Backend.Models;
-using Gifster.Backend.Safety;
+using GifForge.Backend.Models;
+using GifForge.Backend.Safety;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class GenerationRequestPrivacyTests
 {

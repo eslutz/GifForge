@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Gifster.Backend.Models;
-using Gifster.Backend.Storage;
+using GifForge.Backend.Models;
+using GifForge.Backend.Storage;
 
-namespace Gifster.Backend.Providers;
+namespace GifForge.Backend.Providers;
 
 public sealed record GeneratedMotionResult(string ContentType, byte[] Bytes)
 {

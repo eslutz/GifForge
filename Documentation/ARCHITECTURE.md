@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Gifster is split into five bounded areas:
+GifForge is split into five bounded areas:
 
 1. Messages extension: prompt entry, image selection, caption editing, progress, preview, and attachment insertion.
 2. Containing app: onboarding, privacy explanation, local history, clear-history control, and development settings.
@@ -40,11 +40,11 @@ The app submits `POST /v1/generations` with:
 
 The backend returns a job id, status URL, and expiration timestamp. The app polls `GET /v1/generations/:jobId`. On success the backend returns a temporary `downloadUrl`. Expired status and result requests return HTTP `410 Gone`. The demo provider serves a frame sequence JSON result; real adapters can serve MP4 or frame-sequence assets under the same app-facing contract.
 
-The backend can run with `GIFSTER_PROVIDER_ADAPTER=fake` for deterministic development or `GIFSTER_PROVIDER_ADAPTER=external-http` for a provider-neutral HTTP adapter. The external adapter is intended for either a compatible provider gateway or a vendor-specific wrapper service owned by the backend team, so Gifster remains replaceable-provider-first and does not assume a specific AI media vendor. External provider authorization is supplied server-side through the secure `externalProviderAuthorization` deployment parameter and exposed to the container as `GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION`. Before submitting to the external adapter, the backend maps app-level requests to a sanitized provider payload that omits `originalPrompt` and caption text, includes `captionMode`, and sets `renderCaptionLocally=true`.
+The backend can run with `GIFFORGE_PROVIDER_ADAPTER=fake` for deterministic development or `GIFFORGE_PROVIDER_ADAPTER=external-http` for a provider-neutral HTTP adapter. The external adapter is intended for either a compatible provider gateway or a vendor-specific wrapper service owned by the backend team, so GifForge remains replaceable-provider-first and does not assume a specific AI media vendor. External provider authorization is supplied server-side through the secure `externalProviderAuthorization` deployment parameter and exposed to the container as `GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION`. Before submitting to the external adapter, the backend maps app-level requests to a sanitized provider payload that omits `originalPrompt` and caption text, includes `captionMode`, and sets `renderCaptionLocally=true`.
 
 ## Backend Runtime
 
-Gifster targets ASP.NET Core Minimal API with Native AOT on Azure Container Apps for production. The API process should stay stateless and low-memory so the consumption workload profile can scale to zero and scale out efficiently.
+GifForge targets ASP.NET Core Minimal API with Native AOT on Azure Container Apps for production. The API process should stay stateless and low-memory so the consumption workload profile can scale to zero and scale out efficiently.
 
 Production Azure services should be split by responsibility:
 
@@ -57,7 +57,7 @@ Production Azure services should be split by responsibility:
 
 The current local backend keeps an in-memory job store, in-memory App Attest state store, and fake provider for deterministic development. Deployed environments use Azure Table Storage, Queue Storage, Blob Storage, managed identity, and App Attest enforcement without changing the iOS-facing generation contract. App Attest challenge and session state are shared through Azure Table Storage in deployed environments so scaled API replicas do not lose valid clients. After validation, moderation, and provider submission, persisted generation job state clears raw `originalPrompt`, visible caption text, and processed source-image bytes while keeping the structured prompt, caption mode, source-image context, and options needed for worker processing. Generation jobs include `expiresAt`; deployed defaults expire remaining job metadata and result links after 24 hours, prune expired table rows in cleanup passes, and delete temporary provider/source blobs through a 2-day Azure Storage lifecycle policy. Generation lifecycle logs are metadata-only and omit prompt text, caption text, image bytes, result bytes, and provider error messages. The App Attest service fails closed unless either the explicit demo bypass is enabled for local/nonprod testing or a real verifier is configured with the app identifier and Apple App Attest root certificate.
 
-The subscription-scoped Bicep template in `infra/main.subscription.bicep` bootstraps environment resource groups, such as `rg-gifster-nonprod` and `rg-gifster-prod`, and deploys `infra/main.bicep` into them. Repeated environment updates should use resource-group-scope deployments of `infra/main.bicep`; the manual deploy workflows follow that model so their Azure OIDC identities can be scoped to environment resource groups instead of the whole subscription. `scripts/setup-azure-oidc.sh` is the dry-run-first setup path for per-environment GitHub OIDC trust, GitHub environment secrets, and resource-group-scoped RBAC. Gifster has two planned environments: `nonprod` and `prod`. The templates intentionally avoid provider-specific assumptions; provider credentials should be supplied as Container Apps secrets or inserted into Key Vault out-of-band for provider-specific adapter work.
+The subscription-scoped Bicep template in `infra/main.subscription.bicep` bootstraps environment resource groups, such as `rg-gifforge-nonprod` and `rg-gifforge-prod`, and deploys `infra/main.bicep` into them. Repeated environment updates should use resource-group-scope deployments of `infra/main.bicep`; the manual deploy workflows follow that model so their Azure OIDC identities can be scoped to environment resource groups instead of the whole subscription. `scripts/setup-azure-oidc.sh` is the dry-run-first setup path for per-environment GitHub OIDC trust, GitHub environment secrets, and resource-group-scoped RBAC. GifForge has two planned environments: `nonprod` and `prod`. The templates intentionally avoid provider-specific assumptions; provider credentials should be supplied as Container Apps secrets or inserted into Key Vault out-of-band for provider-specific adapter work.
 
 ## iMessage Extension Behavior
 
@@ -68,7 +68,7 @@ The extension treats Messages as a short-lived surface:
 - The extension persists active generation snapshots in the shared app container so a reopened extension resumes polling instead of creating duplicate jobs.
 - The containing app can clear completed history and resumable active-job metadata from the shared container.
 
-Messages insertion is limited to `MSConversation.insertAttachment`. Gifster does not auto-send. Sticker APIs are not used in v1.
+Messages insertion is limited to `MSConversation.insertAttachment`. GifForge does not auto-send. Sticker APIs are not used in v1.
 
 ## GIF Generation Pipeline
 

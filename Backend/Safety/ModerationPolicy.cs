@@ -1,6 +1,6 @@
-using Gifster.Backend.Models;
+using GifForge.Backend.Models;
 
-namespace Gifster.Backend.Safety;
+namespace GifForge.Backend.Safety;
 
 public static class ModerationPolicy
 {

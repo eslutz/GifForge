@@ -1,20 +1,20 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Operations;
-using Gifster.Backend.Models;
-using Gifster.Backend.Providers;
-using Gifster.Backend.Queueing;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Operations;
+using GifForge.Backend.Models;
+using GifForge.Backend.Providers;
+using GifForge.Backend.Queueing;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class BackendRouteTests
 {
   [Fact]
   public async Task HealthEndpointUsesStandardHealthPath()
   {
-    await using var app = GifsterBackendApp.Create(provider: new FakeFrameSequenceProvider());
+    await using var app = GifForgeBackendApp.Create(provider: new FakeFrameSequenceProvider());
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
 
@@ -35,7 +35,7 @@ public sealed class BackendRouteTests
   public async Task CreateGenerationDispatchesQueuedJob()
   {
     var dispatcher = new RecordingGenerationJobDispatcher();
-    await using var app = GifsterBackendApp.Create(
+    await using var app = GifForgeBackendApp.Create(
       provider: new FakeFrameSequenceProvider(),
       jobStore: new MemoryJobStore(),
       jobDispatcher: dispatcher
@@ -63,7 +63,7 @@ public sealed class BackendRouteTests
     const string secretImagePayload = "SECRET_IMAGE_PAYLOAD";
     var dispatcher = new RecordingGenerationJobDispatcher();
     var eventSink = new RecordingGenerationEventSink();
-    await using var app = GifsterBackendApp.Create(
+    await using var app = GifForgeBackendApp.Create(
       provider: new FakeFrameSequenceProvider(),
       jobStore: new MemoryJobStore(),
       jobDispatcher: dispatcher,
@@ -107,7 +107,7 @@ public sealed class BackendRouteTests
     var dispatcher = new RecordingGenerationJobDispatcher();
     var jobStore = new MemoryJobStore();
     var provider = new RecordingGenerationProvider();
-    await using var app = GifsterBackendApp.Create(
+    await using var app = GifForgeBackendApp.Create(
       provider: provider,
       jobStore: jobStore,
       jobDispatcher: dispatcher
@@ -165,7 +165,7 @@ public sealed class BackendRouteTests
   public async Task CreateGenerationReturnsUnprocessableEntityForPermanentProviderSubmissionFailure()
   {
     var dispatcher = new RecordingGenerationJobDispatcher();
-    await using var app = GifsterBackendApp.Create(
+    await using var app = GifForgeBackendApp.Create(
       provider: new SubmitFailureProvider(new GenerationPermanentFailureException("provider secret rejection detail")),
       jobStore: new MemoryJobStore(),
       jobDispatcher: dispatcher
@@ -188,7 +188,7 @@ public sealed class BackendRouteTests
   public async Task CreateGenerationReturnsServiceUnavailableForTransientProviderSubmissionFailure()
   {
     var dispatcher = new RecordingGenerationJobDispatcher();
-    await using var app = GifsterBackendApp.Create(
+    await using var app = GifForgeBackendApp.Create(
       provider: new SubmitFailureProvider(new HttpRequestException("provider unavailable secret detail")),
       jobStore: new MemoryJobStore(),
       jobDispatcher: dispatcher
@@ -211,7 +211,7 @@ public sealed class BackendRouteTests
   public async Task CreateGenerationUsesForwardedHttpsHostInStatusUrl()
   {
     var dispatcher = new RecordingGenerationJobDispatcher();
-    await using var app = GifsterBackendApp.Create(
+    await using var app = GifForgeBackendApp.Create(
       provider: new FakeFrameSequenceProvider(),
       jobStore: new MemoryJobStore(),
       jobDispatcher: dispatcher
@@ -224,7 +224,7 @@ public sealed class BackendRouteTests
       Content = new StringContent(requestJson, Encoding.UTF8, "application/json")
     };
     request.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
-    request.Headers.TryAddWithoutValidation("X-Forwarded-Host", "api.gifster.example");
+    request.Headers.TryAddWithoutValidation("X-Forwarded-Host", "api.gifforge.example");
 
     var response = await client.SendAsync(request);
 
@@ -233,7 +233,7 @@ public sealed class BackendRouteTests
     var submission = JsonSerializer.Deserialize<JobSubmissionResponse>(body, JsonOptions());
     Assert.NotNull(submission);
     Assert.Equal(
-      $"https://api.gifster.example/v1/generations/{submission.JobId}",
+      $"https://api.gifforge.example/v1/generations/{submission.JobId}",
       submission.StatusUrl
     );
     Assert.True(submission.ExpiresAt > DateTimeOffset.UtcNow);
@@ -242,7 +242,7 @@ public sealed class BackendRouteTests
   [Fact]
   public async Task GetGenerationStatusReturnsGoneForExpiredJobs()
   {
-    await using var app = GifsterBackendApp.Create(
+    await using var app = GifForgeBackendApp.Create(
       provider: new FakeFrameSequenceProvider(),
       jobStore: new MemoryJobStore(TimeSpan.FromMilliseconds(-1))
     );
@@ -265,7 +265,7 @@ public sealed class BackendRouteTests
   [Fact]
   public async Task GetGenerationResultReturnsGoneForExpiredJobs()
   {
-    await using var app = GifsterBackendApp.Create(
+    await using var app = GifForgeBackendApp.Create(
       provider: new FakeFrameSequenceProvider(),
       jobStore: new MemoryJobStore(TimeSpan.FromMilliseconds(-1))
     );
@@ -288,11 +288,11 @@ public sealed class BackendRouteTests
   [Fact]
   public async Task HealthEndpointReportsConfiguredExternalProvider()
   {
-    await using var app = GifsterBackendApp.Create(args: [
-      "--GIFSTER_PROVIDER_ADAPTER=external-http",
-      "--GIFSTER_EXTERNAL_PROVIDER_NAME=test-provider",
-      "--GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL=https://provider.example.test/jobs",
-      "--GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE=https://provider.example.test/jobs/{providerJobId}/result"
+    await using var app = GifForgeBackendApp.Create(args: [
+      "--GIFFORGE_PROVIDER_ADAPTER=external-http",
+      "--GIFFORGE_EXTERNAL_PROVIDER_NAME=test-provider",
+      "--GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL=https://provider.example.test/jobs",
+      "--GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE=https://provider.example.test/jobs/{providerJobId}/result"
     ]);
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 
-namespace Gifster.Backend.Configuration;
+namespace GifForge.Backend.Configuration;
 
 public sealed record BackendStorageOptions(
   string? StorageAccountName,
@@ -15,11 +15,11 @@ public sealed record BackendStorageOptions(
 
   public static BackendStorageOptions FromConfiguration(IConfiguration configuration) =>
     new(
-      EmptyAsNull(configuration["GIFSTER_STORAGE_ACCOUNT_NAME"]),
-      configuration["GIFSTER_JOBS_TABLE_NAME"] ?? "GenerationJobs",
-      configuration["GIFSTER_APP_ATTEST_STATE_TABLE_NAME"] ?? "AppAttestState",
-      configuration["GIFSTER_GENERATION_QUEUE_NAME"] ?? "generation-jobs",
-      configuration["GIFSTER_RESULTS_CONTAINER_NAME"] ?? "provider-results",
+      EmptyAsNull(configuration["GIFFORGE_STORAGE_ACCOUNT_NAME"]),
+      configuration["GIFFORGE_JOBS_TABLE_NAME"] ?? "GenerationJobs",
+      configuration["GIFFORGE_APP_ATTEST_STATE_TABLE_NAME"] ?? "AppAttestState",
+      configuration["GIFFORGE_GENERATION_QUEUE_NAME"] ?? "generation-jobs",
+      configuration["GIFFORGE_RESULTS_CONTAINER_NAME"] ?? "provider-results",
       EmptyAsNull(configuration["AZURE_CLIENT_ID"])
     );
 

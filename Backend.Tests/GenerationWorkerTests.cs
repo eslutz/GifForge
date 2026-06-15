@@ -1,9 +1,9 @@
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Operations;
-using Gifster.Backend.Providers;
-using Gifster.Backend.Storage;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Operations;
+using GifForge.Backend.Providers;
+using GifForge.Backend.Storage;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class GenerationWorkerTests
 {
@@ -23,10 +23,10 @@ public sealed class GenerationWorkerTests
     var completed = await store.GetAsync(job.Id, CancellationToken.None);
     Assert.NotNull(completed);
     Assert.Equal(GenerationJobStatus.Succeeded, completed.Status);
-    Assert.Equal("application/vnd.gifster.frame-sequence+json", completed.ResultContentType);
+    Assert.Equal("application/vnd.gifforge.frame-sequence+json", completed.ResultContentType);
     Assert.NotNull(completed.ResultBlobName);
     var saved = await resultStore.ReadAsync(completed, CancellationToken.None);
-    Assert.Equal("application/vnd.gifster.frame-sequence+json", saved.ContentType);
+    Assert.Equal("application/vnd.gifforge.frame-sequence+json", saved.ContentType);
     Assert.Equal("frame-sequence-v1", saved.ToFrameSequence().Format);
   }
 
@@ -58,7 +58,7 @@ public sealed class GenerationWorkerTests
       {
         Assert.Equal("generation.succeeded", succeeded.Name);
         Assert.Equal(job.Id, succeeded.JobId);
-        Assert.Equal("application/vnd.gifster.frame-sequence+json", succeeded.ResultContentType);
+        Assert.Equal("application/vnd.gifforge.frame-sequence+json", succeeded.ResultContentType);
       }
     );
     Assert.DoesNotContain(secretPrompt, eventSink.SerializedEvents);
@@ -191,7 +191,7 @@ internal sealed class ThrowingResultProvider : IGenerationProvider
   public string Mode => "test";
 
   public Task<ProviderJob> SubmitGenerationAsync(
-    Gifster.Backend.Models.GenerationRequest request,
+    GifForge.Backend.Models.GenerationRequest request,
     CancellationToken cancellationToken
   ) =>
     Task.FromResult(new ProviderJob(Name, "provider-job-1"));

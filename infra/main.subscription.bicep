@@ -1,6 +1,6 @@
 targetScope = 'subscription'
 
-@description('Gifster environment to deploy.')
+@description('GifForge environment to deploy.')
 @allowed([
   'nonprod'
   'prod'
@@ -10,10 +10,10 @@ param environmentName string = 'nonprod'
 @description('Azure region for the resource group and contained resources.')
 param location string = 'eastus'
 
-@description('Resource group that will contain the Gifster backend resources.')
-param resourceGroupName string = 'rg-gifster-${environmentName}'
+@description('Resource group that will contain the GifForge backend resources.')
+param resourceGroupName string = 'rg-gifforge-${environmentName}'
 
-@description('Container image for the Gifster backend. Use a real pushed image before production deployment.')
+@description('Container image for the GifForge backend. Use a real pushed image before production deployment.')
 param containerImage string
 
 @description('Public base URL returned in backend status and download URLs. Leave empty to derive from incoming request host.')
@@ -90,7 +90,7 @@ param retentionCleanupBatchSize int = 100
 
 @description('Tags applied to all resources.')
 param tags object = {
-  app: 'gifster'
+  app: 'gifforge'
   environment: environmentName
 }
 
@@ -101,7 +101,7 @@ resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
 }
 
 module backend './main.bicep' = {
-  name: 'gifster-${environmentName}-backend'
+  name: 'gifforge-${environmentName}-backend'
   scope: resourceGroup
   params: {
     environmentName: environmentName

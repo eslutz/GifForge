@@ -1,4 +1,4 @@
-namespace Gifster.Backend.Security;
+namespace GifForge.Backend.Security;
 
 public sealed record AppAttestChallengeResponse(string ChallengeId, string Challenge, DateTimeOffset ExpiresAt);
 

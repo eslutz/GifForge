@@ -1,7 +1,7 @@
 using Azure;
 using Azure.Data.Tables;
 
-namespace Gifster.Backend.Security;
+namespace GifForge.Backend.Security;
 
 public sealed class AzureTableAppAttestStateStore : IAppAttestStateStore
 {

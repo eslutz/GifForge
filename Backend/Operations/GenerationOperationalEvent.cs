@@ -1,7 +1,7 @@
-using Gifster.Backend.Jobs;
+using GifForge.Backend.Jobs;
 using Microsoft.Extensions.Logging;
 
-namespace Gifster.Backend.Operations;
+namespace GifForge.Backend.Operations;
 
 public interface IGenerationEventSink
 {

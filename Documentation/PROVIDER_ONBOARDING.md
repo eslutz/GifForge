@@ -1,6 +1,6 @@
 # Provider Onboarding
 
-Gifster stays provider-neutral. The iOS app never calls external AI media providers directly, and the first real provider should integrate through the backend `external-http` adapter or a provider-specific gateway that implements the same contract.
+GifForge stays provider-neutral. The iOS app never calls external AI media providers directly, and the first real provider should integrate through the backend `external-http` adapter or a provider-specific gateway that implements the same contract.
 
 ## Required Decision Evidence
 
@@ -26,7 +26,7 @@ The selected provider path must prove:
 - Text-to-animation and image-to-animation are supported.
 - Submit returns a non-empty `providerJobId`.
 - Result download accepts `{providerJobId}` or `{jobId}` in the URL template.
-- Results are `video/mp4` or `application/vnd.gifster.frame-sequence+json`.
+- Results are `video/mp4` or `application/vnd.gifforge.frame-sequence+json`.
 - Not-ready result states are retryable instead of being stored as empty assets.
 - Provider payload accepts `captionMode` and `renderCaptionLocally=true`.
 - Provider does not require visible caption text or readable text rendering.

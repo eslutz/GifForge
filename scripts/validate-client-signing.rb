@@ -57,29 +57,29 @@ end
 
 project = YAML.load_file(File.join(ROOT, "Client", "project.yml"))
 
-app_bundle_id = bundle_id(project, "Gifster")
-extension_bundle_id = bundle_id(project, "GifsterMessagesExtension")
-ui_tests_bundle_id = bundle_id(project, "GifsterUITests")
+app_bundle_id = bundle_id(project, "GifForge")
+extension_bundle_id = bundle_id(project, "GifForgeMessagesExtension")
+ui_tests_bundle_id = bundle_id(project, "GifForgeUITests")
 
-app_project_groups = app_groups(project, "Gifster")
-extension_project_groups = app_groups(project, "GifsterMessagesExtension")
+app_project_groups = app_groups(project, "GifForge")
+extension_project_groups = app_groups(project, "GifForgeMessagesExtension")
 
-app_entitlements = parse_plist(File.join(ROOT, "Client", "App", "Gifster", "Gifster.entitlements"))
-extension_entitlements = parse_plist(File.join(ROOT, "Client", "Extensions", "GifsterMessages", "GifsterMessages.entitlements"))
+app_entitlements = parse_plist(File.join(ROOT, "Client", "App", "GifForge", "GifForge.entitlements"))
+extension_entitlements = parse_plist(File.join(ROOT, "Client", "Extensions", "GifForgeMessages", "GifForgeMessages.entitlements"))
 app_storage_directories = File.read(File.join(
   ROOT,
   "Client",
   "Packages",
-  "GifsterCore",
+  "GifForgeCore",
   "Sources",
-  "GifsterCore",
+  "GifForgeCore",
   "Storage",
   "AppStorageDirectories.swift"
 ))
 
 app_entitlement_groups = app_entitlements.fetch("com.apple.security.application-groups", [])
 extension_entitlement_groups = extension_entitlements.fetch("com.apple.security.application-groups", [])
-generated_project_path = File.join(ROOT, "Client", "Gifster.xcodeproj", "project.pbxproj")
+generated_project_path = File.join(ROOT, "Client", "GifForge.xcodeproj", "project.pbxproj")
 generated_bundle_ids = File.read(generated_project_path)
   .scan(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/)
   .flatten

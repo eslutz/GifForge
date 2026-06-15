@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
-namespace Gifster.Backend.Security;
+namespace GifForge.Backend.Security;
 
 public sealed class AppleAppAttestVerifier : IAppAttestVerifier
 {

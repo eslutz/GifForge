@@ -10,7 +10,7 @@ require "time"
 require "uri"
 
 ROOT = File.expand_path("..", __dir__)
-DEFAULT_REPO = "eslutz/Gifster"
+DEFAULT_REPO = "eslutz/GifForge"
 
 options = {
   environment: "nonprod",
@@ -33,7 +33,7 @@ OptionParser.new do |parser|
     options[:repo] = value
   end
 
-  parser.on("--resource-group NAME", "Azure resource group. Default: rg-gifster-<environment>.") do |value|
+  parser.on("--resource-group NAME", "Azure resource group. Default: rg-gifforge-<environment>.") do |value|
     options[:resource_group] = value
   end
 
@@ -64,7 +64,7 @@ unless %w[nonprod prod].include?(options[:environment])
   exit 2
 end
 
-options[:resource_group] ||= "rg-gifster-#{options[:environment]}"
+options[:resource_group] ||= "rg-gifforge-#{options[:environment]}"
 timestamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
 options[:output] ||= File.join(
   ROOT,
@@ -178,7 +178,7 @@ begin
     required: false
   ) || []
   evidence[:containerApps] = apps
-    .select { |app| app["name"].to_s.start_with?("gifster-#{options[:environment]}-") }
+    .select { |app| app["name"].to_s.start_with?("gifforge-#{options[:environment]}-") }
     .map { |app| safe_container_app(app) }
     .sort_by { |app| app[:name].to_s }
 rescue StandardError => e

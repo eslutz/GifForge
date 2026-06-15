@@ -40,7 +40,7 @@ jobs:
         run: xcodegen generate
 
       - name: Check generated project is committed
-        run: git diff --exit-code Client/Gifster.xcodeproj Client/App/Gifster/Info.plist Client/Extensions/GifsterMessages/Info.plist
+        run: git diff --exit-code Client/GifForge.xcodeproj Client/App/GifForge/Info.plist Client/Extensions/GifForgeMessages/Info.plist
 
       - name: Validate client signing configuration
         run: scripts/validate-client-signing.rb
@@ -59,19 +59,19 @@ jobs:
       - name: Validate device evidence tooling
         run: |
           ruby -c scripts/validate-device-evidence.rb
-          scripts/validate-device-evidence.rb --template /tmp/gifster-device-evidence-template.json
+          scripts/validate-device-evidence.rb --template /tmp/gifforge-device-evidence-template.json
 
       - name: Run Swift package tests
-        working-directory: Client/Packages/GifsterCore
-        run: swift test --scratch-path /private/tmp/gifster-swiftpm
+        working-directory: Client/Packages/GifForgeCore
+        run: swift test --scratch-path /private/tmp/gifforge-swiftpm
 
       - name: Build iOS app and UI tests
-        run: xcodebuild -project Client/Gifster.xcodeproj -scheme Gifster -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build-for-testing CODE_SIGNING_ALLOWED=NO
+        run: xcodebuild -project Client/GifForge.xcodeproj -scheme GifForge -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build-for-testing CODE_SIGNING_ALLOWED=NO
 
       - name: Lint plists and entitlements
         run: |
           plutil -lint \
-            Client/App/Gifster/Info.plist \
-            Client/App/Gifster/Gifster.entitlements \
-            Client/Extensions/GifsterMessages/Info.plist \
-            Client/Extensions/GifsterMessages/GifsterMessages.entitlements
+            Client/App/GifForge/Info.plist \
+            Client/App/GifForge/GifForge.entitlements \
+            Client/Extensions/GifForgeMessages/Info.plist \
+            Client/Extensions/GifForgeMessages/GifForgeMessages.entitlements

@@ -1,6 +1,6 @@
-using Gifster.Backend.Queueing;
+using GifForge.Backend.Queueing;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class AzureQueueGenerationJobReaderTests
 {

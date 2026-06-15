@@ -2,7 +2,7 @@ using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 
-namespace Gifster.Backend.Queueing;
+namespace GifForge.Backend.Queueing;
 
 public sealed class AzureQueueGenerationJobReader : IGenerationJobQueueReader
 {
@@ -33,7 +33,7 @@ public sealed class AzureQueueGenerationJobReader : IGenerationJobQueueReader
 
     var payload = JsonSerializer.Deserialize(
       message.MessageText,
-      GifsterJsonSerializerContext.Default.GenerationQueueMessage
+      GifForgeJsonSerializerContext.Default.GenerationQueueMessage
     );
 
     return payload is null

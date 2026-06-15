@@ -2,7 +2,7 @@
 
 ## Data Minimization
 
-- Gifster uses only images selected by the user.
+- GifForge uses only images selected by the user.
 - The app uses a scoped image picker and does not request broad photo library access for v1.
 - Selected images are downscaled and rewritten as JPEG before upload, stripping metadata in the process.
 - Generated GIFs and local history are stored only in the shared app container and can be cleared from the containing app.
@@ -10,7 +10,7 @@
 
 ## User Disclosure
 
-The containing app discloses that prompts and selected images may be sent through the Gifster backend to external AI media providers. It also discloses that prompt planning and caption suggestions use local Apple models where available.
+The containing app discloses that prompts and selected images may be sent through the GifForge backend to external AI media providers. It also discloses that prompt planning and caption suggestions use local Apple models where available.
 
 The checked-in privacy manifests support App Store privacy review, and `Documentation/PRIVACY_POLICY.md` contains the public privacy policy draft. App Store metadata currently points to the public GitHub copy of that policy as a fallback. App Store Connect privacy answers and the final public privacy policy URL still need to match the deployed backend retention and provider-sharing behavior.
 

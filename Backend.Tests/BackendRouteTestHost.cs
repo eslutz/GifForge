@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 internal static class BackendRouteTestHost
 {

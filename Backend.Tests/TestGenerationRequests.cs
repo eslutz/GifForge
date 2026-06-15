@@ -1,6 +1,6 @@
-using Gifster.Backend.Models;
+using GifForge.Backend.Models;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 internal static class TestGenerationRequests
 {

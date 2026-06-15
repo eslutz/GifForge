@@ -1,7 +1,7 @@
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Providers;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Providers;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class TableGenerationJobStoreTests
 {
@@ -44,7 +44,7 @@ public sealed class TableGenerationJobStoreTests
     {
       Status = GenerationJobStatus.Succeeded,
       ResultBlobName = "provider-results/job/result.json",
-      ResultContentType = "application/vnd.gifster.frame-sequence+json",
+      ResultContentType = "application/vnd.gifforge.frame-sequence+json",
       UpdatedAt = job.UpdatedAt.AddSeconds(2)
     }, CancellationToken.None);
 
@@ -53,7 +53,7 @@ public sealed class TableGenerationJobStoreTests
     Assert.NotNull(stored);
     Assert.Equal(GenerationJobStatus.Succeeded, stored.Status);
     Assert.Equal("provider-results/job/result.json", stored.ResultBlobName);
-    Assert.Equal("application/vnd.gifster.frame-sequence+json", stored.ResultContentType);
+    Assert.Equal("application/vnd.gifforge.frame-sequence+json", stored.ResultContentType);
   }
 
   [Fact]

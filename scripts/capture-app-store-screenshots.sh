@@ -1,30 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-output_dir="${1:-${GIFSTER_SCREENSHOT_OUTPUT_DIR:-Documentation/AppStoreScreenshots/containing-app}}"
-destination="${GIFSTER_SCREENSHOT_DESTINATION:-platform=iOS Simulator,OS=26.5,name=iPhone 17 Pro}"
-derived_data_path="${GIFSTER_SCREENSHOT_DERIVED_DATA:-/private/tmp/gifster-screenshot-derived-data}"
-result_bundle_path="${GIFSTER_SCREENSHOT_RESULT_BUNDLE:-/private/tmp/gifster-app-store-screenshots.xcresult}"
-attachments_path="${GIFSTER_SCREENSHOT_ATTACHMENTS:-/private/tmp/gifster-app-store-screenshots-attachments}"
+output_dir="${1:-${GIFFORGE_SCREENSHOT_OUTPUT_DIR:-Documentation/AppStoreScreenshots/containing-app}}"
+destination="${GIFFORGE_SCREENSHOT_DESTINATION:-platform=iOS Simulator,OS=26.5,name=iPhone 17 Pro}"
+derived_data_path="${GIFFORGE_SCREENSHOT_DERIVED_DATA:-/private/tmp/gifforge-screenshot-derived-data}"
+result_bundle_path="${GIFFORGE_SCREENSHOT_RESULT_BUNDLE:-/private/tmp/gifforge-app-store-screenshots.xcresult}"
+attachments_path="${GIFFORGE_SCREENSHOT_ATTACHMENTS:-/private/tmp/gifforge-app-store-screenshots-attachments}"
 
 rm -rf "$output_dir" "$attachments_path"
 mkdir -p "$output_dir"
 rm -rf "$result_bundle_path"
 
-printf 'Capturing Gifster containing-app screenshots\n'
+printf 'Capturing GifForge containing-app screenshots\n'
 printf 'Output: %s\n' "$output_dir"
 printf 'Destination: %s\n' "$destination"
 printf 'Result bundle: %s\n\n' "$result_bundle_path"
 
 xcodebuild \
   -quiet \
-  -project Client/Gifster.xcodeproj \
-  -scheme Gifster \
+  -project Client/GifForge.xcodeproj \
+  -scheme GifForge \
   -configuration Debug \
   -destination "$destination" \
   -derivedDataPath "$derived_data_path" \
   -resultBundlePath "$result_bundle_path" \
-  -only-testing:GifsterUITests/GifsterUITests/testCaptureContainingAppScreenshotsForAppStorePrep \
+  -only-testing:GifForgeUITests/GifForgeUITests/testCaptureContainingAppScreenshotsForAppStorePrep \
   test
 
 xcrun xcresulttool export attachments \

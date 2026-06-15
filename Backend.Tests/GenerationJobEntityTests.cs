@@ -1,7 +1,7 @@
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Providers;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Providers;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class GenerationJobEntityTests
 {
@@ -24,7 +24,7 @@ public sealed class GenerationJobEntityTests
     {
       Status = GenerationJobStatus.Succeeded,
       ResultBlobName = "results/job-1/result.json",
-      ResultContentType = "application/vnd.gifster.frame-sequence+json"
+      ResultContentType = "application/vnd.gifforge.frame-sequence+json"
     };
 
     var entity = GenerationJobTableEntity.FromJob(succeeded);
@@ -37,7 +37,7 @@ public sealed class GenerationJobEntityTests
     Assert.Equal("fake-frame-sequence", roundTrip.Provider);
     Assert.Equal("fake_123", roundTrip.ProviderJobId);
     Assert.Equal("results/job-1/result.json", roundTrip.ResultBlobName);
-    Assert.Equal("application/vnd.gifster.frame-sequence+json", roundTrip.ResultContentType);
+    Assert.Equal("application/vnd.gifforge.frame-sequence+json", roundTrip.ResultContentType);
     Assert.Equal(succeeded.ExpiresAt, roundTrip.ExpiresAt);
     Assert.Equal(request.CleanedPrompt, roundTrip.Request.CleanedPrompt);
   }
@@ -51,7 +51,7 @@ public sealed class GenerationJobEntityTests
     {
       Status = GenerationJobStatus.Succeeded,
       ResultBlobName = "results/job-1/result.json",
-      ResultContentType = "application/vnd.gifster.frame-sequence+json"
+      ResultContentType = "application/vnd.gifforge.frame-sequence+json"
     };
 
     var tableEntity = GenerationJobTableEntity.FromJob(job).ToTableEntity();

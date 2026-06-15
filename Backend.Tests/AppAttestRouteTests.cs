@@ -3,20 +3,20 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Providers;
-using Gifster.Backend.Queueing;
-using Gifster.Backend.Security;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Providers;
+using GifForge.Backend.Queueing;
+using GifForge.Backend.Security;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class AppAttestRouteTests
 {
   [Fact]
   public async Task GenerationRoutesRequireAppAttestWhenConfigured()
   {
-    await using var app = GifsterBackendApp.Create(
-      args: ["--GIFSTER_APP_ATTEST_REQUIRED=true"],
+    await using var app = GifForgeBackendApp.Create(
+      args: ["--GIFFORGE_APP_ATTEST_REQUIRED=true"],
       provider: new FakeFrameSequenceProvider(),
       jobStore: new MemoryJobStore(),
       jobDispatcher: new NoopGenerationJobDispatcher()
@@ -32,10 +32,10 @@ public sealed class AppAttestRouteTests
   [Fact]
   public async Task DemoAppAttestSessionAllowsGenerationRequestWhenDemoBypassIsEnabled()
   {
-    await using var app = GifsterBackendApp.Create(
+    await using var app = GifForgeBackendApp.Create(
       args: [
-        "--GIFSTER_APP_ATTEST_REQUIRED=true",
-        "--GIFSTER_APP_ATTEST_DEMO_BYPASS=true"
+        "--GIFFORGE_APP_ATTEST_REQUIRED=true",
+        "--GIFFORGE_APP_ATTEST_DEMO_BYPASS=true"
       ],
       provider: new FakeFrameSequenceProvider(),
       jobStore: new MemoryJobStore(),
@@ -82,8 +82,8 @@ public sealed class AppAttestRouteTests
   [Fact]
   public async Task ProductionAppAttestRejectsDemoAttestationWhenDemoBypassIsDisabled()
   {
-    await using var app = GifsterBackendApp.Create(
-      args: ["--GIFSTER_APP_ATTEST_REQUIRED=true"],
+    await using var app = GifForgeBackendApp.Create(
+      args: ["--GIFFORGE_APP_ATTEST_REQUIRED=true"],
       provider: new FakeFrameSequenceProvider(),
       jobStore: new MemoryJobStore(),
       jobDispatcher: new NoopGenerationJobDispatcher()
@@ -118,8 +118,8 @@ public sealed class AppAttestRouteTests
   public async Task ProductionAppAttestSessionAllowsGenerationRequestWhenVerifierAccepts()
   {
     var verifier = new AcceptingAppAttestVerifier();
-    await using var app = GifsterBackendApp.Create(
-      args: ["--GIFSTER_APP_ATTEST_REQUIRED=true"],
+    await using var app = GifForgeBackendApp.Create(
+      args: ["--GIFFORGE_APP_ATTEST_REQUIRED=true"],
       provider: new FakeFrameSequenceProvider(),
       jobStore: new MemoryJobStore(),
       jobDispatcher: new NoopGenerationJobDispatcher(),

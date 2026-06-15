@@ -1,11 +1,11 @@
 using System.Net;
 using System.Text;
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Models;
-using Gifster.Backend.Providers;
-using Gifster.Backend.Storage;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Models;
+using GifForge.Backend.Providers;
+using GifForge.Backend.Storage;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class ExternalHttpGenerationProviderTests
 {

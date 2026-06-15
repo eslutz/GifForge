@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-base_url="${GIFSTER_BACKEND_URL:-http://127.0.0.1:8787}"
+base_url="${GIFFORGE_BACKEND_URL:-http://127.0.0.1:8787}"
 base_url="${base_url%/}"
-timeout_seconds="${GIFSTER_SMOKE_TIMEOUT_SECONDS:-60}"
-use_demo_app_attest="${GIFSTER_SMOKE_USE_DEMO_APP_ATTEST:-false}"
-session_token="${GIFSTER_APP_ATTEST_SESSION_TOKEN:-}"
+timeout_seconds="${GIFFORGE_SMOKE_TIMEOUT_SECONDS:-60}"
+use_demo_app_attest="${GIFFORGE_SMOKE_USE_DEMO_APP_ATTEST:-false}"
+session_token="${GIFFORGE_APP_ATTEST_SESSION_TOKEN:-}"
 
 json_string_value() {
   local key="$1"
@@ -56,7 +56,7 @@ expect_status() {
   printf '%s' "$body"
 }
 
-printf 'Smoke testing Gifster backend at %s\n' "$base_url"
+printf 'Smoke testing GifForge backend at %s\n' "$base_url"
 
 health_response="$(curl_request GET /health)"
 health_body="$(expect_status "$health_response" 200 "health")"
@@ -158,4 +158,4 @@ if [[ "$result_body" != *'"format":"frame-sequence-v1"'* ]]; then
   exit 1
 fi
 
-printf 'Gifster backend smoke test passed for job %s\n' "$job_id"
+printf 'GifForge backend smoke test passed for job %s\n' "$job_id"

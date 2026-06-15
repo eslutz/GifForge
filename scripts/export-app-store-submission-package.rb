@@ -151,7 +151,7 @@ blockers = []
 blockers.concat(containing_manifest[:missing].map { |name| "Missing containing-app screenshot #{name}." })
 blockers.concat(messages_manifest[:missing])
 blockers << "App Review phone number must be entered directly in App Store Connect." if metadata.include?("enter directly in App Store Connect")
-blockers << "Replace GitHub fallback URLs with product-site URLs if a dedicated public site is available." if metadata.include?("github.com/eslutz/Gifster")
+blockers << "Replace GitHub fallback URLs with product-site URLs if a dedicated public site is available." if metadata.include?("github.com/eslutz/GifForge")
 
 package = {
   exportedAt: Time.now.utc.iso8601,
@@ -179,7 +179,7 @@ File.write(File.join(options[:output], "privacy-policy.md"), privacy_policy)
 File.write(
   File.join(options[:output], "README.md"),
   <<~MARKDOWN
-    # Gifster App Store Submission Package
+    # GifForge App Store Submission Package
 
     Generated at #{package[:exportedAt]} from commit `#{package[:sourceCommit]}`.
 

@@ -7,13 +7,13 @@ require "optparse"
 require "securerandom"
 require "uri"
 
-FRAME_SEQUENCE_CONTENT_TYPE = "application/vnd.gifster.frame-sequence+json"
+FRAME_SEQUENCE_CONTENT_TYPE = "application/vnd.gifforge.frame-sequence+json"
 MP4_CONTENT_TYPE = "video/mp4"
 
 options = {
   mode: "text_to_gif",
   print_payload: false,
-  timeout_seconds: Integer(ENV.fetch("GIFSTER_PROVIDER_PRECHECK_TIMEOUT_SECONDS", "120"))
+  timeout_seconds: Integer(ENV.fetch("GIFFORGE_PROVIDER_PRECHECK_TIMEOUT_SECONDS", "120"))
 }
 
 OptionParser.new do |parser|
@@ -27,7 +27,7 @@ OptionParser.new do |parser|
     options[:print_payload] = true
   end
 
-  parser.on("--timeout SECONDS", Integer, "HTTP timeout in seconds. Default: GIFSTER_PROVIDER_PRECHECK_TIMEOUT_SECONDS or 120.") do |seconds|
+  parser.on("--timeout SECONDS", Integer, "HTTP timeout in seconds. Default: GIFFORGE_PROVIDER_PRECHECK_TIMEOUT_SECONDS or 120.") do |seconds|
     options[:timeout_seconds] = seconds
   end
 
@@ -56,10 +56,10 @@ def optional_env(name)
 end
 
 def source_image_payload
-  data_base64 = require_env("GIFSTER_PROVIDER_PRECHECK_IMAGE_BASE64")
-  width = Integer(require_env("GIFSTER_PROVIDER_PRECHECK_IMAGE_WIDTH"))
-  height = Integer(require_env("GIFSTER_PROVIDER_PRECHECK_IMAGE_HEIGHT"))
-  mime_type = ENV.fetch("GIFSTER_PROVIDER_PRECHECK_IMAGE_MIME_TYPE", "image/jpeg")
+  data_base64 = require_env("GIFFORGE_PROVIDER_PRECHECK_IMAGE_BASE64")
+  width = Integer(require_env("GIFFORGE_PROVIDER_PRECHECK_IMAGE_WIDTH"))
+  height = Integer(require_env("GIFFORGE_PROVIDER_PRECHECK_IMAGE_HEIGHT"))
+  mime_type = ENV.fetch("GIFFORGE_PROVIDER_PRECHECK_IMAGE_MIME_TYPE", "image/jpeg")
 
   {
     dataBase64: data_base64,
@@ -193,9 +193,9 @@ if options[:print_payload]
   exit
 end
 
-submit_url = URI(require_env("GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL"))
-result_template = require_env("GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE")
-authorization = optional_env("GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION")
+submit_url = URI(require_env("GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL"))
+result_template = require_env("GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE")
+authorization = optional_env("GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION")
 
 puts "Validating external provider contract at #{submit_url}"
 submit_response = request(

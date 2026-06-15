@@ -1,11 +1,11 @@
-# Gifster Implementation Plan
+# GifForge Implementation Plan
 
 ## Phase 1: Scaffold and Demo Loop
 
 Status: implemented in this scaffold.
 
 - Generate the Xcode project from `Client/project.yml`.
-- Keep shared logic in `Client/Packages/GifsterCore`.
+- Keep shared logic in `Client/Packages/GifForgeCore`.
 - Build the containing app with onboarding, privacy, history, and backend settings.
 - Build the Messages extension with compact and expanded SwiftUI surfaces.
 - Use PhotosPicker for user-selected images only.
@@ -27,7 +27,7 @@ Status: implemented in this scaffold.
 
 - Deploy the ASP.NET Core Minimal API with Native AOT to Azure Container Apps.
 - Validate generation requests before provider submission, including supported modes, prompt/caption lengths, caption modes, output option ranges, processed JPEG source-image shape, base64 validity, source-image byte size, and source-image dimensions.
-- Require App Attest for deployed environments. The backend fails closed by default, supports an explicit `GIFSTER_APP_ATTEST_DEMO_BYPASS=true` path for local/nonprod smoke testing only, and verifies real App Attest attestation objects when the app identifier and Apple App Attest root certificate are configured.
+- Require App Attest for deployed environments. The backend fails closed by default, supports an explicit `GIFFORGE_APP_ATTEST_DEMO_BYPASS=true` path for local/nonprod smoke testing only, and verifies real App Attest attestation objects when the app identifier and Apple App Attest root certificate are configured.
 - Use Azure Table Storage for durable job state and App Attest challenge/session state.
 - Use Azure Queue Storage for long-running provider orchestration, including retrying transient provider/result-store failures through queue visibility semantics.
 - Store provider outputs and temporary download assets in Azure Blob Storage.
@@ -43,7 +43,7 @@ Status: implemented in this scaffold.
 ## Phase 4: Real Provider Adapter
 
 - Keep the fake provider as the default nonprod/demo adapter until the first paid media provider is selected.
-- Use `GIFSTER_PROVIDER_ADAPTER=external-http` for the first provider-compatible gateway or vendor-specific wrapper after provider selection.
+- Use `GIFFORGE_PROVIDER_ADAPTER=external-http` for the first provider-compatible gateway or vendor-specific wrapper after provider selection.
 - Convert `StructuredGenerationRequest` into provider-specific parameters.
 - Keep provider credentials server-side only.
 - Request MP4 or frame sequence output, not final captioned GIF output.
@@ -62,11 +62,11 @@ Status: implemented in this scaffold.
 - Maintain the App Store readiness checklist in `Documentation/APP_STORE_READINESS.md`.
 - Finalize privacy policy and in-app disclosure.
 - Preserve successful CI, nonprod deployment, and smoke-test evidence in `Documentation/APP_STORE_READINESS.md` as each gate is completed.
-- Preserve production deployment and health-check evidence once `rg-gifster-prod` and the `prod` GitHub environment are configured.
+- Preserve production deployment and health-check evidence once `rg-gifforge-prod` and the `prod` GitHub environment are configured.
 - Configure production App Attest app identifier/root certificate values and validate the flow on a physical device.
 - Add production signing, app groups, and Messages extension metadata.
 - User-facing error copy is implemented and covered for provider downtime, unavailable local models, network failures, moderation rejections, and App Attest unavailable states.
 - Keep backend tests on xUnit and shared Swift package tests on Swift Testing.
-- Keep UI tests for the containing app in `Client/Tests/GifsterUITests`.
+- Keep UI tests for the containing app in `Client/Tests/GifForgeUITests`.
 - Manually test Messages compact and expanded modes on physical devices.
 - Prepare App Review notes documenting attachment insertion, no auto-send behavior, and backend-mediated provider calls.

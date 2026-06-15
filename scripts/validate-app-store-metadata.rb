@@ -26,8 +26,8 @@ REQUIRED_METADATA_SNIPPETS = [
 ].freeze
 
 REQUIRED_REVIEW_NOTE_SNIPPETS = [
-  "Gifster is an iMessage app extension",
-  "Gifster does not auto-send messages",
+  "GifForge is an iMessage app extension",
+  "GifForge does not auto-send messages",
   "Sticker mode is not implemented in v1",
   "The iOS app does not call external AI media providers directly",
   "Visible caption text is rendered locally",
@@ -36,13 +36,13 @@ REQUIRED_REVIEW_NOTE_SNIPPETS = [
 ].freeze
 
 REQUIRED_PRIVACY_SNIPPETS = [
-  "Gifster uses only images selected by the user",
+  "GifForge uses only images selected by the user",
   "Before upload, selected images are downscaled and rewritten as JPEG data",
   "External AI media providers are used only through the backend",
   "Captions are rendered locally into the final GIF",
   "Deployed defaults expire remaining job records after 24 hours",
   "Temporary provider result and source-image blobs are deleted by Azure Storage lifecycle policy after 2 days",
-  "Gifster does not use data for tracking"
+  "GifForge does not use data for tracking"
 ].freeze
 
 def section_body(markdown, heading)

@@ -1,6 +1,6 @@
-using Gifster.Backend.Jobs;
+using GifForge.Backend.Jobs;
 
-namespace Gifster.Backend.Queueing;
+namespace GifForge.Backend.Queueing;
 
 public interface IGenerationJobDispatcher
 {

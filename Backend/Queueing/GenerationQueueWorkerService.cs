@@ -1,8 +1,8 @@
-using Gifster.Backend.Jobs;
+using GifForge.Backend.Jobs;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Gifster.Backend.Queueing;
+namespace GifForge.Backend.Queueing;
 
 public sealed class GenerationQueueWorkerService : BackgroundService
 {

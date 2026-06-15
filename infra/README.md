@@ -1,4 +1,4 @@
-# Gifster Azure Infrastructure
+# GifForge Azure Infrastructure
 
 This folder contains the Azure Bicep deployment for the production backend target:
 
@@ -11,10 +11,10 @@ This folder contains the Azure Bicep deployment for the production backend targe
 
 ## Environments
 
-Gifster uses two Azure environments:
+GifForge uses two Azure environments:
 
-- `nonprod` in `rg-gifster-nonprod`
-- `prod` in `rg-gifster-prod`
+- `nonprod` in `rg-gifforge-nonprod`
+- `prod` in `rg-gifforge-prod`
 
 ## Bootstrap an Environment Resource Group
 
@@ -25,23 +25,23 @@ az deployment sub create \
   --parameters @infra/main.subscription.parameters.example.json
 ```
 
-The subscription-scoped template creates `rg-gifster-nonprod` and then deploys the backend resources into that group.
+The subscription-scoped template creates `rg-gifforge-nonprod` and then deploys the backend resources into that group.
 
-Use this path only when bootstrapping or recreating an environment resource group. The normal GitHub nonprod deployment targets the existing resource group with `infra/main.bicep`, which keeps the GitHub Actions identity scoped to `rg-gifster-nonprod` instead of the whole subscription.
+Use this path only when bootstrapping or recreating an environment resource group. The normal GitHub nonprod deployment targets the existing resource group with `infra/main.bicep`, which keeps the GitHub Actions identity scoped to `rg-gifforge-nonprod` instead of the whole subscription.
 
 ## Deploy Nonprod From a Workstation
 
 ```bash
 az deployment group create \
-  --resource-group rg-gifster-nonprod \
+  --resource-group rg-gifforge-nonprod \
   --template-file infra/main.bicep \
   --parameters @infra/main.parameters.example.json
 ```
 
 Set `containerImage` to a pushed backend image before deployment. Pushes to `main` publish:
 
-- `ghcr.io/eslutz/gifster-backend:latest`
-- `ghcr.io/eslutz/gifster-backend:<commit-sha>`
+- `ghcr.io/eslutz/gifforge-backend:latest`
+- `ghcr.io/eslutz/gifforge-backend:<commit-sha>`
 
 Prefer the commit SHA tag for repeatable environment deployments. The template expects the image to expose HTTP on port `8080`.
 
@@ -99,7 +99,7 @@ Required GitHub environment secrets:
 Federated credential values:
 
 - issuer: `https://token.actions.githubusercontent.com`
-- subject: `repo:eslutz/Gifster:environment:<environment>`
+- subject: `repo:eslutz/GifForge:environment:<environment>`
 - audience: `api://AzureADTokenExchange`
 
 GitHub Actions service principal roles at the selected environment resource-group scope:
@@ -109,13 +109,13 @@ GitHub Actions service principal roles at the selected environment resource-grou
 
 ## GitHub Nonprod Deployment
 
-The `Deploy Nonprod` workflow is manually dispatched from GitHub Actions. It uses Azure OIDC login, deploys `infra/main.bicep` into the existing `rg-gifster-nonprod` resource group, captures the API Container Apps FQDN, and runs `scripts/smoke-backend.sh`.
+The `Deploy Nonprod` workflow is manually dispatched from GitHub Actions. It uses Azure OIDC login, deploys `infra/main.bicep` into the existing `rg-gifforge-nonprod` resource group, captures the API Container Apps FQDN, and runs `scripts/smoke-backend.sh`.
 
 Optional secrets for real App Attest smoke testing:
 
-- `GIFSTER_APP_ATTEST_APP_IDENTIFIER`
-- `GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM`
-- `GIFSTER_APP_ATTEST_SESSION_TOKEN`
+- `GIFFORGE_APP_ATTEST_APP_IDENTIFIER`
+- `GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM`
+- `GIFFORGE_APP_ATTEST_SESSION_TOKEN`
 
 Dispatch inputs:
 
@@ -137,7 +137,7 @@ The collector writes JSON under `Documentation/DeploymentEvidence/` by default. 
 
 ## GitHub Prod Deployment
 
-The `Deploy Prod` workflow is manually dispatched from GitHub Actions. It uses the `prod` GitHub environment, deploys `infra/main.bicep` into `rg-gifster-prod`, and health-checks `/health`. It intentionally does not run a fake generation smoke test, because production generation requires a real App Attest session and a selected external provider.
+The `Deploy Prod` workflow is manually dispatched from GitHub Actions. It uses the `prod` GitHub environment, deploys `infra/main.bicep` into `rg-gifforge-prod`, and health-checks `/health`. It intentionally does not run a fake generation smoke test, because production generation requires a real App Attest session and a selected external provider.
 
 Before dispatching production, configure OIDC with:
 
@@ -153,15 +153,15 @@ Required `prod` GitHub environment secrets:
 - `AZURE_CLIENT_ID`
 - `AZURE_TENANT_ID`
 - `AZURE_SUBSCRIPTION_ID`
-- `GIFSTER_APP_ATTEST_APP_IDENTIFIER`
-- `GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM`
-- `GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL`
-- `GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`
+- `GIFFORGE_APP_ATTEST_APP_IDENTIFIER`
+- `GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM`
+- `GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL`
+- `GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`
 
 Optional `prod` GitHub environment secrets and variables:
 
-- `GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION`: server-side Authorization header for the external provider gateway.
-- `GIFSTER_EXTERNAL_PROVIDER_NAME`: optional GitHub environment variable for health/status display.
+- `GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION`: server-side Authorization header for the external provider gateway.
+- `GIFFORGE_EXTERNAL_PROVIDER_NAME`: optional GitHub environment variable for health/status display.
 
 Production dispatch rejects `latest` and requires an immutable 40-character commit SHA image tag. It deploys with `providerAdapter=external-http`, `appAttestDemoBypassEnabled=false`, and the selected `minReplicas`, `workerMinReplicas`, and `maxReplicas` values.
 
@@ -169,15 +169,15 @@ Before creating production resources, run a subscription-scope what-if with plac
 
 ```bash
 az deployment sub what-if \
-  --name gifster-prod-bootstrap-whatif \
+  --name gifforge-prod-bootstrap-whatif \
   --location eastus \
   --template-file infra/main.subscription.bicep \
   --result-format ResourceIdOnly \
   --parameters \
     environmentName=prod \
-    resourceGroupName=rg-gifster-prod \
+    resourceGroupName=rg-gifforge-prod \
     location=eastus \
-    containerImage=ghcr.io/eslutz/gifster-backend:<commit-sha> \
+    containerImage=ghcr.io/eslutz/gifforge-backend:<commit-sha> \
     appAttestAppIdentifier=TEAMID.dev.ericslutz.gifforge \
     appAttestRootCertificatePem=placeholder \
     appAttestDemoBypassEnabled=false \
@@ -191,7 +191,7 @@ az deployment sub what-if \
     maxReplicas=10
 ```
 
-The production what-if should show creation of `rg-gifster-prod`, the API and worker Container Apps, managed environment, Key Vault, managed identity, Log Analytics workspace, Storage account, queues, tables, blob containers, lifecycle policy, and role assignments. Do not run the real production deployment until the `prod` GitHub environment has OIDC secrets, production App Attest values, external-provider configuration, and an immutable GHCR image tag.
+The production what-if should show creation of `rg-gifforge-prod`, the API and worker Container Apps, managed environment, Key Vault, managed identity, Log Analytics workspace, Storage account, queues, tables, blob containers, lifecycle policy, and role assignments. Do not run the real production deployment until the `prod` GitHub environment has OIDC secrets, production App Attest values, external-provider configuration, and an immutable GHCR image tag.
 
 After production deployment, run:
 
@@ -208,14 +208,14 @@ Preserve the generated JSON with the App Store release evidence. The collector r
 After deployment, run the backend smoke test against the Container Apps URL:
 
 ```bash
-GIFSTER_BACKEND_URL=https://<api-app-url> scripts/smoke-backend.sh
+GIFFORGE_BACKEND_URL=https://<api-app-url> scripts/smoke-backend.sh
 ```
 
 The smoke test checks `/health`, submits a fake-provider generation job, polls status, and downloads the generated frame-sequence result. If App Attest enforcement is enabled without physical-device App Attest material available to the smoke script, use the explicit demo bypass only in controlled nonprod testing:
 
 ```bash
-GIFSTER_BACKEND_URL=https://<api-app-url> \
-GIFSTER_SMOKE_USE_DEMO_APP_ATTEST=true \
+GIFFORGE_BACKEND_URL=https://<api-app-url> \
+GIFFORGE_SMOKE_USE_DEMO_APP_ATTEST=true \
 scripts/smoke-backend.sh
 ```
 
@@ -227,32 +227,32 @@ The API and worker Container Apps receive these environment variables:
 
 - `ASPNETCORE_HTTP_PORTS`
 - `AZURE_CLIENT_ID`
-- `GIFSTER_APP_ATTEST_REQUIRED`
-- `GIFSTER_APP_ATTEST_APP_IDENTIFIER`
-- `GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM`
-- `GIFSTER_PUBLIC_BASE_URL`
-- `GIFSTER_STORAGE_ACCOUNT_NAME`
-- `GIFSTER_GENERATION_QUEUE_NAME`
-- `GIFSTER_PROVIDER_CALLBACK_QUEUE_NAME`
-- `GIFSTER_DELETION_QUEUE_NAME`
-- `GIFSTER_RESULTS_CONTAINER_NAME`
-- `GIFSTER_SOURCE_IMAGES_CONTAINER_NAME`
-- `GIFSTER_JOBS_TABLE_NAME`
-- `GIFSTER_APP_ATTEST_STATE_TABLE_NAME`
-- `GIFSTER_KEY_VAULT_URI`
-- `GIFSTER_PROVIDER_ADAPTER`
-- `GIFSTER_EXTERNAL_PROVIDER_NAME`
-- `GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL`
-- `GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`
-- `GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION`
-- `GIFSTER_GENERATION_JOB_RETENTION_HOURS`
-- `GIFSTER_RETENTION_CLEANUP_ENABLED`
-- `GIFSTER_RETENTION_CLEANUP_INTERVAL_MINUTES`
-- `GIFSTER_RETENTION_CLEANUP_BATCH_SIZE`
+- `GIFFORGE_APP_ATTEST_REQUIRED`
+- `GIFFORGE_APP_ATTEST_APP_IDENTIFIER`
+- `GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM`
+- `GIFFORGE_PUBLIC_BASE_URL`
+- `GIFFORGE_STORAGE_ACCOUNT_NAME`
+- `GIFFORGE_GENERATION_QUEUE_NAME`
+- `GIFFORGE_PROVIDER_CALLBACK_QUEUE_NAME`
+- `GIFFORGE_DELETION_QUEUE_NAME`
+- `GIFFORGE_RESULTS_CONTAINER_NAME`
+- `GIFFORGE_SOURCE_IMAGES_CONTAINER_NAME`
+- `GIFFORGE_JOBS_TABLE_NAME`
+- `GIFFORGE_APP_ATTEST_STATE_TABLE_NAME`
+- `GIFFORGE_KEY_VAULT_URI`
+- `GIFFORGE_PROVIDER_ADAPTER`
+- `GIFFORGE_EXTERNAL_PROVIDER_NAME`
+- `GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL`
+- `GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`
+- `GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION`
+- `GIFFORGE_GENERATION_JOB_RETENTION_HOURS`
+- `GIFFORGE_RETENTION_CLEANUP_ENABLED`
+- `GIFFORGE_RETENTION_CLEANUP_INTERVAL_MINUTES`
+- `GIFFORGE_RETENTION_CLEANUP_BATCH_SIZE`
 
-The worker also sets `GIFSTER_WORKER_ENABLED=true` and processes jobs from the `generation-jobs` queue. Worker baseline availability is controlled by the `workerMinReplicas` deployment parameter; queue depth controls scale-out from zero through the Azure Queue scale rule.
+The worker also sets `GIFFORGE_WORKER_ENABLED=true` and processes jobs from the `generation-jobs` queue. Worker baseline availability is controlled by the `workerMinReplicas` deployment parameter; queue depth controls scale-out from zero through the Azure Queue scale rule.
 
-The templates intentionally do not set `GIFSTER_APP_ATTEST_DEMO_BYPASS`. That bypass exists only for local and controlled nonprod smoke testing and must not be enabled in production. Set `appAttestAppIdentifier` and `appAttestRootCertificatePem` before testing real App Attest enforcement.
+The templates intentionally do not set `GIFFORGE_APP_ATTEST_DEMO_BYPASS`. That bypass exists only for local and controlled nonprod smoke testing and must not be enabled in production. Set `appAttestAppIdentifier` and `appAttestRootCertificatePem` before testing real App Attest enforcement.
 
 Set `providerAdapter=external-http` only after a provider gateway or vendor-specific wrapper implements the documented external HTTP provider contract. Keep `providerAdapter=fake` for local/demo deployments.
 

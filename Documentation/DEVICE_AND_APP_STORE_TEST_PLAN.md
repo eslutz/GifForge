@@ -1,6 +1,6 @@
 # Device and App Store Test Plan
 
-Use this plan to collect the remaining evidence needed before treating Gifster as App Store-ready. Record the tested build number, device, iOS version, backend URL, and tester initials for each pass.
+Use this plan to collect the remaining evidence needed before treating GifForge as App Store-ready. Record the tested build number, device, iOS version, backend URL, and tester initials for each pass.
 
 ## Test Matrix
 
@@ -27,8 +27,8 @@ Use this plan to collect the remaining evidence needed before treating Gifster a
 
 ## Containing App
 
-- [ ] App launches to the Gifster tab.
-- [ ] Privacy copy says prompts and selected images may be sent through the Gifster backend.
+- [ ] App launches to the GifForge tab.
+- [ ] Privacy copy says prompts and selected images may be sent through the GifForge backend.
 - [ ] Privacy copy says local Apple models are used where available.
 - [ ] History tab loads generated GIF history.
 - [ ] Clear action asks for confirmation before deleting local history.
@@ -44,7 +44,7 @@ Evidence:
 
 ## Messages Extension: Compact Mode
 
-- [ ] Open Messages and select Gifster from the app drawer.
+- [ ] Open Messages and select GifForge from the app drawer.
 - [ ] Compact mode shows prompt entry.
 - [ ] Compact mode exposes add-image control.
 - [ ] Compact mode exposes caption mode selection: no caption, user text, AI suggestion.
@@ -89,7 +89,7 @@ Evidence:
 
 - [ ] Start a generation job.
 - [ ] Close the Messages extension while the job is active.
-- [ ] Reopen Gifster from Messages.
+- [ ] Reopen GifForge from Messages.
 - [ ] The extension resumes polling the existing job instead of creating a duplicate job.
 - [ ] Completed result renders and can be inserted.
 - [ ] Failed active jobs show a user-facing error and can be cleared.
@@ -104,7 +104,7 @@ Evidence:
 
 ## App Attest Physical Device
 
-- [ ] Backend is deployed with `GIFSTER_APP_ATTEST_REQUIRED=true`.
+- [ ] Backend is deployed with `GIFFORGE_APP_ATTEST_REQUIRED=true`.
 - [ ] Backend has the production app identifier configured in `TeamID.BundleID` form.
 - [ ] Backend has the Apple App Attest root certificate configured.
 - [ ] Debug/device build uses the expected App Attest environment.
@@ -187,7 +187,7 @@ Run the deterministic containing-app screenshot pass before assembling App Store
 scripts/capture-app-store-screenshots.sh
 ```
 
-The script writes PNG files to `Documentation/AppStoreScreenshots/containing-app` by default and preserves an XCTest result bundle under `/private/tmp/gifster-app-store-screenshots.xcresult`. Override the simulator with `GIFSTER_SCREENSHOT_DESTINATION` or pass a custom output directory as the first argument.
+The script writes PNG files to `Documentation/AppStoreScreenshots/containing-app` by default and preserves an XCTest result bundle under `/private/tmp/gifforge-app-store-screenshots.xcresult`. Override the simulator with `GIFFORGE_SCREENSHOT_DESTINATION` or pass a custom output directory as the first argument.
 
 This script covers the containing app overview, seeded history, clear-history confirmation, and settings screens. Capture Messages extension screenshots separately from the physical Messages flow above because the App Store screenshot set must show the real compact/expanded iMessage extension experience.
 
@@ -203,4 +203,4 @@ The package is written under ignored `Documentation/AppStoreSubmission/` by defa
 
 ## Pass Criteria
 
-Gifster is ready for App Store submission only after every checklist item above is complete, evidence is attached or linked, and `Documentation/APP_STORE_READINESS.md` no longer lists unresolved release blockers.
+GifForge is ready for App Store submission only after every checklist item above is complete, evidence is attached or linked, and `Documentation/APP_STORE_READINESS.md` no longer lists unresolved release blockers.

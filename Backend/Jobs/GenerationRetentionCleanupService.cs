@@ -1,8 +1,8 @@
-using Gifster.Backend.Configuration;
+using GifForge.Backend.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Gifster.Backend.Jobs;
+namespace GifForge.Backend.Jobs;
 
 public sealed class GenerationRetentionCleanupService : BackgroundService
 {

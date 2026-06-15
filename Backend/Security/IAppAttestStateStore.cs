@@ -1,4 +1,4 @@
-namespace Gifster.Backend.Security;
+namespace GifForge.Backend.Security;
 
 public interface IAppAttestStateStore
 {

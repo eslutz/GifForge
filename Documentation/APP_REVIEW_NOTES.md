@@ -4,9 +4,9 @@ Use this draft in App Store Connect review notes. Update environment details bef
 
 ## Primary Flow
 
-Gifster is an iMessage app extension. The primary experience is inside Messages:
+GifForge is an iMessage app extension. The primary experience is inside Messages:
 
-1. Open Messages and select Gifster from the app drawer.
+1. Open Messages and select GifForge from the app drawer.
 2. Enter a prompt describing the GIF.
 3. Optionally select a user-chosen image.
 4. Choose a caption mode: no caption, user text, or local AI-suggested text.
@@ -14,11 +14,11 @@ Gifster is an iMessage app extension. The primary experience is inside Messages:
 6. Tap Insert to place the GIF into the Messages compose field.
 7. Send manually from Messages.
 
-Gifster does not auto-send messages.
+GifForge does not auto-send messages.
 
 ## Attachment Insertion Only
 
-Gifster uses Messages attachment insertion for v1. It inserts the generated GIF into the Messages compose field as an attachment.
+GifForge uses Messages attachment insertion for v1. It inserts the generated GIF into the Messages compose field as an attachment.
 
 Sticker mode is not implemented in v1. Sticker APIs are not used in v1.
 
@@ -63,5 +63,5 @@ Image Playground is not part of the v1 workflow. The repository includes a separ
 
 ## Support and Privacy URLs
 
-- Support URL: https://github.com/eslutz/Gifster/issues
-- Privacy Policy URL: https://github.com/eslutz/Gifster/blob/main/Documentation/PRIVACY_POLICY.md
+- Support URL: https://github.com/eslutz/GifForge/issues
+- Privacy Policy URL: https://github.com/eslutz/GifForge/blob/main/Documentation/PRIVACY_POLICY.md

@@ -2,11 +2,11 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Models;
-using Gifster.Backend.Storage;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Models;
+using GifForge.Backend.Storage;
 
-namespace Gifster.Backend.Providers;
+namespace GifForge.Backend.Providers;
 
 public sealed class ExternalHttpGenerationProvider : IGenerationProvider
 {

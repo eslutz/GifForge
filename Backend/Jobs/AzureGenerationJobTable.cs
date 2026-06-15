@@ -1,7 +1,7 @@
 using Azure;
 using Azure.Data.Tables;
 
-namespace Gifster.Backend.Jobs;
+namespace GifForge.Backend.Jobs;
 
 public sealed class AzureGenerationJobTable : IGenerationJobTable
 {

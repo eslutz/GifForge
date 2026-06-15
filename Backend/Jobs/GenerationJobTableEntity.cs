@@ -2,7 +2,7 @@ using System.Text.Json;
 using Azure;
 using Azure.Data.Tables;
 
-namespace Gifster.Backend.Jobs;
+namespace GifForge.Backend.Jobs;
 
 public sealed class GenerationJobTableEntity : ITableEntity
 {
@@ -33,7 +33,7 @@ public sealed class GenerationJobTableEntity : ITableEntity
     {
       PartitionKey = JobPartitionKey,
       RowKey = job.Id,
-      RequestJson = JsonSerializer.Serialize(job.Request, GifsterJsonSerializerContext.Default.GenerationRequest),
+      RequestJson = JsonSerializer.Serialize(job.Request, GifForgeJsonSerializerContext.Default.GenerationRequest),
       Provider = job.Provider,
       ProviderJobId = job.ProviderJobId,
       Status = job.Status.JsonValue(),
@@ -97,7 +97,7 @@ public sealed class GenerationJobTableEntity : ITableEntity
 
   public GenerationJob ToJob()
   {
-    var request = JsonSerializer.Deserialize(RequestJson, GifsterJsonSerializerContext.Default.GenerationRequest)
+    var request = JsonSerializer.Deserialize(RequestJson, GifForgeJsonSerializerContext.Default.GenerationRequest)
       ?? throw new InvalidOperationException("Generation job row did not contain a valid generation request.");
 
     return new GenerationJob(

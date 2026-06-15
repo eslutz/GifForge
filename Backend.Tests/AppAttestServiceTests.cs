@@ -1,8 +1,8 @@
 using System.Net.Http.Headers;
-using Gifster.Backend.Security;
+using GifForge.Backend.Security;
 using Microsoft.AspNetCore.Http;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class AppAttestServiceTests
 {

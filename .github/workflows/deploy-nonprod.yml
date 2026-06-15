@@ -21,8 +21,8 @@ permissions:
   id-token: write
 
 env:
-  BACKEND_IMAGE: ghcr.io/eslutz/gifster-backend
-  RESOURCE_GROUP_NAME: rg-gifster-nonprod
+  BACKEND_IMAGE: ghcr.io/eslutz/gifforge-backend
+  RESOURCE_GROUP_NAME: rg-gifforge-nonprod
 
 jobs:
   deploy:
@@ -61,11 +61,11 @@ jobs:
           set -euo pipefail
 
           image="${BACKEND_IMAGE}:${IMAGE_TAG}"
-          app_attest_app_identifier="${GIFSTER_APP_ATTEST_APP_IDENTIFIER:-}"
-          app_attest_root_certificate_pem="${GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM:-}"
+          app_attest_app_identifier="${GIFFORGE_APP_ATTEST_APP_IDENTIFIER:-}"
+          app_attest_root_certificate_pem="${GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM:-}"
 
           az deployment group create \
-            --name "gifster-nonprod-${GITHUB_RUN_ID}" \
+            --name "gifforge-nonprod-${GITHUB_RUN_ID}" \
             --resource-group "${RESOURCE_GROUP_NAME}" \
             --template-file infra/main.bicep \
             --parameters \
@@ -79,26 +79,26 @@ jobs:
               minReplicas=0 \
               workerMinReplicas=0 \
             --query properties.outputs \
-            --output json > /tmp/gifster-deployment-outputs.json
+            --output json > /tmp/gifforge-deployment-outputs.json
 
-          fqdn="$(jq -r '.containerAppFqdn.value' /tmp/gifster-deployment-outputs.json)"
+          fqdn="$(jq -r '.containerAppFqdn.value' /tmp/gifforge-deployment-outputs.json)"
           if [ -z "$fqdn" ] || [ "$fqdn" = "null" ]; then
             echo "Deployment did not return containerAppFqdn." >&2
-            cat /tmp/gifster-deployment-outputs.json >&2
+            cat /tmp/gifforge-deployment-outputs.json >&2
             exit 1
           fi
 
           echo "backend_url=https://${fqdn}" >> "$GITHUB_OUTPUT"
-          echo "Deployed Gifster API to https://${fqdn}"
+          echo "Deployed GifForge API to https://${fqdn}"
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
-          GIFSTER_APP_ATTEST_APP_IDENTIFIER: ${{ secrets.GIFSTER_APP_ATTEST_APP_IDENTIFIER }}
-          GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM }}
+          GIFFORGE_APP_ATTEST_APP_IDENTIFIER: ${{ secrets.GIFFORGE_APP_ATTEST_APP_IDENTIFIER }}
+          GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM }}
 
       - name: Smoke test backend
         run: scripts/smoke-backend.sh
         env:
-          GIFSTER_BACKEND_URL: ${{ steps.deploy.outputs.backend_url }}
-          GIFSTER_SMOKE_USE_DEMO_APP_ATTEST: ${{ inputs.enable_demo_app_attest_bypass }}
-          GIFSTER_APP_ATTEST_SESSION_TOKEN: ${{ secrets.GIFSTER_APP_ATTEST_SESSION_TOKEN }}
-          GIFSTER_SMOKE_TIMEOUT_SECONDS: 180
+          GIFFORGE_BACKEND_URL: ${{ steps.deploy.outputs.backend_url }}
+          GIFFORGE_SMOKE_USE_DEMO_APP_ATTEST: ${{ inputs.enable_demo_app_attest_bypass }}
+          GIFFORGE_APP_ATTEST_SESSION_TOKEN: ${{ secrets.GIFFORGE_APP_ATTEST_SESSION_TOKEN }}
+          GIFFORGE_SMOKE_TIMEOUT_SECONDS: 180

@@ -4,7 +4,7 @@ Use this file as the source draft for App Store Connect. Replace the GitHub fall
 
 ## App Information
 
-- Name: Gifster
+- Name: GifForge
 - Subtitle: AI GIFs for Messages
 - Category: Social Networking
 - Secondary category: Photo & Video
@@ -16,11 +16,11 @@ Create custom animated GIFs inside Messages from a prompt, an optional image, an
 
 ## Description
 
-Gifster is an iMessage app for creating custom animated GIFs without searching a public GIF library.
+GifForge is an iMessage app for creating custom animated GIFs without searching a public GIF library.
 
-Open Gifster from the Messages app drawer, describe the GIF you want, optionally select an image, choose a caption mode, preview the finished GIF, and insert it into the Messages compose field as a normal attachment. Messages always requires you to send manually.
+Open GifForge from the Messages app drawer, describe the GIF you want, optionally select an image, choose a caption mode, preview the finished GIF, and insert it into the Messages compose field as a normal attachment. Messages always requires you to send manually.
 
-Gifster uses local Apple models where available for prompt cleanup, request planning, and caption suggestions. Media generation requests go through the developer-operated backend, which validates requests, applies safety checks, hides provider credentials, and works with configured AI media providers.
+GifForge uses local Apple models where available for prompt cleanup, request planning, and caption suggestions. Media generation requests go through the developer-operated backend, which validates requests, applies safety checks, hides provider credentials, and works with configured AI media providers.
 
 Captions are rendered locally into the final GIF, so caption edits do not require a new media-generation request.
 
@@ -34,15 +34,15 @@ Initial TestFlight build for prompt-based GIF generation in Messages.
 
 ## Support URL
 
-https://github.com/eslutz/Gifster/issues
+https://github.com/eslutz/GifForge/issues
 
 ## Marketing URL
 
-https://github.com/eslutz/Gifster
+https://github.com/eslutz/GifForge
 
 ## Privacy Policy URL
 
-https://github.com/eslutz/Gifster/blob/main/Documentation/PRIVACY_POLICY.md
+https://github.com/eslutz/GifForge/blob/main/Documentation/PRIVACY_POLICY.md
 
 ## App Review Contact
 
@@ -53,7 +53,7 @@ https://github.com/eslutz/Gifster/blob/main/Documentation/PRIVACY_POLICY.md
 
 ## Demo Account
 
-Not required for v1. Gifster does not use account login.
+Not required for v1. GifForge does not use account login.
 
 ## App Review Notes
 

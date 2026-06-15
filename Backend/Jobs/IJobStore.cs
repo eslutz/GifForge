@@ -1,7 +1,7 @@
-using Gifster.Backend.Models;
-using Gifster.Backend.Providers;
+using GifForge.Backend.Models;
+using GifForge.Backend.Providers;
 
-namespace Gifster.Backend.Jobs;
+namespace GifForge.Backend.Jobs;
 
 public interface IJobStore
 {

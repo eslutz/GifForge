@@ -1,6 +1,6 @@
-using Gifster.Backend.Jobs;
+using GifForge.Backend.Jobs;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 internal sealed class InMemoryGenerationJobTable : IGenerationJobTable
 {

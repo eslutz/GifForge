@@ -28,8 +28,8 @@ permissions:
   id-token: write
 
 env:
-  BACKEND_IMAGE: ghcr.io/eslutz/gifster-backend
-  RESOURCE_GROUP_NAME: rg-gifster-prod
+  BACKEND_IMAGE: ghcr.io/eslutz/gifforge-backend
+  RESOURCE_GROUP_NAME: rg-gifforge-prod
 
 jobs:
   deploy:
@@ -60,10 +60,10 @@ jobs:
             AZURE_CLIENT_ID
             AZURE_TENANT_ID
             AZURE_SUBSCRIPTION_ID
-            GIFSTER_APP_ATTEST_APP_IDENTIFIER
-            GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM
-            GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL
-            GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE
+            GIFFORGE_APP_ATTEST_APP_IDENTIFIER
+            GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM
+            GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL
+            GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE
           )
 
           for secret_name in "${required_secrets[@]}"; do
@@ -73,8 +73,8 @@ jobs:
             fi
           done
 
-          if [[ -z "${GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION}" ]]; then
-            echo "::warning::GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION is empty. Continue only if the provider gateway uses another server-side authentication mechanism."
+          if [[ -z "${GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION}" ]]; then
+            echo "::warning::GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION is empty. Continue only if the provider gateway uses another server-side authentication mechanism."
           fi
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
@@ -84,11 +84,11 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          GIFSTER_APP_ATTEST_APP_IDENTIFIER: ${{ secrets.GIFSTER_APP_ATTEST_APP_IDENTIFIER }}
-          GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM }}
-          GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL: ${{ secrets.GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL }}
-          GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE: ${{ secrets.GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE }}
-          GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION: ${{ secrets.GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION }}
+          GIFFORGE_APP_ATTEST_APP_IDENTIFIER: ${{ secrets.GIFFORGE_APP_ATTEST_APP_IDENTIFIER }}
+          GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM }}
+          GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL }}
+          GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE }}
+          GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION }}
 
       - name: Azure login
         uses: azure/login@v2
@@ -108,51 +108,51 @@ jobs:
           set -euo pipefail
 
           image="${BACKEND_IMAGE}:${IMAGE_TAG}"
-          external_provider_name="${GIFSTER_EXTERNAL_PROVIDER_NAME:-external-http}"
+          external_provider_name="${GIFFORGE_EXTERNAL_PROVIDER_NAME:-external-http}"
 
           az deployment group create \
-            --name "gifster-prod-${GITHUB_RUN_ID}" \
+            --name "gifforge-prod-${GITHUB_RUN_ID}" \
             --resource-group "${RESOURCE_GROUP_NAME}" \
             --template-file infra/main.bicep \
             --parameters \
               environmentName=prod \
               location="${LOCATION}" \
               containerImage="$image" \
-              appAttestAppIdentifier="$GIFSTER_APP_ATTEST_APP_IDENTIFIER" \
-              appAttestRootCertificatePem="$GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM" \
+              appAttestAppIdentifier="$GIFFORGE_APP_ATTEST_APP_IDENTIFIER" \
+              appAttestRootCertificatePem="$GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM" \
               appAttestDemoBypassEnabled=false \
               providerAdapter=external-http \
               externalProviderName="$external_provider_name" \
-              externalProviderSubmitUrl="$GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL" \
-              externalProviderResultUrlTemplate="$GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE" \
-              externalProviderAuthorization="$GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION" \
+              externalProviderSubmitUrl="$GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL" \
+              externalProviderResultUrlTemplate="$GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE" \
+              externalProviderAuthorization="$GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION" \
               minReplicas="${MIN_REPLICAS}" \
               workerMinReplicas="${WORKER_MIN_REPLICAS}" \
               maxReplicas="${MAX_REPLICAS}" \
             --query properties.outputs \
-            --output json > /tmp/gifster-prod-deployment-outputs.json
+            --output json > /tmp/gifforge-prod-deployment-outputs.json
 
-          fqdn="$(jq -r '.containerAppFqdn.value' /tmp/gifster-prod-deployment-outputs.json)"
+          fqdn="$(jq -r '.containerAppFqdn.value' /tmp/gifforge-prod-deployment-outputs.json)"
           if [[ -z "$fqdn" || "$fqdn" == "null" ]]; then
             echo "Deployment did not return containerAppFqdn." >&2
-            cat /tmp/gifster-prod-deployment-outputs.json >&2
+            cat /tmp/gifforge-prod-deployment-outputs.json >&2
             exit 1
           fi
 
           echo "backend_url=https://${fqdn}" >> "$GITHUB_OUTPUT"
-          echo "Deployed Gifster prod API to https://${fqdn}"
+          echo "Deployed GifForge prod API to https://${fqdn}"
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
           LOCATION: ${{ inputs.location }}
           MIN_REPLICAS: ${{ inputs.min_replicas }}
           WORKER_MIN_REPLICAS: ${{ inputs.worker_min_replicas }}
           MAX_REPLICAS: ${{ inputs.max_replicas }}
-          GIFSTER_APP_ATTEST_APP_IDENTIFIER: ${{ secrets.GIFSTER_APP_ATTEST_APP_IDENTIFIER }}
-          GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM }}
-          GIFSTER_EXTERNAL_PROVIDER_NAME: ${{ vars.GIFSTER_EXTERNAL_PROVIDER_NAME }}
-          GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL: ${{ secrets.GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL }}
-          GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE: ${{ secrets.GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE }}
-          GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION: ${{ secrets.GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION }}
+          GIFFORGE_APP_ATTEST_APP_IDENTIFIER: ${{ secrets.GIFFORGE_APP_ATTEST_APP_IDENTIFIER }}
+          GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM }}
+          GIFFORGE_EXTERNAL_PROVIDER_NAME: ${{ vars.GIFFORGE_EXTERNAL_PROVIDER_NAME }}
+          GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL }}
+          GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE }}
+          GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION }}
 
       - name: Health check prod backend
         run: |

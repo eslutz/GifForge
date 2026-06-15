@@ -9,10 +9,10 @@
       "value": "eastus"
     },
     "resourceGroupName": {
-      "value": "rg-gifster-nonprod"
+      "value": "rg-gifforge-nonprod"
     },
     "containerImage": {
-      "value": "ghcr.io/eslutz/gifster-backend:latest"
+      "value": "ghcr.io/eslutz/gifforge-backend:latest"
     },
     "publicBaseUrl": {
       "value": ""

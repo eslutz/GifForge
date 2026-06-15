@@ -8,7 +8,7 @@ require "optparse"
 require "time"
 
 ROOT = File.expand_path("..", __dir__)
-DEFAULT_REPO = "eslutz/Gifster"
+DEFAULT_REPO = "eslutz/GifForge"
 AZURE_OIDC_ISSUER = "https://token.actions.githubusercontent.com"
 AZURE_OIDC_AUDIENCE = "api://AzureADTokenExchange"
 BASE_REQUIRED_SECRETS = %w[
@@ -17,13 +17,13 @@ BASE_REQUIRED_SECRETS = %w[
   AZURE_SUBSCRIPTION_ID
 ].freeze
 PROD_REQUIRED_SECRETS = %w[
-  GIFSTER_APP_ATTEST_APP_IDENTIFIER
-  GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM
-  GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL
-  GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE
+  GIFFORGE_APP_ATTEST_APP_IDENTIFIER
+  GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM
+  GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL
+  GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE
 ].freeze
 PROD_OPTIONAL_SECRET_WARNINGS = %w[
-  GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION
+  GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION
 ].freeze
 REQUIRED_RESOURCE_GROUP_ROLES = [
   "Contributor",
@@ -52,11 +52,11 @@ OptionParser.new do |parser|
     options[:repo] = value
   end
 
-  parser.on("--resource-group NAME", "Azure resource group. Default: rg-gifster-<environment>.") do |value|
+  parser.on("--resource-group NAME", "Azure resource group. Default: rg-gifforge-<environment>.") do |value|
     options[:resource_group] = value
   end
 
-  parser.on("--app-name NAME", "Azure app registration display name. Default: Gifster-GitHub-Actions-<environment>.") do |value|
+  parser.on("--app-name NAME", "Azure app registration display name. Default: GifForge-GitHub-Actions-<environment>.") do |value|
     options[:app_name] = value
   end
 
@@ -87,8 +87,8 @@ unless %w[nonprod prod].include?(options[:environment])
   exit 2
 end
 
-options[:resource_group] ||= "rg-gifster-#{options[:environment]}"
-options[:app_name] ||= "Gifster-GitHub-Actions-#{options[:environment]}"
+options[:resource_group] ||= "rg-gifforge-#{options[:environment]}"
+options[:app_name] ||= "GifForge-GitHub-Actions-#{options[:environment]}"
 timestamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
 options[:output] ||= File.join(
   ROOT,

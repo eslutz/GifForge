@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 
-namespace Gifster.Backend.Configuration;
+namespace GifForge.Backend.Configuration;
 
 public sealed record GenerationRetentionOptions(
   TimeSpan JobLifetime,
@@ -14,10 +14,10 @@ public sealed record GenerationRetentionOptions(
 
   public static GenerationRetentionOptions FromConfiguration(IConfiguration configuration) =>
     new(
-      PositiveHours(configuration["GIFSTER_GENERATION_JOB_RETENTION_HOURS"], Default.JobLifetime),
-      PositiveMinutes(configuration["GIFSTER_RETENTION_CLEANUP_INTERVAL_MINUTES"], Default.CleanupInterval),
-      PositiveInt(configuration["GIFSTER_RETENTION_CLEANUP_BATCH_SIZE"], Default.CleanupBatchSize),
-      string.Equals(configuration["GIFSTER_RETENTION_CLEANUP_ENABLED"], "true", StringComparison.OrdinalIgnoreCase)
+      PositiveHours(configuration["GIFFORGE_GENERATION_JOB_RETENTION_HOURS"], Default.JobLifetime),
+      PositiveMinutes(configuration["GIFFORGE_RETENTION_CLEANUP_INTERVAL_MINUTES"], Default.CleanupInterval),
+      PositiveInt(configuration["GIFFORGE_RETENTION_CLEANUP_BATCH_SIZE"], Default.CleanupBatchSize),
+      string.Equals(configuration["GIFFORGE_RETENTION_CLEANUP_ENABLED"], "true", StringComparison.OrdinalIgnoreCase)
     );
 
   private static TimeSpan PositiveHours(string? value, TimeSpan fallback) =>

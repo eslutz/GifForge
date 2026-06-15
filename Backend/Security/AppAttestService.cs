@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Http;
 
-namespace Gifster.Backend.Security;
+namespace GifForge.Backend.Security;
 
 public sealed class AppAttestService : IAppAttestService
 {

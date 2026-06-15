@@ -1,8 +1,8 @@
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Providers;
-using Gifster.Backend.Storage;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Providers;
+using GifForge.Backend.Storage;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 internal sealed class InMemoryGenerationResultStore : IGenerationResultStore
 {

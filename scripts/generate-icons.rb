@@ -6,8 +6,8 @@ require "zlib"
 
 ROOT = File.expand_path("..", __dir__)
 
-APP_ICON = File.join(ROOT, "Client", "App", "Gifster", "Assets.xcassets", "AppIcon.appiconset")
-MESSAGES_ICON = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "Assets.xcassets", "iMessage App Icon.stickersiconset")
+APP_ICON = File.join(ROOT, "Client", "App", "GifForge", "Assets.xcassets", "AppIcon.appiconset")
+MESSAGES_ICON = File.join(ROOT, "Client", "Extensions", "GifForgeMessages", "Assets.xcassets", "iMessage App Icon.stickersiconset")
 
 def lerp(a, b, t)
   (a + ((b - a) * t)).round
@@ -179,22 +179,22 @@ end
 FileUtils.mkdir_p(APP_ICON)
 FileUtils.mkdir_p(MESSAGES_ICON)
 
-write_png(File.join(APP_ICON, "gifster-app-icon-1024.png"), 1024, 1024)
+write_png(File.join(APP_ICON, "gifforge-app-icon-1024.png"), 1024, 1024)
 
 {
-  "gifster-messages-58.png" => [58, 58],
-  "gifster-messages-87.png" => [87, 87],
-  "gifster-messages-120x90.png" => [120, 90],
-  "gifster-messages-180x135.png" => [180, 135],
-  "gifster-messages-134x100.png" => [134, 100],
-  "gifster-messages-148x110.png" => [148, 110],
-  "gifster-messages-54x40.png" => [54, 40],
-  "gifster-messages-81x60.png" => [81, 60],
-  "gifster-messages-64x48.png" => [64, 48],
-  "gifster-messages-96x72.png" => [96, 72],
-  "gifster-messages-1024x768.png" => [1024, 768]
+  "gifforge-messages-58.png" => [58, 58],
+  "gifforge-messages-87.png" => [87, 87],
+  "gifforge-messages-120x90.png" => [120, 90],
+  "gifforge-messages-180x135.png" => [180, 135],
+  "gifforge-messages-134x100.png" => [134, 100],
+  "gifforge-messages-148x110.png" => [148, 110],
+  "gifforge-messages-54x40.png" => [54, 40],
+  "gifforge-messages-81x60.png" => [81, 60],
+  "gifforge-messages-64x48.png" => [64, 48],
+  "gifforge-messages-96x72.png" => [96, 72],
+  "gifforge-messages-1024x768.png" => [1024, 768]
 }.each do |filename, size|
   write_png(File.join(MESSAGES_ICON, filename), size.fetch(0), size.fetch(1))
 end
 
-puts "Generated Gifster app and iMessage icon assets."
+puts "Generated GifForge app and iMessage icon assets."

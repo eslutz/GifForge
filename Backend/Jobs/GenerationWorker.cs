@@ -1,8 +1,8 @@
-using Gifster.Backend.Operations;
-using Gifster.Backend.Providers;
-using Gifster.Backend.Storage;
+using GifForge.Backend.Operations;
+using GifForge.Backend.Providers;
+using GifForge.Backend.Storage;
 
-namespace Gifster.Backend.Jobs;
+namespace GifForge.Backend.Jobs;
 
 public sealed class GenerationWorker
 {

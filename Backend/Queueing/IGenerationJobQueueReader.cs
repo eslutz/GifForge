@@ -1,4 +1,4 @@
-namespace Gifster.Backend.Queueing;
+namespace GifForge.Backend.Queueing;
 
 public interface IGenerationJobQueueReader
 {

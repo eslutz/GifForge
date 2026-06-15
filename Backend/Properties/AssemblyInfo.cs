@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Gifster.Backend.Tests")]
+[assembly: InternalsVisibleTo("GifForge.Backend.Tests")]

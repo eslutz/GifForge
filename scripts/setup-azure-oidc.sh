@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo="eslutz/Gifster"
+repo="eslutz/GifForge"
 environment="nonprod"
 resource_group=""
 app_name=""
@@ -13,15 +13,15 @@ usage() {
   cat <<'USAGE'
 Usage: scripts/setup-azure-oidc.sh [--apply] [options]
 
-Configures a GitHub Actions Azure OIDC identity for a Gifster environment.
+Configures a GitHub Actions Azure OIDC identity for a GifForge environment.
 Dry-run is the default. Pass --apply to create or update Azure/GitHub state.
 
 Options:
   --apply                         Apply changes. Without this, commands are printed only.
-  --repo OWNER/REPO               GitHub repository. Default: eslutz/Gifster.
+  --repo OWNER/REPO               GitHub repository. Default: eslutz/GifForge.
   --environment NAME              GitHub environment. Allowed: nonprod, prod. Default: nonprod.
-  --resource-group NAME           Azure resource group scope. Default: rg-gifster-<environment>.
-  --app-name NAME                 Azure app registration display name. Default: Gifster-GitHub-Actions-<environment>.
+  --resource-group NAME           Azure resource group scope. Default: rg-gifforge-<environment>.
+  --app-name NAME                 Azure app registration display name. Default: GifForge-GitHub-Actions-<environment>.
   --subscription-id ID            Azure subscription id. Defaults to AZURE_SUBSCRIPTION_ID or az account.
   --tenant-id ID                  Azure tenant id. Defaults to AZURE_TENANT_ID or az account.
   -h, --help                      Show this help.
@@ -102,8 +102,8 @@ case "$environment" in
     ;;
 esac
 
-resource_group="${resource_group:-rg-gifster-${environment}}"
-app_name="${app_name:-Gifster-GitHub-Actions-${environment}}"
+resource_group="${resource_group:-rg-gifforge-${environment}}"
+app_name="${app_name:-GifForge-GitHub-Actions-${environment}}"
 
 require_tool() {
   local tool="$1"
@@ -138,7 +138,7 @@ scope="/subscriptions/${subscription_id}/resourceGroups/${resource_group}"
 subject="repo:${repo}:environment:${environment}"
 credential_name="github-${repo//\//-}-${environment}"
 
-printf 'Gifster Azure OIDC setup\n'
+printf 'GifForge Azure OIDC setup\n'
 printf 'Mode: %s\n' "$([[ "$apply" == "true" ]] && printf apply || printf dry-run)"
 printf 'Repository: %s\n' "$repo"
 printf 'Environment: %s\n' "$environment"

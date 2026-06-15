@@ -24,7 +24,7 @@ permissions:
   contents: read
 
 env:
-  BACKEND_IMAGE: ghcr.io/eslutz/gifster-backend
+  BACKEND_IMAGE: ghcr.io/eslutz/gifforge-backend
 
 jobs:
   backend:
@@ -45,21 +45,21 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang libssl-dev zlib1g-dev
 
       - name: Build backend
-        run: dotnet build Backend/Gifster.Backend.csproj --configuration Release
+        run: dotnet build Backend/GifForge.Backend.csproj --configuration Release
 
       - name: Build backend tests
-        run: dotnet build Backend.Tests/Gifster.Backend.Tests.csproj --configuration Release
+        run: dotnet build Backend.Tests/GifForge.Backend.Tests.csproj --configuration Release
 
       - name: Run backend tests
-        run: dotnet test Backend.Tests/Gifster.Backend.Tests.csproj --configuration Release --no-build
+        run: dotnet test Backend.Tests/GifForge.Backend.Tests.csproj --configuration Release --no-build
 
       - name: Validate provider onboarding tooling
         run: |
           ruby -c scripts/validate-provider-onboarding.rb
-          scripts/validate-provider-onboarding.rb --template /tmp/gifster-provider-onboarding-template.json
+          scripts/validate-provider-onboarding.rb --template /tmp/gifforge-provider-onboarding-template.json
 
       - name: Publish backend Native AOT
-        run: dotnet publish Backend/Gifster.Backend.csproj --configuration Release --runtime linux-x64 --self-contained true --output /tmp/gifster-backend-publish
+        run: dotnet publish Backend/GifForge.Backend.csproj --configuration Release --runtime linux-x64 --self-contained true --output /tmp/gifforge-backend-publish
 
       - name: Login to GHCR
         if: github.event_name == 'push'

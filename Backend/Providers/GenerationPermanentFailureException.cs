@@ -1,4 +1,4 @@
-namespace Gifster.Backend.Providers;
+namespace GifForge.Backend.Providers;
 
 public sealed class GenerationPermanentFailureException : Exception
 {

@@ -10,15 +10,15 @@ using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
-using Gifster.Backend.Configuration;
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Models;
-using Gifster.Backend.Operations;
-using Gifster.Backend.Providers;
-using Gifster.Backend.Queueing;
-using Gifster.Backend.Safety;
-using Gifster.Backend.Security;
-using Gifster.Backend.Storage;
+using GifForge.Backend.Configuration;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Models;
+using GifForge.Backend.Operations;
+using GifForge.Backend.Providers;
+using GifForge.Backend.Queueing;
+using GifForge.Backend.Safety;
+using GifForge.Backend.Security;
+using GifForge.Backend.Storage;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 
@@ -28,10 +28,10 @@ if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URL
   Environment.SetEnvironmentVariable("ASPNETCORE_HTTP_PORTS", "8787");
 }
 
-var app = GifsterBackendApp.Create(args);
+var app = GifForgeBackendApp.Create(args);
 app.Run();
 
-public static class GifsterBackendApp
+public static class GifForgeBackendApp
 {
   public static WebApplication Create(
     string[]? args = null,
@@ -72,7 +72,7 @@ public static class GifsterBackendApp
     ConfigureWorkerServices(builder);
     ConfigureRetentionCleanup(builder, retentionOptions);
     builder.Services.AddSingleton(new BackendOptions(
-      publicBaseUrl ?? builder.Configuration["GIFSTER_PUBLIC_BASE_URL"]
+      publicBaseUrl ?? builder.Configuration["GIFFORGE_PUBLIC_BASE_URL"]
     ));
 
     var app = builder.Build();
@@ -91,12 +91,12 @@ public static class GifsterBackendApp
 
   private static void ConfigureJson(JsonOptions options)
   {
-    options.SerializerOptions.TypeInfoResolverChain.Insert(0, GifsterJsonSerializerContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Insert(0, GifForgeJsonSerializerContext.Default);
   }
 
   private static IGenerationProvider CreateGenerationProvider(IConfiguration configuration)
   {
-    var adapter = configuration["GIFSTER_PROVIDER_ADAPTER"]?.Trim().ToLowerInvariant();
+    var adapter = configuration["GIFFORGE_PROVIDER_ADAPTER"]?.Trim().ToLowerInvariant();
     return adapter switch
     {
       null or "" or "fake" or "fake-frame-sequence" => new FakeFrameSequenceProvider(),
@@ -222,7 +222,7 @@ public static class GifsterBackendApp
 
   private static void ConfigureWorkerServices(WebApplicationBuilder builder)
   {
-    if (!string.Equals(builder.Configuration["GIFSTER_WORKER_ENABLED"], "true", StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(builder.Configuration["GIFFORGE_WORKER_ENABLED"], "true", StringComparison.OrdinalIgnoreCase))
     {
       return;
     }
@@ -230,7 +230,7 @@ public static class GifsterBackendApp
     var storage = BackendStorageOptions.FromConfiguration(builder.Configuration);
     if (!storage.IsConfigured)
     {
-      throw new InvalidOperationException("GIFSTER_WORKER_ENABLED requires GIFSTER_STORAGE_ACCOUNT_NAME.");
+      throw new InvalidOperationException("GIFFORGE_WORKER_ENABLED requires GIFFORGE_STORAGE_ACCOUNT_NAME.");
     }
 
     var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
@@ -270,7 +270,7 @@ public static class GifsterBackendApp
   private static void MapRoutes(WebApplication app)
   {
     app.MapGet("/health", (IGenerationProvider provider) =>
-      Json(new HealthResponse(true, provider.Name, provider.Mode), GifsterJsonSerializerContext.Default.HealthResponse));
+      Json(new HealthResponse(true, provider.Name, provider.Mode), GifForgeJsonSerializerContext.Default.HealthResponse));
 
     app.MapPost("/v1/app-attest/challenges", async (
       IAppAttestService appAttest,
@@ -278,7 +278,7 @@ public static class GifsterBackendApp
     ) =>
       Json(
         await appAttest.CreateChallengeAsync(context.RequestAborted),
-        GifsterJsonSerializerContext.Default.AppAttestChallengeResponse
+        GifForgeJsonSerializerContext.Default.AppAttestChallengeResponse
       ));
 
     app.MapPost("/v1/app-attest/attestations", async (
@@ -290,7 +290,7 @@ public static class GifsterBackendApp
       var session = await appAttest.CreateSessionAsync(request, context.RequestAborted);
       return session is null
         ? Error(StatusCodes.Status401Unauthorized, "App Attest challenge could not be verified.")
-        : Json(session, GifsterJsonSerializerContext.Default.AppAttestSessionResponse);
+        : Json(session, GifForgeJsonSerializerContext.Default.AppAttestSessionResponse);
     });
 
     app.MapPost("/v1/generations", async (
@@ -337,7 +337,7 @@ public static class GifsterBackendApp
 
       return Json(
         new JobSubmissionResponse(job.Id, "queued", statusUrl, job.ExpiresAt),
-        GifsterJsonSerializerContext.Default.JobSubmissionResponse,
+        GifForgeJsonSerializerContext.Default.JobSubmissionResponse,
         statusCode: StatusCodes.Status202Accepted
       );
     });
@@ -379,7 +379,7 @@ public static class GifsterBackendApp
           status == GenerationJobStatus.Failed ? job.FailedMessage : null,
           job.ExpiresAt
         ),
-        GifsterJsonSerializerContext.Default.JobStatusResponse
+        GifForgeJsonSerializerContext.Default.JobStatusResponse
       );
     });
 
@@ -428,7 +428,7 @@ public static class GifsterBackendApp
   private static IResult Error(int statusCode, string message) =>
     Json(
       new ErrorResponse(statusCode >= 500 ? "internal_error" : "invalid_request", message),
-      GifsterJsonSerializerContext.Default.ErrorResponse,
+      GifForgeJsonSerializerContext.Default.ErrorResponse,
       statusCode: statusCode
     );
 
@@ -457,7 +457,7 @@ public sealed record BackendOptions(string? PublicBaseUrl);
 [JsonSerializable(typeof(AppAttestChallengeResponse))]
 [JsonSerializable(typeof(AppAttestAttestationRequest))]
 [JsonSerializable(typeof(AppAttestSessionResponse))]
-internal partial class GifsterJsonSerializerContext : JsonSerializerContext;
+internal partial class GifForgeJsonSerializerContext : JsonSerializerContext;
 
 public sealed record HealthResponse(bool Ok, string Provider, string Mode);
 public sealed record ErrorResponse(string Error, string Message);

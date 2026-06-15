@@ -1,8 +1,8 @@
 using System.Text.Json;
 using Azure.Storage.Queues;
-using Gifster.Backend.Jobs;
+using GifForge.Backend.Jobs;
 
-namespace Gifster.Backend.Queueing;
+namespace GifForge.Backend.Queueing;
 
 public sealed class AzureQueueGenerationJobDispatcher : IGenerationJobDispatcher
 {
@@ -16,7 +16,7 @@ public sealed class AzureQueueGenerationJobDispatcher : IGenerationJobDispatcher
   public async Task DispatchAsync(GenerationJob job, CancellationToken cancellationToken)
   {
     var message = new GenerationQueueMessage(job.Id);
-    var json = JsonSerializer.Serialize(message, GifsterJsonSerializerContext.Default.GenerationQueueMessage);
+    var json = JsonSerializer.Serialize(message, GifForgeJsonSerializerContext.Default.GenerationQueueMessage);
     await queueClient.SendMessageAsync(json, cancellationToken).ConfigureAwait(false);
   }
 }

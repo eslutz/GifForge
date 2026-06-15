@@ -1,9 +1,9 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Providers;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Providers;
 
-namespace Gifster.Backend.Storage;
+namespace GifForge.Backend.Storage;
 
 public sealed class AzureBlobGenerationResultStore : IGenerationResultStore
 {

@@ -1,4 +1,4 @@
-namespace Gifster.Backend.Models;
+namespace GifForge.Backend.Models;
 
 public sealed record FrameSequenceAsset(
   string Format,

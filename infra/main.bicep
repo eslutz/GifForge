@@ -10,7 +10,7 @@ param environmentName string = 'nonprod'
 @description('Azure region for all resources.')
 param location string = resourceGroup().location
 
-@description('Container image for the Gifster backend. Use a real pushed image before production deployment.')
+@description('Container image for the GifForge backend. Use a real pushed image before production deployment.')
 param containerImage string
 
 @description('Public base URL returned in backend status and download URLs. Leave empty to derive from incoming request host.')
@@ -88,17 +88,17 @@ param retentionCleanupBatchSize int = 100
 @description('Globally unique storage account name. Lowercase letters and numbers only.')
 @minLength(3)
 @maxLength(24)
-param storageAccountName string = take('gifster${environmentName}${uniqueString(subscription().subscriptionId, resourceGroup().id, environmentName)}', 24)
+param storageAccountName string = take('gifforge${environmentName}${uniqueString(subscription().subscriptionId, resourceGroup().id, environmentName)}', 24)
 
 @description('Tags applied to all resources.')
 param tags object = {
-  app: 'gifster'
+  app: 'gifforge'
   environment: environmentName
 }
 
 var nameSeed = toLower(uniqueString(subscription().subscriptionId, resourceGroup().id, environmentName))
-var prefix = 'gifster-${environmentName}-${nameSeed}'
-var containerAppPrefix = 'gifster-${environmentName}-${take(nameSeed, 9)}'
+var prefix = 'gifforge-${environmentName}-${nameSeed}'
+var containerAppPrefix = 'gifforge-${environmentName}-${take(nameSeed, 9)}'
 var keyVaultName = take('gkv-${environmentName}-${nameSeed}', 24)
 
 var generationQueueName = 'generation-jobs'
@@ -342,91 +342,91 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: '8080'
             }
             {
-              name: 'GIFSTER_PUBLIC_BASE_URL'
+              name: 'GIFFORGE_PUBLIC_BASE_URL'
               value: publicBaseUrl
             }
             {
-              name: 'GIFSTER_STORAGE_ACCOUNT_NAME'
+              name: 'GIFFORGE_STORAGE_ACCOUNT_NAME'
               value: storage.name
             }
             {
-              name: 'GIFSTER_GENERATION_QUEUE_NAME'
+              name: 'GIFFORGE_GENERATION_QUEUE_NAME'
               value: generationQueueName
             }
             {
-              name: 'GIFSTER_PROVIDER_CALLBACK_QUEUE_NAME'
+              name: 'GIFFORGE_PROVIDER_CALLBACK_QUEUE_NAME'
               value: providerCallbackQueueName
             }
             {
-              name: 'GIFSTER_DELETION_QUEUE_NAME'
+              name: 'GIFFORGE_DELETION_QUEUE_NAME'
               value: deletionQueueName
             }
             {
-              name: 'GIFSTER_RESULTS_CONTAINER_NAME'
+              name: 'GIFFORGE_RESULTS_CONTAINER_NAME'
               value: resultContainerName
             }
             {
-              name: 'GIFSTER_SOURCE_IMAGES_CONTAINER_NAME'
+              name: 'GIFFORGE_SOURCE_IMAGES_CONTAINER_NAME'
               value: sourceContainerName
             }
             {
-              name: 'GIFSTER_JOBS_TABLE_NAME'
+              name: 'GIFFORGE_JOBS_TABLE_NAME'
               value: jobTableName
             }
             {
-              name: 'GIFSTER_APP_ATTEST_STATE_TABLE_NAME'
+              name: 'GIFFORGE_APP_ATTEST_STATE_TABLE_NAME'
               value: appAttestStateTable.name
             }
             {
-              name: 'GIFSTER_KEY_VAULT_URI'
+              name: 'GIFFORGE_KEY_VAULT_URI'
               value: keyVault.properties.vaultUri
             }
             {
-              name: 'GIFSTER_PROVIDER_ADAPTER'
+              name: 'GIFFORGE_PROVIDER_ADAPTER'
               value: providerAdapter
             }
             {
-              name: 'GIFSTER_EXTERNAL_PROVIDER_NAME'
+              name: 'GIFFORGE_EXTERNAL_PROVIDER_NAME'
               value: externalProviderName
             }
             {
-              name: 'GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL'
+              name: 'GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL'
               value: externalProviderSubmitUrl
             }
             {
-              name: 'GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE'
+              name: 'GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE'
               value: externalProviderResultUrlTemplate
             }
             {
-              name: 'GIFSTER_APP_ATTEST_REQUIRED'
+              name: 'GIFFORGE_APP_ATTEST_REQUIRED'
               value: 'true'
             }
             {
-              name: 'GIFSTER_APP_ATTEST_DEMO_BYPASS'
+              name: 'GIFFORGE_APP_ATTEST_DEMO_BYPASS'
               value: appAttestDemoBypassEnabled && environmentName != 'prod' ? 'true' : 'false'
             }
             {
-              name: 'GIFSTER_APP_ATTEST_APP_IDENTIFIER'
+              name: 'GIFFORGE_APP_ATTEST_APP_IDENTIFIER'
               value: appAttestAppIdentifier
             }
             {
-              name: 'GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM'
+              name: 'GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM'
               value: appAttestRootCertificatePem
             }
             {
-              name: 'GIFSTER_GENERATION_JOB_RETENTION_HOURS'
+              name: 'GIFFORGE_GENERATION_JOB_RETENTION_HOURS'
               value: string(generationJobRetentionHours)
             }
             {
-              name: 'GIFSTER_RETENTION_CLEANUP_ENABLED'
+              name: 'GIFFORGE_RETENTION_CLEANUP_ENABLED'
               value: 'true'
             }
             {
-              name: 'GIFSTER_RETENTION_CLEANUP_INTERVAL_MINUTES'
+              name: 'GIFFORGE_RETENTION_CLEANUP_INTERVAL_MINUTES'
               value: string(retentionCleanupIntervalMinutes)
             }
             {
-              name: 'GIFSTER_RETENTION_CLEANUP_BATCH_SIZE'
+              name: 'GIFFORGE_RETENTION_CLEANUP_BATCH_SIZE'
               value: string(retentionCleanupBatchSize)
             }
             {
@@ -435,7 +435,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
             }
           ], empty(externalProviderAuthorization) ? [] : [
             {
-              name: 'GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION'
+              name: 'GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION'
               secretRef: externalProviderAuthorizationSecretName
             }
           ])
@@ -517,95 +517,95 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: '8080'
             }
             {
-              name: 'GIFSTER_WORKER_ENABLED'
+              name: 'GIFFORGE_WORKER_ENABLED'
               value: 'true'
             }
             {
-              name: 'GIFSTER_PUBLIC_BASE_URL'
+              name: 'GIFFORGE_PUBLIC_BASE_URL'
               value: publicBaseUrl
             }
             {
-              name: 'GIFSTER_STORAGE_ACCOUNT_NAME'
+              name: 'GIFFORGE_STORAGE_ACCOUNT_NAME'
               value: storage.name
             }
             {
-              name: 'GIFSTER_GENERATION_QUEUE_NAME'
+              name: 'GIFFORGE_GENERATION_QUEUE_NAME'
               value: generationQueueName
             }
             {
-              name: 'GIFSTER_PROVIDER_CALLBACK_QUEUE_NAME'
+              name: 'GIFFORGE_PROVIDER_CALLBACK_QUEUE_NAME'
               value: providerCallbackQueueName
             }
             {
-              name: 'GIFSTER_DELETION_QUEUE_NAME'
+              name: 'GIFFORGE_DELETION_QUEUE_NAME'
               value: deletionQueueName
             }
             {
-              name: 'GIFSTER_RESULTS_CONTAINER_NAME'
+              name: 'GIFFORGE_RESULTS_CONTAINER_NAME'
               value: resultContainerName
             }
             {
-              name: 'GIFSTER_SOURCE_IMAGES_CONTAINER_NAME'
+              name: 'GIFFORGE_SOURCE_IMAGES_CONTAINER_NAME'
               value: sourceContainerName
             }
             {
-              name: 'GIFSTER_JOBS_TABLE_NAME'
+              name: 'GIFFORGE_JOBS_TABLE_NAME'
               value: jobTableName
             }
             {
-              name: 'GIFSTER_APP_ATTEST_STATE_TABLE_NAME'
+              name: 'GIFFORGE_APP_ATTEST_STATE_TABLE_NAME'
               value: appAttestStateTable.name
             }
             {
-              name: 'GIFSTER_KEY_VAULT_URI'
+              name: 'GIFFORGE_KEY_VAULT_URI'
               value: keyVault.properties.vaultUri
             }
             {
-              name: 'GIFSTER_PROVIDER_ADAPTER'
+              name: 'GIFFORGE_PROVIDER_ADAPTER'
               value: providerAdapter
             }
             {
-              name: 'GIFSTER_EXTERNAL_PROVIDER_NAME'
+              name: 'GIFFORGE_EXTERNAL_PROVIDER_NAME'
               value: externalProviderName
             }
             {
-              name: 'GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL'
+              name: 'GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL'
               value: externalProviderSubmitUrl
             }
             {
-              name: 'GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE'
+              name: 'GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE'
               value: externalProviderResultUrlTemplate
             }
             {
-              name: 'GIFSTER_APP_ATTEST_REQUIRED'
+              name: 'GIFFORGE_APP_ATTEST_REQUIRED'
               value: 'true'
             }
             {
-              name: 'GIFSTER_APP_ATTEST_DEMO_BYPASS'
+              name: 'GIFFORGE_APP_ATTEST_DEMO_BYPASS'
               value: appAttestDemoBypassEnabled && environmentName != 'prod' ? 'true' : 'false'
             }
             {
-              name: 'GIFSTER_APP_ATTEST_APP_IDENTIFIER'
+              name: 'GIFFORGE_APP_ATTEST_APP_IDENTIFIER'
               value: appAttestAppIdentifier
             }
             {
-              name: 'GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM'
+              name: 'GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM'
               value: appAttestRootCertificatePem
             }
             {
-              name: 'GIFSTER_GENERATION_JOB_RETENTION_HOURS'
+              name: 'GIFFORGE_GENERATION_JOB_RETENTION_HOURS'
               value: string(generationJobRetentionHours)
             }
             {
-              name: 'GIFSTER_RETENTION_CLEANUP_ENABLED'
+              name: 'GIFFORGE_RETENTION_CLEANUP_ENABLED'
               value: 'true'
             }
             {
-              name: 'GIFSTER_RETENTION_CLEANUP_INTERVAL_MINUTES'
+              name: 'GIFFORGE_RETENTION_CLEANUP_INTERVAL_MINUTES'
               value: string(retentionCleanupIntervalMinutes)
             }
             {
-              name: 'GIFSTER_RETENTION_CLEANUP_BATCH_SIZE'
+              name: 'GIFFORGE_RETENTION_CLEANUP_BATCH_SIZE'
               value: string(retentionCleanupBatchSize)
             }
             {
@@ -614,7 +614,7 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
             }
           ], empty(externalProviderAuthorization) ? [] : [
             {
-              name: 'GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION'
+              name: 'GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION'
               secretRef: externalProviderAuthorizationSecretName
             }
           ])

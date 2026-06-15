@@ -1,7 +1,7 @@
-using Gifster.Backend.Configuration;
+using GifForge.Backend.Configuration;
 using Microsoft.Extensions.Configuration;
 
-namespace Gifster.Backend.Tests;
+namespace GifForge.Backend.Tests;
 
 public sealed class BackendStorageOptionsTests
 {
@@ -11,11 +11,11 @@ public sealed class BackendStorageOptionsTests
     var configuration = new ConfigurationBuilder()
       .AddInMemoryCollection(new Dictionary<string, string?>
       {
-        ["GIFSTER_STORAGE_ACCOUNT_NAME"] = "gifsternonprod",
-        ["GIFSTER_JOBS_TABLE_NAME"] = "GenerationJobs",
-        ["GIFSTER_APP_ATTEST_STATE_TABLE_NAME"] = "AppAttestState",
-        ["GIFSTER_GENERATION_QUEUE_NAME"] = "generation-jobs",
-        ["GIFSTER_RESULTS_CONTAINER_NAME"] = "provider-results",
+        ["GIFFORGE_STORAGE_ACCOUNT_NAME"] = "gifforgenonprod",
+        ["GIFFORGE_JOBS_TABLE_NAME"] = "GenerationJobs",
+        ["GIFFORGE_APP_ATTEST_STATE_TABLE_NAME"] = "AppAttestState",
+        ["GIFFORGE_GENERATION_QUEUE_NAME"] = "generation-jobs",
+        ["GIFFORGE_RESULTS_CONTAINER_NAME"] = "provider-results",
         ["AZURE_CLIENT_ID"] = "11111111-1111-1111-1111-111111111111"
       })
       .Build();
@@ -23,7 +23,7 @@ public sealed class BackendStorageOptionsTests
     var options = BackendStorageOptions.FromConfiguration(configuration);
 
     Assert.True(options.IsConfigured);
-    Assert.Equal("gifsternonprod", options.StorageAccountName);
+    Assert.Equal("gifforgenonprod", options.StorageAccountName);
     Assert.Equal("GenerationJobs", options.JobsTableName);
     Assert.Equal("AppAttestState", options.AppAttestStateTableName);
     Assert.Equal("generation-jobs", options.GenerationQueueName);

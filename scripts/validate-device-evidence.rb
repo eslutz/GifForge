@@ -35,7 +35,7 @@ SECTION_REQUIRED_STRINGS = {
 
 REQUIRED_CHECKS = {
   "containingApp" => %w[
-    launchesToGifsterTab
+    launchesToGifForgeTab
     privacyCopyMentionsBackend
     privacyCopyMentionsLocalModels
     historyLoads

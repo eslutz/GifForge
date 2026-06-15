@@ -1,4 +1,4 @@
-namespace Gifster.Backend.Jobs;
+namespace GifForge.Backend.Jobs;
 
 public interface IGenerationJobTable
 {

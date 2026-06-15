@@ -9,18 +9,18 @@ require "yaml"
 ROOT = File.expand_path("..", __dir__)
 
 PROJECT_PATH = File.join(ROOT, "Client", "project.yml")
-PACKAGE_PATH = File.join(ROOT, "Client", "Packages", "GifsterCore", "Package.swift")
-APP_ICON_CONTENTS = File.join(ROOT, "Client", "App", "Gifster", "Assets.xcassets", "AppIcon.appiconset", "Contents.json")
-MESSAGES_ICON_CONTENTS = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "Assets.xcassets", "iMessage App Icon.stickersiconset", "Contents.json")
-MESSAGES_INFO_PLIST = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "Info.plist")
-MESSAGES_VIEW_CONTROLLER = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesViewController.swift")
-MESSAGES_APP_VIEW = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesAppView.swift")
-MESSAGES_COMPOSER_MODEL = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesComposerModel.swift")
-UI_TESTS = File.join(ROOT, "Client", "Tests", "GifsterUITests", "GifsterUITests.swift")
-GENERATION_MODELS = File.join(ROOT, "Client", "Packages", "GifsterCore", "Sources", "GifsterCore", "Models", "GenerationModels.swift")
-BACKEND_CLIENT = File.join(ROOT, "Client", "Packages", "GifsterCore", "Sources", "GifsterCore", "Networking", "BackendClient.swift")
-ACTIVE_GENERATION_STORE = File.join(ROOT, "Client", "Packages", "GifsterCore", "Sources", "GifsterCore", "Storage", "ActiveGenerationStore.swift")
-APP_STORAGE_DIRECTORIES = File.join(ROOT, "Client", "Packages", "GifsterCore", "Sources", "GifsterCore", "Storage", "AppStorageDirectories.swift")
+PACKAGE_PATH = File.join(ROOT, "Client", "Packages", "GifForgeCore", "Package.swift")
+APP_ICON_CONTENTS = File.join(ROOT, "Client", "App", "GifForge", "Assets.xcassets", "AppIcon.appiconset", "Contents.json")
+MESSAGES_ICON_CONTENTS = File.join(ROOT, "Client", "Extensions", "GifForgeMessages", "Assets.xcassets", "iMessage App Icon.stickersiconset", "Contents.json")
+MESSAGES_INFO_PLIST = File.join(ROOT, "Client", "Extensions", "GifForgeMessages", "Info.plist")
+MESSAGES_VIEW_CONTROLLER = File.join(ROOT, "Client", "Extensions", "GifForgeMessages", "MessagesViewController.swift")
+MESSAGES_APP_VIEW = File.join(ROOT, "Client", "Extensions", "GifForgeMessages", "MessagesAppView.swift")
+MESSAGES_COMPOSER_MODEL = File.join(ROOT, "Client", "Extensions", "GifForgeMessages", "MessagesComposerModel.swift")
+UI_TESTS = File.join(ROOT, "Client", "Tests", "GifForgeUITests", "GifForgeUITests.swift")
+GENERATION_MODELS = File.join(ROOT, "Client", "Packages", "GifForgeCore", "Sources", "GifForgeCore", "Models", "GenerationModels.swift")
+BACKEND_CLIENT = File.join(ROOT, "Client", "Packages", "GifForgeCore", "Sources", "GifForgeCore", "Networking", "BackendClient.swift")
+ACTIVE_GENERATION_STORE = File.join(ROOT, "Client", "Packages", "GifForgeCore", "Sources", "GifForgeCore", "Storage", "ActiveGenerationStore.swift")
+APP_STORAGE_DIRECTORIES = File.join(ROOT, "Client", "Packages", "GifForgeCore", "Sources", "GifForgeCore", "Storage", "AppStorageDirectories.swift")
 MAIN_BICEP = File.join(ROOT, "infra", "main.bicep")
 SUBSCRIPTION_BICEP = File.join(ROOT, "infra", "main.subscription.bicep")
 DEPLOY_NONPROD_WORKFLOW = File.join(ROOT, ".github", "workflows", "deploy-nonprod.yml")
@@ -144,14 +144,14 @@ rescue REXML::ParseException => e
 end
 
 def validate_messages_extension_metadata(project, errors)
-  target = project.fetch("targets").fetch("GifsterMessagesExtension")
+  target = project.fetch("targets").fetch("GifForgeMessagesExtension")
   target_type = target.fetch("type")
-  errors << "GifsterMessagesExtension target must be app-extension.messages, found #{target_type.inspect}." unless target_type == "app-extension.messages"
+  errors << "GifForgeMessagesExtension target must be app-extension.messages, found #{target_type.inspect}." unless target_type == "app-extension.messages"
 
   settings = target.fetch("settings").fetch("base")
   extension_api_only = settings.fetch("APPLICATION_EXTENSION_API_ONLY", nil)
   unless [true, "YES"].include?(extension_api_only)
-    errors << "GifsterMessagesExtension must set APPLICATION_EXTENSION_API_ONLY to YES, found #{extension_api_only.inspect}."
+    errors << "GifForgeMessagesExtension must set APPLICATION_EXTENSION_API_ONLY to YES, found #{extension_api_only.inspect}."
   end
 
   info = parse_plist(MESSAGES_INFO_PLIST)
@@ -293,7 +293,7 @@ def validate_deployment_safety_invariants(errors)
 
     smoke_step = workflow_step(nonprod_workflow, DEPLOY_NONPROD_WORKFLOW, "deploy", "Smoke test backend", errors)
     smoke_env = smoke_step&.fetch("env", {}) || {}
-    unless smoke_env["GIFSTER_SMOKE_USE_DEMO_APP_ATTEST"] == "${{ inputs.enable_demo_app_attest_bypass }}"
+    unless smoke_env["GIFFORGE_SMOKE_USE_DEMO_APP_ATTEST"] == "${{ inputs.enable_demo_app_attest_bypass }}"
       errors << "#{relative(DEPLOY_NONPROD_WORKFLOW)} smoke test must bind demo App Attest bypass to the manual workflow input."
     end
   end
@@ -327,10 +327,10 @@ def validate_deployment_safety_invariants(errors)
       AZURE_CLIENT_ID
       AZURE_TENANT_ID
       AZURE_SUBSCRIPTION_ID
-      GIFSTER_APP_ATTEST_APP_IDENTIFIER
-      GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM
-      GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL
-      GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE
+      GIFFORGE_APP_ATTEST_APP_IDENTIFIER
+      GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM
+      GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL
+      GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE
     ].each do |secret_name|
       require_text_include(run_script, secret_name, "#{relative(DEPLOY_PROD_WORKFLOW)} required prod secret validation", errors)
     end
@@ -366,14 +366,14 @@ def validate_provider_operational_readiness(errors)
   {
     "--mode MODE" => "mode selection",
     "--print-payload" => "sanitized payload dry run",
-    "GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL" => "submit URL configuration",
-    "GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE" => "result URL configuration",
-    "GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION" => "optional provider authorization",
-    "GIFSTER_PROVIDER_PRECHECK_IMAGE_BASE64" => "image-to-GIF preflight source image",
+    "GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL" => "submit URL configuration",
+    "GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE" => "result URL configuration",
+    "GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION" => "optional provider authorization",
+    "GIFFORGE_PROVIDER_PRECHECK_IMAGE_BASE64" => "image-to-GIF preflight source image",
     "captionMode: \"none\"" => "caption mode metadata",
     "renderCaptionLocally: true" => "local caption rendering contract",
     "retryable_result_status?" => "retryable result polling",
-    "FRAME_SEQUENCE_CONTENT_TYPE = \"application/vnd.gifster.frame-sequence+json\"" => "frame sequence result support",
+    "FRAME_SEQUENCE_CONTENT_TYPE = \"application/vnd.gifforge.frame-sequence+json\"" => "frame sequence result support",
     "MP4_CONTENT_TYPE = \"video/mp4\"" => "MP4 result support"
   }.each do |needle, label|
     require_text_include(preflight, needle, "#{relative(PROVIDER_PREFLIGHT)} #{label}", errors)
@@ -405,10 +405,10 @@ def validate_provider_operational_readiness(errors)
     "preflightImagePassed" => "image preflight evidence",
     "renderCaptionLocally" => "local caption rendering contract",
     "doesNotRequireReadableTextRendering" => "no provider-readable-text requirement",
-    "GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL" => "submit URL secret plan",
-    "GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE" => "result URL secret plan",
+    "GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL" => "submit URL secret plan",
+    "GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE" => "result URL secret plan",
     "video/mp4" => "MP4 result support",
-    "application/vnd.gifster.frame-sequence+json" => "frame-sequence result support",
+    "application/vnd.gifforge.frame-sequence+json" => "frame-sequence result support",
     "Provider onboarding validation passed" => "successful validation output"
   }.each do |needle, label|
     require_text_include(onboarding, needle, "#{relative(PROVIDER_ONBOARDING_VALIDATOR)} #{label}", errors)
@@ -427,8 +427,8 @@ def validate_app_store_screenshot_tooling(errors)
 
   script = File.read(SCREENSHOT_CAPTURE_SCRIPT)
   {
-    "GIFSTER_SCREENSHOT_ATTACHMENTS" => "configurable intermediate attachment directory",
-    "GIFSTER_SCREENSHOT_DESTINATION" => "configurable simulator destination",
+    "GIFFORGE_SCREENSHOT_ATTACHMENTS" => "configurable intermediate attachment directory",
+    "GIFFORGE_SCREENSHOT_DESTINATION" => "configurable simulator destination",
     "testCaptureContainingAppScreenshotsForAppStorePrep" => "screenshot UI test selection",
     "-resultBundlePath" => "XCTest result bundle preservation",
     "xcrun xcresulttool export attachments" => "XCTest attachment export",
@@ -440,7 +440,7 @@ def validate_app_store_screenshot_tooling(errors)
   tests = File.read(UI_TESTS)
   {
     "func testCaptureContainingAppScreenshotsForAppStorePrep()" => "App Store screenshot UI test",
-    "GIFSTER_UI_TEST_SEED_HISTORY" => "deterministic screenshot history seed",
+    "GIFFORGE_UI_TEST_SEED_HISTORY" => "deterministic screenshot history seed",
     "01-containing-app-overview" => "overview screenshot",
     "02-containing-app-history" => "history screenshot",
     "03-containing-app-clear-history" => "clear-history screenshot",
@@ -468,7 +468,7 @@ def validate_app_store_metadata_tooling(errors)
     "Privacy Policy URL" => "privacy URL validation",
     "Sticker mode is not implemented in v1" => "review-note no-sticker invariant",
     "Image Playground is not part of the v1 workflow" => "review-note no-Image-Playground invariant",
-    "Gifster does not use data for tracking" => "privacy no-tracking invariant"
+    "GifForge does not use data for tracking" => "privacy no-tracking invariant"
   }.each do |needle, label|
     require_text_include(script, needle, "#{relative(APP_STORE_METADATA_VALIDATOR)} #{label}", errors)
   end
@@ -600,12 +600,12 @@ end
 project = YAML.load_file(PROJECT_PATH)
 deployment_target = project.dig("options", "deploymentTarget", "iOS")
 iphoneos_target = project.dig("settings", "base", "IPHONEOS_DEPLOYMENT_TARGET")
-app_groups = project.dig("targets", "Gifster", "entitlements", "properties", "com.apple.security.application-groups") || []
-extension_app_groups = project.dig("targets", "GifsterMessagesExtension", "entitlements", "properties", "com.apple.security.application-groups") || []
+app_groups = project.dig("targets", "GifForge", "entitlements", "properties", "com.apple.security.application-groups") || []
+extension_app_groups = project.dig("targets", "GifForgeMessagesExtension", "entitlements", "properties", "com.apple.security.application-groups") || []
 
 errors << "Client/project.yml options.deploymentTarget.iOS must be 26.5, found #{deployment_target.inspect}." unless deployment_target == "26.5"
 errors << "Client/project.yml IPHONEOS_DEPLOYMENT_TARGET must be 26.5, found #{iphoneos_target.inspect}." unless iphoneos_target == "26.5"
-errors << "Gifster and GifsterMessagesExtension must share one App Group, found app=#{app_groups.inspect}, extension=#{extension_app_groups.inspect}." unless app_groups.length == 1 && app_groups == extension_app_groups
+errors << "GifForge and GifForgeMessagesExtension must share one App Group, found app=#{app_groups.inspect}, extension=#{extension_app_groups.inspect}." unless app_groups.length == 1 && app_groups == extension_app_groups
 
 app_storage_directories = File.read(APP_STORAGE_DIRECTORIES)
 app_group_identifier = app_groups.first
@@ -614,7 +614,7 @@ if app_group_identifier && !app_storage_directories.include?("appGroupIdentifier
 end
 
 package_swift = File.read(PACKAGE_PATH)
-errors << "GifsterCore Package.swift must declare .iOS(\"26.5\")." unless package_swift.include?(".iOS(\"26.5\")")
+errors << "GifForgeCore Package.swift must declare .iOS(\"26.5\")." unless package_swift.include?(".iOS(\"26.5\")")
 
 source_files = Dir.glob(File.join(ROOT, "Client", "**", "*.swift"))
 forbidden_source_patterns = {

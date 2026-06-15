@@ -1,6 +1,6 @@
-# Gifster
+# GifForge
 
-Gifster is an iOS 26.5+ iMessage app extension scaffold for generating custom animated GIFs with AI and inserting the finished GIF into Messages as a normal attachment.
+GifForge is an iOS 26.5+ iMessage app extension scaffold for generating custom animated GIFs with AI and inserting the finished GIF into Messages as a normal attachment.
 
 The v1 architecture is deliberately provider-neutral:
 
@@ -14,9 +14,9 @@ The v1 architecture is deliberately provider-neutral:
 
 - `Client` - iOS client workspace containing the XcodeGen project, containing app, Messages extension, generated Xcode project, and shared Swift package.
 - `Client/project.yml` - XcodeGen project for the containing iOS app and Messages extension.
-- `Client/App/Gifster` - containing app SwiftUI UI for onboarding, privacy, history, and settings.
-- `Client/Extensions/GifsterMessages` - iMessage extension UI and attachment insertion flow.
-- `Client/Packages/GifsterCore` - shared Swift package for planning models, backend client, image preprocessing, GIF rendering, and history.
+- `Client/App/GifForge` - containing app SwiftUI UI for onboarding, privacy, history, and settings.
+- `Client/Extensions/GifForgeMessages` - iMessage extension UI and attachment insertion flow.
+- `Client/Packages/GifForgeCore` - shared Swift package for planning models, backend client, image preprocessing, GIF rendering, and history.
 - `Backend` - ASP.NET Core Minimal API backend with Native AOT settings, provider abstraction, and job polling endpoints.
 - `Backend.Tests` - xUnit backend integration and unit tests.
 - `Documentation` - product, architecture, privacy, roadmap, and implementation plan.
@@ -29,11 +29,11 @@ The v1 architecture is deliberately provider-neutral:
 ```bash
 cd Client
 xcodegen generate
-cd Packages/GifsterCore
-swift test --scratch-path /private/tmp/gifster-swiftpm
+cd Packages/GifForgeCore
+swift test --scratch-path /private/tmp/gifforge-swiftpm
 cd ../../..
-dotnet test Backend.Tests/Gifster.Backend.Tests.csproj
-ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/Gifster.Backend.csproj
+dotnet test Backend.Tests/GifForge.Backend.Tests.csproj
+ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/GifForge.Backend.csproj
 ```
 
 The local backend listens at `http://127.0.0.1:8787` by default. The containing app Settings screen stores the backend URL in the shared app-group defaults used by the Messages extension.

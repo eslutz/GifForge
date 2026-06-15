@@ -15,10 +15,10 @@ The current scaffold was generated and build-checked on Xcode 26.5 with the iOS 
 ```bash
 cd Client
 xcodegen generate
-open Gifster.xcodeproj
+open GifForge.xcodeproj
 ```
 
-Select the `Gifster` scheme. Configure signing for the app and extension bundle ids:
+Select the `GifForge` scheme. Configure signing for the app and extension bundle ids:
 
 - `dev.ericslutz.gifforge`
 - `dev.ericslutz.gifforge.messagesextension`
@@ -46,14 +46,14 @@ The readiness check verifies the iOS 26.5 target, v1 no-sticker/no-Image-Playgro
 ## Run Shared Swift Tests
 
 ```bash
-cd Client/Packages/GifsterCore
-swift test --scratch-path /private/tmp/gifster-swiftpm
+cd Client/Packages/GifForgeCore
+swift test --scratch-path /private/tmp/gifforge-swiftpm
 ```
 
 ## Run Backend Tests
 
 ```bash
-dotnet test Backend.Tests/Gifster.Backend.Tests.csproj
+dotnet test Backend.Tests/GifForge.Backend.Tests.csproj
 ```
 
 ## Capture Containing-App Screenshots
@@ -62,7 +62,7 @@ dotnet test Backend.Tests/Gifster.Backend.Tests.csproj
 scripts/capture-app-store-screenshots.sh
 ```
 
-By default, the script writes App Store prep screenshots to `Documentation/AppStoreScreenshots/containing-app`, which is ignored by git. Set `GIFSTER_SCREENSHOT_DESTINATION` to target a specific simulator, or pass an output directory as the first argument. Capture Messages extension screenshots separately on a physical device from Messages compact and expanded modes.
+By default, the script writes App Store prep screenshots to `Documentation/AppStoreScreenshots/containing-app`, which is ignored by git. Set `GIFFORGE_SCREENSHOT_DESTINATION` to target a specific simulator, or pass an output directory as the first argument. Capture Messages extension screenshots separately on a physical device from Messages compact and expanded modes.
 
 ## Validate App Store Metadata
 
@@ -94,7 +94,7 @@ The generated evidence directory is ignored by git. Use the template while testi
 ## Run the Local Backend
 
 ```bash
-ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/Gifster.Backend.csproj
+ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/GifForge.Backend.csproj
 ```
 
 The backend listens at `http://127.0.0.1:8787`.
@@ -105,21 +105,21 @@ The production backend target is ASP.NET Core Minimal API with Native AOT on Azu
 
 Provider adapter selection:
 
-- `GIFSTER_PROVIDER_ADAPTER=fake`: deterministic local/demo frame-sequence provider.
-- `GIFSTER_PROVIDER_ADAPTER=external-http`: posts generation requests to a compatible provider gateway and downloads either `video/mp4` or `application/vnd.gifster.frame-sequence+json` results.
+- `GIFFORGE_PROVIDER_ADAPTER=fake`: deterministic local/demo frame-sequence provider.
+- `GIFFORGE_PROVIDER_ADAPTER=external-http`: posts generation requests to a compatible provider gateway and downloads either `video/mp4` or `application/vnd.gifforge.frame-sequence+json` results.
 
 Validate a compatible provider gateway before using it in nonprod or prod:
 
 ```bash
-GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL=https://provider.example.test/jobs \
-GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE='https://provider.example.test/jobs/{providerJobId}/result' \
-GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION='Bearer <token>' \
+GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL=https://provider.example.test/jobs \
+GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE='https://provider.example.test/jobs/{providerJobId}/result' \
+GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION='Bearer <token>' \
 scripts/validate-external-provider-contract.rb
 ```
 
-Use `scripts/validate-external-provider-contract.rb --print-payload` to inspect the sanitized provider-facing JSON without network calls. To validate image-to-GIF, pass `--mode image_to_gif` and provide `GIFSTER_PROVIDER_PRECHECK_IMAGE_BASE64`, `GIFSTER_PROVIDER_PRECHECK_IMAGE_WIDTH`, and `GIFSTER_PROVIDER_PRECHECK_IMAGE_HEIGHT` for an app-processed JPEG sample.
+Use `scripts/validate-external-provider-contract.rb --print-payload` to inspect the sanitized provider-facing JSON without network calls. To validate image-to-GIF, pass `--mode image_to_gif` and provide `GIFFORGE_PROVIDER_PRECHECK_IMAGE_BASE64`, `GIFFORGE_PROVIDER_PRECHECK_IMAGE_WIDTH`, and `GIFFORGE_PROVIDER_PRECHECK_IMAGE_HEIGHT` for an app-processed JPEG sample.
 
-The provider preflight polls retryable result states until the configured timeout and accepts only non-empty `video/mp4` or valid `application/vnd.gifster.frame-sequence+json` results.
+The provider preflight polls retryable result states until the configured timeout and accepts only non-empty `video/mp4` or valid `application/vnd.gifforge.frame-sequence+json` results.
 
 Record the selected provider decision and production readiness evidence:
 
@@ -130,28 +130,28 @@ scripts/validate-provider-onboarding.rb Documentation/ProviderEvidence/first-pro
 
 The generated evidence directory is ignored by git. Keep provider credentials, Authorization header values, API keys, bearer tokens, passwords, and raw secret values out of the evidence file.
 
-Deployed environments set `GIFSTER_APP_ATTEST_REQUIRED=true`. Local development leaves it unset unless you are testing the App Attest challenge/session flow.
+Deployed environments set `GIFFORGE_APP_ATTEST_REQUIRED=true`. Local development leaves it unset unless you are testing the App Attest challenge/session flow.
 
 Real App Attest verification requires:
 
-- `GIFSTER_APP_ATTEST_APP_IDENTIFIER`: Apple Team ID plus bundle id, such as `TEAMID.dev.ericslutz.gifforge`.
-- `GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM`: PEM-encoded Apple App Attest root certificate.
+- `GIFFORGE_APP_ATTEST_APP_IDENTIFIER`: Apple Team ID plus bundle id, such as `TEAMID.dev.ericslutz.gifforge`.
+- `GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM`: PEM-encoded Apple App Attest root certificate.
 
 The scaffold includes a demo-only App Attest bypass for local and nonprod smoke testing:
 
 ```bash
-GIFSTER_APP_ATTEST_REQUIRED=true \
-GIFSTER_APP_ATTEST_DEMO_BYPASS=true \
+GIFFORGE_APP_ATTEST_REQUIRED=true \
+GIFFORGE_APP_ATTEST_DEMO_BYPASS=true \
 ASPNETCORE_HTTP_PORTS=8787 \
-dotnet run --project Backend/Gifster.Backend.csproj
+dotnet run --project Backend/GifForge.Backend.csproj
 ```
 
-`GIFSTER_APP_ATTEST_DEMO_BYPASS` lets the backend issue short-lived demo session tokens from placeholder attestation payloads. Do not set it in production.
+`GIFFORGE_APP_ATTEST_DEMO_BYPASS` lets the backend issue short-lived demo session tokens from placeholder attestation payloads. Do not set it in production.
 
 Pushes to `main` publish the backend container to GitHub Container Registry as:
 
-- `ghcr.io/eslutz/gifster-backend:latest`
-- `ghcr.io/eslutz/gifster-backend:<commit-sha>`
+- `ghcr.io/eslutz/gifforge-backend:latest`
+- `ghcr.io/eslutz/gifforge-backend:<commit-sha>`
 
 ## Validate Infrastructure
 
@@ -160,13 +160,13 @@ az bicep build --file infra/main.bicep
 az bicep build --file infra/main.subscription.bicep
 ```
 
-Bootstrap an environment with `az deployment sub create` after setting the `containerImage` parameter to a pushed backend image, preferably the immutable commit SHA tag from GHCR for repeatable deployments. Use `infra/main.subscription.bicep` for initial environment creation; it creates `rg-gifster-nonprod` or `rg-gifster-prod` and then deploys `infra/main.bicep` into that resource group. Once the resource group exists, deploy normal updates with `az deployment group create --resource-group rg-gifster-nonprod --template-file infra/main.bicep ...`. Deployments default to `minReplicas=0` and `workerMinReplicas=0` to scale to zero; the worker wakes from the Azure Queue scale rule when generation jobs are waiting.
+Bootstrap an environment with `az deployment sub create` after setting the `containerImage` parameter to a pushed backend image, preferably the immutable commit SHA tag from GHCR for repeatable deployments. Use `infra/main.subscription.bicep` for initial environment creation; it creates `rg-gifforge-nonprod` or `rg-gifforge-prod` and then deploys `infra/main.bicep` into that resource group. Once the resource group exists, deploy normal updates with `az deployment group create --resource-group rg-gifforge-nonprod --template-file infra/main.bicep ...`. Deployments default to `minReplicas=0` and `workerMinReplicas=0` to scale to zero; the worker wakes from the Azure Queue scale rule when generation jobs are waiting.
 
 Deployed environments also default to `generationJobRetentionHours=24`, `temporaryBlobRetentionDays=2`, `retentionCleanupIntervalMinutes=360`, and `retentionCleanupBatchSize=100`. The backend stores an `expiresAt` value with each generation job, returns HTTP `410 Gone` for expired status/result reads, and prunes expired job rows during cleanup passes. Azure Storage lifecycle policy deletes temporary provider result and source-image blobs from the private containers.
 
-The `Deploy Nonprod` GitHub Actions workflow can deploy and smoke-test `rg-gifster-nonprod` manually. It uses resource-group-scope deployment against the existing nonprod resource group. Run `scripts/setup-azure-oidc.sh --environment nonprod` first in dry-run mode to review the Azure OIDC trust, GitHub environment secrets, and resource-group-scoped RBAC changes. After approval, run it with `--apply` to configure `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, the federated credential subject `repo:eslutz/Gifster:environment:nonprod`, and the `Contributor` plus `Role Based Access Control Administrator` roles at the `rg-gifster-nonprod` scope. Dispatch the workflow with an immutable backend GHCR commit SHA tag to deploy. Use its demo App Attest bypass input only for controlled nonprod smoke tests.
+The `Deploy Nonprod` GitHub Actions workflow can deploy and smoke-test `rg-gifforge-nonprod` manually. It uses resource-group-scope deployment against the existing nonprod resource group. Run `scripts/setup-azure-oidc.sh --environment nonprod` first in dry-run mode to review the Azure OIDC trust, GitHub environment secrets, and resource-group-scoped RBAC changes. After approval, run it with `--apply` to configure `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, the federated credential subject `repo:eslutz/GifForge:environment:nonprod`, and the `Contributor` plus `Role Based Access Control Administrator` roles at the `rg-gifforge-nonprod` scope. Dispatch the workflow with an immutable backend GHCR commit SHA tag to deploy. Use its demo App Attest bypass input only for controlled nonprod smoke tests.
 
-The `Deploy Prod` workflow deploys to `rg-gifster-prod` through the `prod` GitHub environment. Run `scripts/setup-azure-oidc.sh --environment prod` first, configure the required production App Attest and external provider secrets in that GitHub environment, and dispatch only with an immutable commit SHA image tag. Production deployment forces `providerAdapter=external-http`, disables the demo App Attest bypass, and performs only a `/health` check; generation validation still requires a physical-device App Attest session and the selected provider.
+The `Deploy Prod` workflow deploys to `rg-gifforge-prod` through the `prod` GitHub environment. Run `scripts/setup-azure-oidc.sh --environment prod` first, configure the required production App Attest and external provider secrets in that GitHub environment, and dispatch only with an immutable commit SHA image tag. Production deployment forces `providerAdapter=external-http`, disables the demo App Attest bypass, and performs only a `/health` check; generation validation still requires a physical-device App Attest session and the selected provider.
 
 Audit OIDC readiness without mutating Azure or GitHub state:
 
@@ -204,12 +204,12 @@ scripts/smoke-backend.sh
 With the local demo App Attest bypass enabled:
 
 ```bash
-GIFSTER_BACKEND_URL=http://127.0.0.1:8787 \
-GIFSTER_SMOKE_USE_DEMO_APP_ATTEST=true \
+GIFFORGE_BACKEND_URL=http://127.0.0.1:8787 \
+GIFFORGE_SMOKE_USE_DEMO_APP_ATTEST=true \
 scripts/smoke-backend.sh
 ```
 
-For deployed environments, set `GIFSTER_BACKEND_URL` to the Container Apps URL. Once real App Attest verification exists, provide a short-lived real session token with `GIFSTER_APP_ATTEST_SESSION_TOKEN`.
+For deployed environments, set `GIFFORGE_BACKEND_URL` to the Container Apps URL. Once real App Attest verification exists, provide a short-lived real session token with `GIFFORGE_APP_ATTEST_SESSION_TOKEN`.
 
 ## CI
 
@@ -225,9 +225,9 @@ The client workflow also builds the containing app, Messages extension, and UI t
 
 ## End-to-End Demo Flow
 
-1. Start the local backend with `ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/Gifster.Backend.csproj`.
+1. Start the local backend with `ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/GifForge.Backend.csproj`.
 2. Launch the containing app once and confirm the backend URL in Settings.
-3. Open Messages, select the Gifster iMessage app, and enter a prompt.
+3. Open Messages, select the GifForge iMessage app, and enter a prompt.
 4. Optionally add an image with the Photos picker.
 5. Select a caption mode.
 6. Tap Generate.

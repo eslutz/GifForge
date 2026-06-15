@@ -1,4 +1,4 @@
-name: Gifster
+name: GifForge
 options:
   bundleIdPrefix: dev.ericslutz
   deploymentTarget:
@@ -20,24 +20,24 @@ settings:
     Release:
       APP_ATTEST_ENVIRONMENT: production
 packages:
-  GifsterCore:
-    path: Packages/GifsterCore
+  GifForgeCore:
+    path: Packages/GifForgeCore
 targets:
-  Gifster:
+  GifForge:
     type: application
     platform: iOS
     sources:
-      - App/Gifster
+      - App/GifForge
     resources:
-      - App/Gifster/Assets.xcassets
-      - App/Gifster/PrivacyInfo.xcprivacy
+      - App/GifForge/Assets.xcassets
+      - App/GifForge/PrivacyInfo.xcprivacy
     dependencies:
-      - package: GifsterCore
-      - target: GifsterMessagesExtension
+      - package: GifForgeCore
+      - target: GifForgeMessagesExtension
     info:
-      path: App/Gifster/Info.plist
+      path: App/GifForge/Info.plist
       properties:
-        CFBundleDisplayName: Gifster
+        CFBundleDisplayName: GifForge
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
@@ -51,7 +51,7 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
     entitlements:
-      path: App/Gifster/Gifster.entitlements
+      path: App/GifForge/GifForge.entitlements
       properties:
         com.apple.developer.devicecheck.appattest-environment: $(APP_ATTEST_ENVIRONMENT)
         com.apple.security.application-groups:
@@ -59,27 +59,27 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.ericslutz.gifforge
-        PRODUCT_NAME: Gifster
+        PRODUCT_NAME: GifForge
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
-  GifsterMessagesExtension:
+  GifForgeMessagesExtension:
     type: app-extension.messages
     platform: iOS
     sources:
-      - Extensions/GifsterMessages
+      - Extensions/GifForgeMessages
     resources:
-      - Extensions/GifsterMessages/Assets.xcassets
-      - Extensions/GifsterMessages/PrivacyInfo.xcprivacy
+      - Extensions/GifForgeMessages/Assets.xcassets
+      - Extensions/GifForgeMessages/PrivacyInfo.xcprivacy
     dependencies:
-      - package: GifsterCore
+      - package: GifForgeCore
       - sdk: Messages.framework
       - sdk: PhotosUI.framework
       - sdk: UIKit.framework
       - sdk: WebKit.framework
     info:
-      path: Extensions/GifsterMessages/Info.plist
+      path: Extensions/GifForgeMessages/Info.plist
       properties:
-        CFBundleDisplayName: Gifster
+        CFBundleDisplayName: GifForge
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
@@ -88,7 +88,7 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
     entitlements:
-      path: Extensions/GifsterMessages/GifsterMessages.entitlements
+      path: Extensions/GifForgeMessages/GifForgeMessages.entitlements
       properties:
         com.apple.developer.devicecheck.appattest-environment: $(APP_ATTEST_ENVIRONMENT)
         com.apple.security.application-groups:
@@ -96,31 +96,31 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.ericslutz.gifforge.messagesextension
-        PRODUCT_NAME: GifsterMessagesExtension
+        PRODUCT_NAME: GifForgeMessagesExtension
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
-  GifsterUITests:
+  GifForgeUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - Tests/GifsterUITests
+      - Tests/GifForgeUITests
     dependencies:
-      - target: Gifster
+      - target: GifForge
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: dev.ericslutz.gifforge.UITests
-        PRODUCT_NAME: GifsterUITests
-        TEST_TARGET_NAME: Gifster
+        PRODUCT_NAME: GifForgeUITests
+        TEST_TARGET_NAME: GifForge
 schemes:
-  Gifster:
+  GifForge:
     build:
       targets:
-        Gifster: all
-        GifsterMessagesExtension: all
-        GifsterUITests: test
+        GifForge: all
+        GifForgeMessagesExtension: all
+        GifForgeUITests: test
     test:
       targets:
-        - GifsterUITests
+        - GifForgeUITests
     run:
       config: Debug

@@ -1,7 +1,7 @@
-using Gifster.Backend.Jobs;
-using Gifster.Backend.Models;
+using GifForge.Backend.Jobs;
+using GifForge.Backend.Models;
 
-namespace Gifster.Backend.Providers;
+namespace GifForge.Backend.Providers;
 
 public interface IGenerationProvider
 {

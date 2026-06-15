@@ -1,8 +1,8 @@
-namespace Gifster.Backend.Storage;
+namespace GifForge.Backend.Storage;
 
 public static class GenerationResultContentTypes
 {
-  public const string FrameSequence = "application/vnd.gifster.frame-sequence+json";
+  public const string FrameSequence = "application/vnd.gifforge.frame-sequence+json";
   public const string Mp4 = "video/mp4";
 
   public static string FileExtensionFor(string contentType) =>

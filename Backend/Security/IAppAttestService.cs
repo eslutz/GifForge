@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace Gifster.Backend.Security;
+namespace GifForge.Backend.Security;
 
 public interface IAppAttestService
 {
