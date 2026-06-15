@@ -41,7 +41,7 @@ Run the release readiness invariant check before screenshots, archive validation
 ruby scripts/verify-release-readiness.rb
 ```
 
-The readiness check verifies the iOS 26.5 target, v1 no-sticker/no-Image-Playground source-code invariants, iMessage extension metadata, local caption re-render wiring, backend expiration propagation, deploy workflow scale-to-zero and production safety invariants, provider health/preflight invariants, containing-app screenshot tooling, known App Store metadata placeholders, and tracked app/iMessage icon catalog completeness.
+The readiness check verifies the iOS 26.5 target, v1 no-sticker/no-Image-Playground source-code invariants, iMessage extension metadata, local caption re-render wiring, backend expiration propagation, deploy workflow scale-to-zero and production safety invariants, provider health/preflight invariants, containing-app screenshot tooling, App Store metadata validation, known App Store metadata placeholders, and tracked app/iMessage icon catalog completeness.
 
 ## Run Shared Swift Tests
 
@@ -63,6 +63,14 @@ scripts/capture-app-store-screenshots.sh
 ```
 
 By default, the script writes App Store prep screenshots to `Documentation/AppStoreScreenshots/containing-app`, which is ignored by git. Set `GIFSTER_SCREENSHOT_DESTINATION` to target a specific simulator, or pass an output directory as the first argument. Capture Messages extension screenshots separately on a physical device from Messages compact and expanded modes.
+
+## Validate App Store Metadata
+
+```bash
+scripts/validate-app-store-metadata.rb
+```
+
+The validator checks App Store field lengths, required support/privacy URLs, no-tracking privacy claims, review-note coverage for attachment insertion and manual sending, no sticker mode, no Image Playground dependency, and privacy-policy retention/provider disclosures.
 
 ## Run the Local Backend
 

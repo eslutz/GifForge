@@ -6,6 +6,7 @@ on:
       - Client/**
       - scripts/validate-client-signing.rb
       - scripts/verify-release-readiness.rb
+      - scripts/validate-app-store-metadata.rb
       - .github/workflows/client.yml
   push:
     branches:
@@ -14,6 +15,7 @@ on:
       - Client/**
       - scripts/validate-client-signing.rb
       - scripts/verify-release-readiness.rb
+      - scripts/validate-app-store-metadata.rb
       - .github/workflows/client.yml
 
 permissions:
@@ -41,6 +43,9 @@ jobs:
 
       - name: Validate release readiness invariants
         run: ruby scripts/verify-release-readiness.rb
+
+      - name: Validate App Store metadata
+        run: scripts/validate-app-store-metadata.rb
 
       - name: Run Swift package tests
         working-directory: Client/Packages/GifsterCore

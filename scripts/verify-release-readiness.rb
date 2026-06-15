@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "open3"
 require "rexml/document"
 require "yaml"
 
@@ -29,6 +30,7 @@ EXTERNAL_PROVIDER = File.join(ROOT, "Backend", "Providers", "ExternalHttpGenerat
 BACKEND_PROGRAM = File.join(ROOT, "Backend", "Program.cs")
 PROVIDER_PREFLIGHT = File.join(ROOT, "scripts", "validate-external-provider-contract.rb")
 SCREENSHOT_CAPTURE_SCRIPT = File.join(ROOT, "scripts", "capture-app-store-screenshots.sh")
+APP_STORE_METADATA_VALIDATOR = File.join(ROOT, "scripts", "validate-app-store-metadata.rb")
 
 DOCS_WITH_RELEASE_COPY = [
   "Documentation/APP_STORE_METADATA.md",
@@ -415,6 +417,40 @@ def validate_app_store_screenshot_tooling(errors)
   end
 end
 
+def validate_app_store_metadata_tooling(errors)
+  unless File.executable?(APP_STORE_METADATA_VALIDATOR)
+    errors << "#{relative(APP_STORE_METADATA_VALIDATOR)} must be executable so App Store metadata checks are repeatable."
+    return unless File.file?(APP_STORE_METADATA_VALIDATOR)
+  end
+
+  script = File.read(APP_STORE_METADATA_VALIDATOR)
+  {
+    "FIELD_LIMITS" => "App Store field length checks",
+    "\"Name\" => 30" => "name limit",
+    "\"Subtitle\" => 30" => "subtitle limit",
+    "\"Promotional Text\" => 170" => "promotional text limit",
+    "\"Keywords\" => 100" => "keywords limit",
+    "Support URL" => "support URL validation",
+    "Privacy Policy URL" => "privacy URL validation",
+    "Sticker mode is not implemented in v1" => "review-note no-sticker invariant",
+    "Image Playground is not part of the v1 workflow" => "review-note no-Image-Playground invariant",
+    "Gifster does not use data for tracking" => "privacy no-tracking invariant"
+  }.each do |needle, label|
+    require_text_include(script, needle, "#{relative(APP_STORE_METADATA_VALIDATOR)} #{label}", errors)
+  end
+end
+
+def validate_app_store_metadata_content(errors)
+  return unless File.executable?(APP_STORE_METADATA_VALIDATOR)
+
+  output, status = Open3.capture2e(APP_STORE_METADATA_VALIDATOR)
+  return if status.success?
+
+  output.lines.reject { |line| line.strip.empty? }.each do |line|
+    errors << "#{relative(APP_STORE_METADATA_VALIDATOR)}: #{line.chomp}"
+  end
+end
+
 project = YAML.load_file(PROJECT_PATH)
 deployment_target = project.dig("options", "deploymentTarget", "iOS")
 iphoneos_target = project.dig("settings", "base", "IPHONEOS_DEPLOYMENT_TARGET")
@@ -469,6 +505,8 @@ validate_backend_expiration_contract(errors)
 validate_deployment_safety_invariants(errors)
 validate_provider_operational_readiness(errors)
 validate_app_store_screenshot_tooling(errors)
+validate_app_store_metadata_tooling(errors)
+validate_app_store_metadata_content(errors)
 
 if errors.any?
   warn "Release readiness validation failed:"
@@ -487,3 +525,4 @@ puts "Checked client preserves backend generation expiration for active-job resu
 puts "Checked deployment scale-to-zero and production safety invariants."
 puts "Checked provider health mode and external-provider preflight invariants."
 puts "Checked containing-app App Store screenshot capture tooling."
+puts "Checked App Store metadata validation tooling."
