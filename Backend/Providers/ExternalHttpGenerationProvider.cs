@@ -21,6 +21,8 @@ public sealed class ExternalHttpGenerationProvider : IGenerationProvider
 
   public string Name => options.Name;
 
+  public string Mode => "external";
+
   public async Task<ProviderJob> SubmitGenerationAsync(
     GenerationRequest request,
     CancellationToken cancellationToken

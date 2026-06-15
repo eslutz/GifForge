@@ -188,6 +188,8 @@ internal sealed class ThrowingResultProvider : IGenerationProvider
 
   public string Name => "throwing-provider";
 
+  public string Mode => "test";
+
   public Task<ProviderJob> SubmitGenerationAsync(
     Gifster.Backend.Models.GenerationRequest request,
     CancellationToken cancellationToken

@@ -270,7 +270,7 @@ public static class GifsterBackendApp
   private static void MapRoutes(WebApplication app)
   {
     app.MapGet("/health", (IGenerationProvider provider) =>
-      Json(new HealthResponse(true, provider.Name, "demo"), GifsterJsonSerializerContext.Default.HealthResponse));
+      Json(new HealthResponse(true, provider.Name, provider.Mode), GifsterJsonSerializerContext.Default.HealthResponse));
 
     app.MapPost("/v1/app-attest/challenges", async (
       IAppAttestService appAttest,

@@ -12,6 +12,8 @@ Returns backend health and active provider mode for Container Apps probes.
 }
 ```
 
+`mode` is `demo` for the built-in fake provider and `external` when `GIFSTER_PROVIDER_ADAPTER=external-http` is active.
+
 ## POST `/v1/app-attest/challenges`
 
 Creates a short-lived App Attest challenge. Local demo mode can use this endpoint with `GIFSTER_APP_ATTEST_DEMO_BYPASS=true`; production uses it as the challenge source for server-side App Attest verification.

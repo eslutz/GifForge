@@ -302,6 +302,8 @@ public sealed class BackendRouteTests
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     var body = await response.Content.ReadAsStringAsync();
     Assert.Contains("\"provider\":\"test-provider\"", body);
+    Assert.Contains("\"mode\":\"external\"", body);
+    Assert.DoesNotContain("\"mode\":\"demo\"", body);
   }
 
   private static JsonSerializerOptions JsonOptions() =>
@@ -322,6 +324,8 @@ internal sealed class RecordingGenerationJobDispatcher : IGenerationJobDispatche
 internal sealed class RecordingGenerationProvider : IGenerationProvider
 {
   public string Name => "recording-provider";
+
+  public string Mode => "test";
 
   public GenerationRequest? SubmittedRequest { get; private set; }
 
@@ -345,6 +349,8 @@ internal sealed class SubmitFailureProvider : IGenerationProvider
   }
 
   public string Name => "submit-failure-provider";
+
+  public string Mode => "test";
 
   public Task<ProviderJob> SubmitGenerationAsync(GenerationRequest request, CancellationToken cancellationToken) =>
     Task.FromException<ProviderJob>(error);
