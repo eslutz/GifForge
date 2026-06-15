@@ -159,6 +159,11 @@ Submission response:
 }
 ```
 
+Submission failure handling:
+
+- Provider `400`, `401`, `403`, and `422` responses are treated as permanent provider rejections. The app-facing generation route returns HTTP `422` with generic safe copy and does not persist or dispatch a generation job.
+- Provider `408`, `429`, `5xx`, network, and timeout-style failures are treated as retryable availability failures. The app-facing generation route returns HTTP `503` with generic safe copy and does not expose provider error bodies.
+
 The backend later downloads the motion asset from `GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`, replacing `{providerJobId}` and `{jobId}` placeholders. The result response must use either:
 
 - `application/vnd.gifster.frame-sequence+json`

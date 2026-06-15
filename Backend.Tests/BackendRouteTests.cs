@@ -162,6 +162,52 @@ public sealed class BackendRouteTests
   }
 
   [Fact]
+  public async Task CreateGenerationReturnsUnprocessableEntityForPermanentProviderSubmissionFailure()
+  {
+    var dispatcher = new RecordingGenerationJobDispatcher();
+    await using var app = GifsterBackendApp.Create(
+      provider: new SubmitFailureProvider(new GenerationPermanentFailureException("provider secret rejection detail")),
+      jobStore: new MemoryJobStore(),
+      jobDispatcher: dispatcher
+    );
+    var baseAddress = await BackendRouteTestHost.StartAsync(app);
+    using var client = new HttpClient { BaseAddress = baseAddress };
+    var requestJson = JsonSerializer.Serialize(TestGenerationRequests.Valid(), JsonOptions());
+    using var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+    var response = await client.PostAsync("/v1/generations", content);
+
+    Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    Assert.Empty(dispatcher.JobIds);
+    var body = await response.Content.ReadAsStringAsync();
+    Assert.Contains("Generation provider rejected the request.", body);
+    Assert.DoesNotContain("provider secret rejection detail", body);
+  }
+
+  [Fact]
+  public async Task CreateGenerationReturnsServiceUnavailableForTransientProviderSubmissionFailure()
+  {
+    var dispatcher = new RecordingGenerationJobDispatcher();
+    await using var app = GifsterBackendApp.Create(
+      provider: new SubmitFailureProvider(new HttpRequestException("provider unavailable secret detail")),
+      jobStore: new MemoryJobStore(),
+      jobDispatcher: dispatcher
+    );
+    var baseAddress = await BackendRouteTestHost.StartAsync(app);
+    using var client = new HttpClient { BaseAddress = baseAddress };
+    var requestJson = JsonSerializer.Serialize(TestGenerationRequests.Valid(), JsonOptions());
+    using var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+    var response = await client.PostAsync("/v1/generations", content);
+
+    Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    Assert.Empty(dispatcher.JobIds);
+    var body = await response.Content.ReadAsStringAsync();
+    Assert.Contains("Generation provider is temporarily unavailable.", body);
+    Assert.DoesNotContain("provider unavailable secret detail", body);
+  }
+
+  [Fact]
   public async Task CreateGenerationUsesForwardedHttpsHostInStatusUrl()
   {
     var dispatcher = new RecordingGenerationJobDispatcher();
@@ -284,6 +330,24 @@ internal sealed class RecordingGenerationProvider : IGenerationProvider
     SubmittedRequest = request;
     return Task.FromResult(new ProviderJob(Name, "recording-provider-job"));
   }
+
+  public Task<GeneratedMotionResult> GetResultAsync(GenerationJob job, CancellationToken cancellationToken) =>
+    throw new NotSupportedException();
+}
+
+internal sealed class SubmitFailureProvider : IGenerationProvider
+{
+  private readonly Exception error;
+
+  public SubmitFailureProvider(Exception error)
+  {
+    this.error = error;
+  }
+
+  public string Name => "submit-failure-provider";
+
+  public Task<ProviderJob> SubmitGenerationAsync(GenerationRequest request, CancellationToken cancellationToken) =>
+    Task.FromException<ProviderJob>(error);
 
   public Task<GeneratedMotionResult> GetResultAsync(GenerationJob job, CancellationToken cancellationToken) =>
     throw new NotSupportedException();

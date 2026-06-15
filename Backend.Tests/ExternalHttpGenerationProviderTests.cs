@@ -80,6 +80,50 @@ public sealed class ExternalHttpGenerationProviderTests
   }
 
   [Fact]
+  public async Task SubmitGenerationClassifiesProviderValidationRejectionsAsPermanent()
+  {
+    var handler = new RecordingHttpMessageHandler(_ =>
+      new HttpResponseMessage(HttpStatusCode.UnprocessableEntity)
+    );
+    var provider = new ExternalHttpGenerationProvider(
+      new ExternalHttpProviderOptions(
+        "external-http",
+        new Uri("https://provider.example.test/jobs"),
+        "https://provider.example.test/jobs/{providerJobId}/result",
+        null
+      ),
+      new HttpClient(handler)
+    );
+
+    var error = await Assert.ThrowsAsync<GenerationPermanentFailureException>(
+      () => provider.SubmitGenerationAsync(TestGenerationRequests.Valid(), CancellationToken.None)
+    );
+
+    Assert.Equal("External provider rejected generation submission with HTTP 422.", error.Message);
+  }
+
+  [Fact]
+  public async Task SubmitGenerationLeavesProviderOutagesRetryable()
+  {
+    var handler = new RecordingHttpMessageHandler(_ =>
+      new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+    );
+    var provider = new ExternalHttpGenerationProvider(
+      new ExternalHttpProviderOptions(
+        "external-http",
+        new Uri("https://provider.example.test/jobs"),
+        "https://provider.example.test/jobs/{providerJobId}/result",
+        null
+      ),
+      new HttpClient(handler)
+    );
+
+    await Assert.ThrowsAsync<HttpRequestException>(
+      () => provider.SubmitGenerationAsync(TestGenerationRequests.Valid(), CancellationToken.None)
+    );
+  }
+
+  [Fact]
   public async Task GetResultDownloadsProviderMotionAssetBytes()
   {
     var mp4Bytes = "fake mp4 bytes"u8.ToArray();

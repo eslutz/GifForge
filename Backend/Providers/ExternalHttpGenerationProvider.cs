@@ -39,7 +39,7 @@ public sealed class ExternalHttpGenerationProvider : IGenerationProvider
     ApplyAuthorization(httpRequest);
 
     using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-    response.EnsureSuccessStatusCode();
+    EnsureSubmissionAccepted(response);
     var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
     var providerJob = await JsonSerializer.DeserializeAsync(
       stream,
@@ -85,6 +85,21 @@ public sealed class ExternalHttpGenerationProvider : IGenerationProvider
       .Replace("{providerJobId}", Uri.EscapeDataString(job.ProviderJobId), StringComparison.Ordinal)
       .Replace("{jobId}", Uri.EscapeDataString(job.Id), StringComparison.Ordinal);
     return new Uri(url);
+  }
+
+  private static void EnsureSubmissionAccepted(HttpResponseMessage response)
+  {
+    if (response.StatusCode is System.Net.HttpStatusCode.BadRequest or
+        System.Net.HttpStatusCode.Unauthorized or
+        System.Net.HttpStatusCode.Forbidden or
+        System.Net.HttpStatusCode.UnprocessableEntity)
+    {
+      throw new GenerationPermanentFailureException(
+        $"External provider rejected generation submission with HTTP {(int)response.StatusCode}."
+      );
+    }
+
+    response.EnsureSuccessStatusCode();
   }
 
   private void ApplyAuthorization(HttpRequestMessage request)

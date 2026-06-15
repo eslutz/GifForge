@@ -315,7 +315,20 @@ public static class GifsterBackendApp
         return Error(validation.StatusCode, validation.Message);
       }
 
-      var providerJob = await provider.SubmitGenerationAsync(request, context.RequestAborted);
+      ProviderJob providerJob;
+      try
+      {
+        providerJob = await provider.SubmitGenerationAsync(request, context.RequestAborted);
+      }
+      catch (GenerationPermanentFailureException)
+      {
+        return Error(StatusCodes.Status422UnprocessableEntity, "Generation provider rejected the request.");
+      }
+      catch (HttpRequestException)
+      {
+        return Error(StatusCodes.Status503ServiceUnavailable, "Generation provider is temporarily unavailable.");
+      }
+
       var jobRequest = GenerationRequestPrivacy.SanitizeForJobState(request);
       var job = await jobStore.CreateAsync(jobRequest, providerJob, context.RequestAborted);
       await jobDispatcher.DispatchAsync(job, context.RequestAborted);

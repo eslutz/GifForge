@@ -75,4 +75,6 @@ Linux Native AOT publishing requires native linker dependencies. The Dockerfile 
 - `GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION`: optional `Authorization` header value such as `Bearer <token>`.
 - `GIFSTER_EXTERNAL_PROVIDER_NAME`: optional health/status display name.
 
+Provider submit responses of `400`, `401`, `403`, or `422` are treated as permanent provider rejections and return a generic app-facing HTTP `422` without persisting a job. Availability failures such as `408`, `429`, `5xx`, network errors, and timeout-style failures are treated as retryable provider outages and return a generic app-facing HTTP `503`. Provider error bodies are not exposed to the app.
+
 The result endpoint may return `application/vnd.gifster.frame-sequence+json` or `video/mp4`. The iOS app still renders captions locally and creates the final GIF.
