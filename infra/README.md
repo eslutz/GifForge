@@ -78,8 +78,6 @@ scripts/setup-azure-oidc.sh --apply \
   --tenant-id <tenant-id>
 ```
 
-`scripts/setup-nonprod-oidc.sh` remains as a compatibility wrapper for the nonprod defaults used by the current manual deployment workflow.
-
 The helper creates or reuses an Azure app registration, creates its service principal if needed, creates a federated credential on the Azure app registration for the selected GitHub environment, sets the three GitHub environment secrets, and assigns only resource-group-scoped Azure roles.
 
 After applying setup, audit readiness without changing Azure or GitHub state:
