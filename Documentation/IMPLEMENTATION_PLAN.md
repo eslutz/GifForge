@@ -26,8 +26,8 @@ Status: implemented in this scaffold.
 
 - Deploy the ASP.NET Core Minimal API with Native AOT to Azure Container Apps.
 - Require App Attest for deployed environments. The backend fails closed by default, supports an explicit `GIFSTER_APP_ATTEST_DEMO_BYPASS=true` path for local/nonprod smoke testing only, and verifies real App Attest attestation objects when the app identifier and Apple App Attest root certificate are configured.
-- Use Azure Table Storage for durable job state.
-- Use Azure Queue Storage for long-running provider orchestration.
+- Use Azure Table Storage for durable job state and App Attest challenge/session state.
+- Use Azure Queue Storage for long-running provider orchestration, including retrying transient provider/result-store failures through queue visibility semantics.
 - Store provider outputs and temporary download assets in Azure Blob Storage.
 - Run the public API and queue worker as separate Azure Container Apps from the same image.
 - Add provider adapter interfaces for text-to-animation, image-to-animation, and result download.

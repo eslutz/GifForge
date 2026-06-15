@@ -50,11 +50,11 @@ Production Azure services should be split by responsibility:
 - Azure Container Apps hosts the public Minimal API and a separate queue worker app from the same container image.
 - Azure Queue Storage carries long-running provider orchestration work.
 - Azure Blob Storage stores provider outputs and temporary downloadable assets.
-- Azure Table Storage stores durable generation job state.
+- Azure Table Storage stores durable generation job state and App Attest challenge/session state.
 - Azure Key Vault or Container Apps secrets hold external provider credentials.
 - Managed identity limits secret exposure and grants scoped Azure resource access.
 
-The current local backend keeps an in-memory job store and fake provider for deterministic development. Deployed environments use Azure Table Storage, Queue Storage, Blob Storage, managed identity, and App Attest enforcement without changing the iOS-facing generation contract. The App Attest service fails closed unless either the explicit demo bypass is enabled for local/nonprod testing or a real verifier is configured with the app identifier and Apple App Attest root certificate.
+The current local backend keeps an in-memory job store, in-memory App Attest state store, and fake provider for deterministic development. Deployed environments use Azure Table Storage, Queue Storage, Blob Storage, managed identity, and App Attest enforcement without changing the iOS-facing generation contract. App Attest challenge and session state are shared through Azure Table Storage in deployed environments so scaled API replicas do not lose valid clients. The App Attest service fails closed unless either the explicit demo bypass is enabled for local/nonprod testing or a real verifier is configured with the app identifier and Apple App Attest root certificate.
 
 The subscription-scoped Bicep template in `infra/main.subscription.bicep` creates the environment resource group, such as `rg-gifster-nonprod`, and deploys `infra/main.bicep` into it. Gifster has two planned environments: `nonprod` and `prod`. The templates intentionally do not create provider API secrets; those should be inserted into Key Vault out-of-band and accessed by the backend through managed identity.
 

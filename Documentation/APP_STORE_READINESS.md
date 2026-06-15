@@ -2,7 +2,7 @@
 
 ## Automated Gates
 
-- Backend xUnit tests cover health, moderation, fake provider behavior, durable Table Storage job state, queue worker processing, App Attest authorization gates, demo-only App Attest bypass behavior, and cryptographic App Attest verifier checks using a generated certificate fixture.
+- Backend xUnit tests cover health, moderation, fake provider behavior, durable Table Storage job state, shared App Attest state storage, queue worker processing and retry behavior, App Attest authorization gates, demo-only App Attest bypass behavior, and cryptographic App Attest verifier checks using a generated certificate fixture.
 - Swift package tests cover prompt planning fallback, backend authorization, App Attest client routes, active-job persistence, MP4 ingestion, frame-sequence rendering, GIF downsampling, caption line fitting, and user-facing error copy for provider downtime, unavailable local models, network failures, moderation rejections, and App Attest unavailable states.
 - The Xcode scheme includes `GifsterUITests` for the containing app shell, history tab, settings tab, backend URL field, and App Attest setting.
 - The app and Messages extension include privacy manifests declaring no tracking, app-functionality use of user content/images, and the UserDefaults required-reason API.
@@ -15,6 +15,7 @@
 ## Verified Nonprod Evidence
 
 - Backend commit `99e376d592c1ec55a9e5e51b6a6c1a0105a42f75` passed GitHub Actions backend run `27526392923`, including build, xUnit tests, Native AOT publish, and GHCR image publish.
+- PR feedback commit `14cc2952c2311bb78532ca389b09566e51cb4579` passed PR checks for Backend x2, Client, and Infrastructure. That commit adds shared App Attest state storage, retryable queue-worker failure handling, GIF duration-preserving frame sampling, and scale-to-zero Container Apps defaults.
 - Nonprod was deployed with image `ghcr.io/eslutz/gifster-backend:99e376d592c1ec55a9e5e51b6a6c1a0105a42f75` using Azure deployment `gifster-nonprod-final-20260615014701`.
 - Resource group: `rg-gifster-nonprod`.
 - API Container App: `gifster-nonprod-mamh4mnpf-api`.
@@ -23,6 +24,7 @@
 - `/health` returned `{"ok":true,"provider":"fake-frame-sequence","mode":"demo"}` with HTTP 200.
 - `scripts/smoke-backend.sh` passed against nonprod with demo App Attest enabled for job `9d51caf8-680f-4e39-9884-626211302d3c`.
 - Attempted to dispatch `deploy-nonprod.yml` from this feature branch, but GitHub returned `HTTP 404: workflow deploy-nonprod.yml not found on the default branch`. The workflow-dispatch proof remains pending until the workflow file exists on the default branch.
+- The tracked Bicep templates and deploy workflow now default/pass `minReplicas=0` and `workerMinReplicas=0`; redeploy nonprod with the updated template or workflow to apply scale-to-zero in Azure.
 
 ## Required Physical Device Checks
 

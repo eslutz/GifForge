@@ -18,13 +18,15 @@ The backend listens on `http://127.0.0.1:8787` by default when launched directly
 dotnet test Backend.Tests/Gifster.Backend.Tests.csproj
 ```
 
-The xUnit test suite verifies the HTTP contract, App Attest authorization gates, explicit demo App Attest bypass behavior, demo provider, durable job mapping, queue worker behavior, fake frame-sequence output, and moderation rejection.
+The xUnit test suite verifies the HTTP contract, App Attest authorization gates, shared App Attest state storage, explicit demo App Attest bypass behavior, demo provider, durable job mapping, queue worker retry behavior, fake frame-sequence output, and moderation rejection.
 
 ## App Attest Modes
 
 `GIFSTER_APP_ATTEST_REQUIRED=true` requires generation, status, and result requests to include a backend session token. When `GIFSTER_APP_ATTEST_APP_IDENTIFIER` and `GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM` are configured, the backend verifies App Attest challenge binding, attestation CBOR, certificate trust, nonce binding, key-id matching, RP/app-id hash, and COSE public key matching before issuing that session token.
 
-The local in-memory App Attest implementation only issues demo session tokens when `GIFSTER_APP_ATTEST_DEMO_BYPASS=true`. Do not set `GIFSTER_APP_ATTEST_DEMO_BYPASS` in production.
+Local development uses an in-memory App Attest state store. Storage-configured deployments use Azure Table Storage for challenge and session state so challenge exchange and authorized generation requests keep working across multiple API replicas and restarts.
+
+The demo bypass only issues session tokens when `GIFSTER_APP_ATTEST_DEMO_BYPASS=true`. Do not set `GIFSTER_APP_ATTEST_DEMO_BYPASS` in production.
 
 ## Azure Container Apps Direction
 
@@ -34,7 +36,7 @@ Recommended supporting services:
 
 - Azure Queue Storage for asynchronous provider orchestration.
 - Azure Blob Storage for provider output and temporary downloadable media.
-- Azure Table Storage for durable job state.
+- Azure Table Storage for durable job state and App Attest challenge/session state.
 - Azure Key Vault or Container Apps secrets for provider credentials.
 - Managed identity for Azure resource access.
 - Application Insights for logs, metrics, and request tracing.
