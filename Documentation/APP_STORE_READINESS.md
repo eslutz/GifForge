@@ -4,10 +4,11 @@
 
 - Backend xUnit tests cover health, request shape/payload validation, moderation, fake provider behavior, durable Table Storage job state, shared App Attest state storage, sanitized operational generation events, queue worker processing and retry behavior, App Attest authorization gates, demo-only App Attest bypass behavior, and cryptographic App Attest verifier checks using a generated certificate fixture.
 - Swift package tests cover prompt planning fallback, backend authorization, App Attest client routes, active-job persistence, MP4 ingestion, frame-sequence rendering, GIF downsampling, caption line fitting, and user-facing error copy for provider downtime, unavailable local models, network failures, moderation rejections, and App Attest unavailable states.
-- The Xcode scheme includes `GifsterUITests` for the containing app shell, history tab, settings tab, backend URL field, and App Attest setting.
+- The Xcode scheme includes `GifsterUITests` for the containing app shell, history tab, history clear confirmation, settings tab, backend URL field, and App Attest setting.
 - The app and Messages extension include privacy manifests declaring no tracking, app-functionality use of user content/images, and the UserDefaults required-reason API.
 - App group entitlements are configured for the containing app and Messages extension. App Attest entitlement uses `development` for Debug and `production` for Release.
 - App Store metadata, App Review notes, and a public privacy policy draft are maintained in `Documentation/APP_STORE_METADATA.md`, `Documentation/APP_REVIEW_NOTES.md`, and `Documentation/PRIVACY_POLICY.md`.
+- The containing app asks for confirmation before deleting generated GIF history and resumable active-job metadata.
 - Physical-device and App Store evidence should be collected with `Documentation/DEVICE_AND_APP_STORE_TEST_PLAN.md`.
 - The client workflow regenerates the Xcode project, checks generated files, runs Swift package tests, and builds the app, Messages extension, and UI tests for iOS Simulator.
 - `scripts/smoke-backend.sh` covers the backend demo loop by checking `/health`, submitting a fake-provider generation job, polling status, and downloading the generated frame-sequence result.

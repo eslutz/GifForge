@@ -21,4 +21,21 @@ final class GifsterUITests: XCTestCase {
     XCTAssertTrue(app.textFields["Base URL"].exists)
     XCTAssertTrue(app.switches["Require App Attest"].exists)
   }
+
+  @MainActor
+  func testClearHistoryRequiresConfirmation() throws {
+    let app = XCUIApplication()
+    app.launchEnvironment["GIFSTER_UI_TEST_SEED_HISTORY"] = "1"
+    app.launch()
+
+    XCTAssertTrue(app.tabBars.buttons["History"].waitForExistence(timeout: 5))
+    app.tabBars.buttons["History"].tap()
+
+    XCTAssertTrue(app.staticTexts["UI test prompt"].waitForExistence(timeout: 2))
+    app.buttons["Clear"].tap()
+
+    XCTAssertTrue(app.alerts["Clear History?"].waitForExistence(timeout: 2))
+    XCTAssertTrue(app.alerts["Clear History?"].buttons["Cancel"].exists)
+    XCTAssertTrue(app.alerts["Clear History?"].buttons["Clear History"].exists)
+  }
 }
