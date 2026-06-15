@@ -117,6 +117,16 @@ Dispatch inputs:
 
 The workflow deploys the API and worker with `minReplicas=0` and `workerMinReplicas=0`. The API wakes on HTTP traffic, and the worker wakes from the `generation-jobs` queue scaler so the smoke test can still create and process a queued fake-provider generation job.
 
+After a successful deployment, capture read-only evidence for the release record:
+
+```bash
+scripts/collect-deployment-evidence.rb \
+  --environment nonprod \
+  --workflow-run-id <github-actions-run-id>
+```
+
+The collector writes JSON under `Documentation/DeploymentEvidence/` by default. That directory is ignored by git because evidence can include environment-specific URLs, resource names, and run metadata.
+
 ## GitHub Prod Deployment
 
 The `Deploy Prod` workflow is manually dispatched from GitHub Actions. It uses the `prod` GitHub environment, deploys `infra/main.bicep` into `rg-gifster-prod`, and health-checks `/health`. It intentionally does not run a fake generation smoke test, because production generation requires a real App Attest session and a selected external provider.
@@ -174,6 +184,16 @@ az deployment sub what-if \
 ```
 
 The production what-if should show creation of `rg-gifster-prod`, the API and worker Container Apps, managed environment, Key Vault, managed identity, Log Analytics workspace, Storage account, queues, tables, blob containers, lifecycle policy, and role assignments. Do not run the real production deployment until the `prod` GitHub environment has OIDC secrets, production App Attest values, external-provider configuration, and an immutable GHCR image tag.
+
+After production deployment, run:
+
+```bash
+scripts/collect-deployment-evidence.rb \
+  --environment prod \
+  --workflow-run-id <github-actions-run-id>
+```
+
+Preserve the generated JSON with the App Store release evidence. The collector records only sanitized Container Apps environment variable names, not environment variable values or secret values.
 
 ## Smoke Test Nonprod
 

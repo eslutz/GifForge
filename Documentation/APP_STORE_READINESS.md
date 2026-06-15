@@ -20,6 +20,7 @@
 - `scripts/smoke-backend.sh` covers the backend demo loop by checking `/health`, submitting a fake-provider generation job, polling status, and downloading the generated frame-sequence result.
 - The manual `Deploy Nonprod` workflow deploys an immutable GHCR backend image tag to the existing `rg-gifster-nonprod` resource group and runs the backend smoke test against the resulting Container Apps URL.
 - The manual `Deploy Prod` workflow deploys an immutable GHCR backend image tag to `rg-gifster-prod` through the `prod` GitHub environment, requires production App Attest and external-provider configuration, disables the demo bypass, and health-checks `/health`.
+- `scripts/collect-deployment-evidence.rb` captures read-only deployment proof after nonprod/prod workflows: local git context, selected GitHub Actions run metadata, sanitized Container Apps image/scale/rule settings, and `/health` output.
 - Generation jobs include expiration metadata. After validation, moderation, and provider submission, persisted job state clears raw `originalPrompt`, visible caption text, and processed source-image bytes. Deployed defaults expire remaining job metadata and result links after 24 hours, prune expired job rows during cleanup passes, and delete temporary provider/source blobs after 2 days through Azure Storage lifecycle policy.
 
 ## Verified Nonprod Evidence
@@ -83,4 +84,5 @@ Use `Documentation/APP_REVIEW_NOTES.md` as the submission draft.
 - Confirm the App Review phone number has been entered directly in App Store Connect, confirm the public GitHub fallback URLs are acceptable or replace them with product-site URLs, and confirm in-app wording matches backend retention and deletion behavior.
 - Explicitly approve and apply `scripts/setup-azure-oidc.sh --apply --environment nonprod --subscription-id fba65efe-a59e-4177-a27a-afc3ee0b2172 --tenant-id 6131bdcf-4c9a-4d55-ac15-78135afd4637` to configure the GitHub OIDC federated credential, nonprod environment secrets, and `rg-gifster-nonprod`-scoped Azure RBAC grants, then run the `Deploy Nonprod` workflow with an immutable GHCR image tag and preserve the successful workflow run as deployment evidence.
 - Review and apply `scripts/setup-azure-oidc.sh --apply --environment prod`, configure production App Attest and external provider secrets, run `Deploy Prod` with an immutable GHCR image tag, and preserve the successful workflow run as production deployment evidence.
+- Run `scripts/collect-deployment-evidence.rb --environment <nonprod|prod> --workflow-run-id <run-id>` after successful deploy workflows and preserve the generated JSON with the release record.
 - Smoke-test GIF preview and Messages insertion from a device against the nonprod backend.

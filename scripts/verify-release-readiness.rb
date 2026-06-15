@@ -31,6 +31,7 @@ BACKEND_PROGRAM = File.join(ROOT, "Backend", "Program.cs")
 PROVIDER_PREFLIGHT = File.join(ROOT, "scripts", "validate-external-provider-contract.rb")
 SCREENSHOT_CAPTURE_SCRIPT = File.join(ROOT, "scripts", "capture-app-store-screenshots.sh")
 APP_STORE_METADATA_VALIDATOR = File.join(ROOT, "scripts", "validate-app-store-metadata.rb")
+DEPLOYMENT_EVIDENCE_COLLECTOR = File.join(ROOT, "scripts", "collect-deployment-evidence.rb")
 
 DOCS_WITH_RELEASE_COPY = [
   "Documentation/APP_STORE_METADATA.md",
@@ -451,6 +452,35 @@ def validate_app_store_metadata_content(errors)
   end
 end
 
+def validate_deployment_evidence_tooling(errors)
+  unless File.executable?(DEPLOYMENT_EVIDENCE_COLLECTOR)
+    errors << "#{relative(DEPLOYMENT_EVIDENCE_COLLECTOR)} must be executable so deployment evidence capture is repeatable."
+    return unless File.file?(DEPLOYMENT_EVIDENCE_COLLECTOR)
+  end
+
+  script = File.read(DEPLOYMENT_EVIDENCE_COLLECTOR)
+  {
+    "--environment NAME" => "environment selection",
+    "--resource-group NAME" => "resource-group override",
+    "--workflow-run-id ID" => "GitHub deployment run capture",
+    "--backend-url URL" => "health-check URL override",
+    "DeploymentEvidence" => "ignored default evidence output path",
+    "\"az\", \"containerapp\", \"list\"" => "Container Apps inventory",
+    "minReplicas" => "scale-to-zero evidence",
+    "maxReplicas" => "scale-out evidence",
+    "scaleRules" => "scale-rule evidence",
+    "gh\", \"run\", \"view\"" => "GitHub Actions evidence",
+    "URI.join" => "backend health check",
+    "envNames" => "sanitized environment variable names only"
+  }.each do |needle, label|
+    require_text_include(script, needle, "#{relative(DEPLOYMENT_EVIDENCE_COLLECTOR)} #{label}", errors)
+  end
+
+  if script.include?("entry[\"value\"]")
+    errors << "#{relative(DEPLOYMENT_EVIDENCE_COLLECTOR)} must not serialize Container Apps environment variable values."
+  end
+end
+
 project = YAML.load_file(PROJECT_PATH)
 deployment_target = project.dig("options", "deploymentTarget", "iOS")
 iphoneos_target = project.dig("settings", "base", "IPHONEOS_DEPLOYMENT_TARGET")
@@ -507,6 +537,7 @@ validate_provider_operational_readiness(errors)
 validate_app_store_screenshot_tooling(errors)
 validate_app_store_metadata_tooling(errors)
 validate_app_store_metadata_content(errors)
+validate_deployment_evidence_tooling(errors)
 
 if errors.any?
   warn "Release readiness validation failed:"
@@ -526,3 +557,4 @@ puts "Checked deployment scale-to-zero and production safety invariants."
 puts "Checked provider health mode and external-provider preflight invariants."
 puts "Checked containing-app App Store screenshot capture tooling."
 puts "Checked App Store metadata validation tooling."
+puts "Checked deployment evidence capture tooling."

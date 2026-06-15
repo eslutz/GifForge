@@ -6,6 +6,7 @@ on:
       - infra/**
       - scripts/setup-azure-oidc.sh
       - scripts/setup-nonprod-oidc.sh
+      - scripts/collect-deployment-evidence.rb
       - .github/workflows/deploy-nonprod.yml
       - .github/workflows/deploy-prod.yml
       - .github/workflows/infra.yml
@@ -16,6 +17,7 @@ on:
       - infra/**
       - scripts/setup-azure-oidc.sh
       - scripts/setup-nonprod-oidc.sh
+      - scripts/collect-deployment-evidence.rb
       - .github/workflows/deploy-nonprod.yml
       - .github/workflows/deploy-prod.yml
       - .github/workflows/infra.yml
@@ -39,6 +41,7 @@ jobs:
         run: |
           bash -n scripts/setup-azure-oidc.sh
           bash -n scripts/setup-nonprod-oidc.sh
+          ruby -c scripts/collect-deployment-evidence.rb
           scripts/setup-nonprod-oidc.sh \
             --subscription-id 00000000-0000-0000-0000-000000000000 \
             --tenant-id 00000000-0000-0000-0000-000000000000

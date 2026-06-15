@@ -140,6 +140,16 @@ The `Deploy Nonprod` GitHub Actions workflow can deploy and smoke-test `rg-gifst
 
 The `Deploy Prod` workflow deploys to `rg-gifster-prod` through the `prod` GitHub environment. Run `scripts/setup-azure-oidc.sh --environment prod` first, configure the required production App Attest and external provider secrets in that GitHub environment, and dispatch only with an immutable commit SHA image tag. Production deployment forces `providerAdapter=external-http`, disables the demo App Attest bypass, and performs only a `/health` check; generation validation still requires a physical-device App Attest session and the selected provider.
 
+After a successful deploy workflow, capture read-only release evidence:
+
+```bash
+scripts/collect-deployment-evidence.rb \
+  --environment nonprod \
+  --workflow-run-id <github-actions-run-id>
+```
+
+The default output directory `Documentation/DeploymentEvidence/` is ignored by git. The JSON includes local git context, selected GitHub Actions run metadata, sanitized Container Apps image/scale/rule settings, and `/health` output without serializing Container Apps environment variable values.
+
 ## App Store Submission Drafts
 
 - `Documentation/APP_STORE_METADATA.md` contains App Store Connect copy, keywords, privacy-answer notes, public GitHub fallback URLs, and owner-entered fields that should not be committed to source control.
