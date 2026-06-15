@@ -56,6 +56,6 @@ Use `Documentation/APP_REVIEW_NOTES.md` as the submission draft.
 - Complete at least one physical-device Messages pass for compact and expanded modes.
 - Configure production App Attest app identifier/root certificate values and validate the flow on a physical device.
 - Validate production signing, bundle identifiers, App Group/App Attest capabilities, and extension metadata in the Apple Developer portal.
-- Replace all App Store metadata TODOs, publish the privacy policy URL, and confirm in-app wording matches backend retention and deletion behavior.
+- Confirm the App Review phone number has been entered directly in App Store Connect, confirm the public GitHub fallback URLs are acceptable or replace them with product-site URLs, and confirm in-app wording matches backend retention and deletion behavior.
 - Configure the GitHub OIDC federated credential, nonprod environment secrets, and `rg-gifster-nonprod`-scoped Azure RBAC grants, then run the `Deploy Nonprod` workflow with an immutable GHCR image tag and preserve the successful workflow run as deployment evidence.
 - Smoke-test GIF preview and Messages insertion from a device against the nonprod backend.

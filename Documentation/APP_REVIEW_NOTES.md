@@ -1,6 +1,6 @@
 # App Review Notes
 
-Use this draft in App Store Connect review notes. Update URLs and environment details before submission.
+Use this draft in App Store Connect review notes. Update environment details before submission, and replace GitHub fallback URLs with dedicated product-site URLs when available.
 
 ## Primary Flow
 
@@ -61,5 +61,5 @@ Image Playground is not part of the v1 workflow. The repository includes a separ
 
 ## Support and Privacy URLs
 
-- Support URL: TODO
-- Privacy Policy URL: TODO
+- Support URL: https://github.com/eslutz/Gifster/issues
+- Privacy Policy URL: https://github.com/eslutz/Gifster/blob/main/Documentation/PRIVACY_POLICY.md

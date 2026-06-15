@@ -12,7 +12,7 @@
 
 The containing app discloses that prompts and selected images may be sent through the Gifster backend to external AI media providers. It also discloses that prompt planning and caption suggestions use local Apple models where available.
 
-The checked-in privacy manifests support App Store privacy review, and `Documentation/PRIVACY_POLICY.md` contains the public privacy policy draft. App Store Connect privacy answers and the published privacy policy URL still need to match the deployed backend retention and provider-sharing behavior.
+The checked-in privacy manifests support App Store privacy review, and `Documentation/PRIVACY_POLICY.md` contains the public privacy policy draft. App Store metadata currently points to the public GitHub copy of that policy as a fallback. App Store Connect privacy answers and the final public privacy policy URL still need to match the deployed backend retention and provider-sharing behavior.
 
 ## Backend Responsibilities
 

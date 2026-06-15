@@ -93,7 +93,7 @@ The `Deploy Nonprod` GitHub Actions workflow can deploy and smoke-test `rg-gifst
 
 ## App Store Submission Drafts
 
-- `Documentation/APP_STORE_METADATA.md` contains App Store Connect copy, keywords, privacy-answer notes, and TODOs.
+- `Documentation/APP_STORE_METADATA.md` contains App Store Connect copy, keywords, privacy-answer notes, public GitHub fallback URLs, and owner-entered fields that should not be committed to source control.
 - `Documentation/APP_REVIEW_NOTES.md` contains review notes for attachment insertion, manual sending, backend-mediated AI generation, App Attest, and no sticker mode.
 - `Documentation/PRIVACY_POLICY.md` contains the public privacy policy draft to publish before submission.
 
