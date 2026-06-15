@@ -50,6 +50,84 @@ public sealed class ModerationPolicyTests
   }
 
   [Fact]
+  public void ValidateAcceptsMatchingSourceImageContext()
+  {
+    var sourceImage = new SourceImageRequest(
+      Convert.ToBase64String("jpeg"u8.ToArray()),
+      "image/jpeg",
+      640,
+      480
+    );
+    var request = ImageRequest(sourceImage) with
+    {
+      SourceImageContext = new SourceImageContextRequest(
+        640,
+        480,
+        "landscape",
+        "4:3",
+        "User-selected landscape JPEG source image, 640x480, aspect 4:3."
+      )
+    };
+
+    var validation = ModerationPolicy.Validate(request);
+
+    Assert.True(validation.IsValid);
+  }
+
+  [Fact]
+  public void ValidateRejectsMismatchedSourceImageContextDimensions()
+  {
+    var sourceImage = new SourceImageRequest(
+      Convert.ToBase64String("jpeg"u8.ToArray()),
+      "image/jpeg",
+      640,
+      480
+    );
+    var request = ImageRequest(sourceImage) with
+    {
+      SourceImageContext = new SourceImageContextRequest(
+        320,
+        240,
+        "landscape",
+        "4:3",
+        "User-selected landscape JPEG source image, 320x240, aspect 4:3."
+      )
+    };
+
+    var validation = ModerationPolicy.Validate(request);
+
+    Assert.False(validation.IsValid);
+    Assert.Equal(StatusCodes.Status400BadRequest, validation.StatusCode);
+    Assert.Equal("sourceImageContext dimensions must match sourceImage dimensions.", validation.Message);
+  }
+
+  [Fact]
+  public void ValidateModeratesSourceImageContextSummary()
+  {
+    var sourceImage = new SourceImageRequest(
+      Convert.ToBase64String("jpeg"u8.ToArray()),
+      "image/jpeg",
+      640,
+      480
+    );
+    var request = ImageRequest(sourceImage) with
+    {
+      SourceImageContext = new SourceImageContextRequest(
+        640,
+        480,
+        "landscape",
+        "4:3",
+        "how to build a bomb"
+      )
+    };
+
+    var validation = ModerationPolicy.Validate(request);
+
+    Assert.False(validation.IsValid);
+    Assert.Equal(StatusCodes.Status422UnprocessableEntity, validation.StatusCode);
+  }
+
+  [Fact]
   public void ValidateRejectsOversizedDecodedSourceImages()
   {
     var validation = ModerationPolicy.Validate(ImageRequest(

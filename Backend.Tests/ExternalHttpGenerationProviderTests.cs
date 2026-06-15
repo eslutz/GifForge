@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Gifster.Backend.Jobs;
+using Gifster.Backend.Models;
 using Gifster.Backend.Providers;
 using Gifster.Backend.Storage;
 
@@ -40,12 +41,33 @@ public sealed class ExternalHttpGenerationProviderTests
       new HttpClient(handler)
     );
 
-    var providerJob = await provider.SubmitGenerationAsync(TestGenerationRequests.Valid(), CancellationToken.None);
+    var request = TestGenerationRequests.Valid() with
+    {
+      Mode = "image_to_gif",
+      SourceImage = new SourceImageRequest(
+        Convert.ToBase64String("processed jpeg"u8.ToArray()),
+        "image/jpeg",
+        320,
+        240
+      ),
+      SourceImageContext = new SourceImageContextRequest(
+        320,
+        240,
+        "landscape",
+        "4:3",
+        "User-selected landscape JPEG source image, 320x240, aspect 4:3."
+      )
+    };
+
+    var providerJob = await provider.SubmitGenerationAsync(request, CancellationToken.None);
 
     Assert.Equal("external-http", provider.Name);
     Assert.Equal("external-http", providerJob.Provider);
     Assert.Equal("provider-job-123", providerJob.ProviderJobId);
     Assert.Contains("\"cleanedPrompt\":\"cat in sunglasses\"", handler.LastRequestBody);
+    Assert.Contains("\"sourceImageContext\"", handler.LastRequestBody);
+    Assert.Contains("\"orientation\":\"landscape\"", handler.LastRequestBody);
+    Assert.Contains("\"aspectRatio\":\"4:3\"", handler.LastRequestBody);
   }
 
   [Fact]

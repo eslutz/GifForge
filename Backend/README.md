@@ -4,7 +4,7 @@ Gifster uses an ASP.NET Core Minimal API backend configured for Native AOT and i
 
 The backend is provider-neutral. The app never calls external AI media providers directly; it submits structured generation requests to this service, which validates and moderates requests, owns provider credentials, tracks jobs, and returns temporary result URLs.
 
-Request validation rejects unsupported modes, overlong prompts/captions, unsupported caption modes, out-of-range output options, non-JPEG source images, invalid base64 source data, oversized processed images, and source-image dimensions larger than the app preprocessing limit.
+Request validation rejects unsupported modes, overlong prompts/captions, unsupported caption modes, out-of-range output options, non-JPEG source images, invalid base64 source data, oversized processed images, source-image dimensions larger than the app preprocessing limit, and mismatched source-image context metadata.
 
 Operational generation logs are metadata-only. They include event name, job id, provider, mode, status, source-image presence, caption mode, result content type, and failure kind. They intentionally do not include prompt text, caption text, source-image bytes, provider result bytes, or provider error messages.
 
@@ -68,7 +68,7 @@ Linux Native AOT publishing requires native linker dependencies. The Dockerfile 
 
 `GIFSTER_PROVIDER_ADAPTER=external-http` enables a provider-neutral HTTP adapter for a compatible provider gateway or vendor-specific wrapper service. It requires:
 
-- `GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL`: receives a `GenerationRequest` JSON payload and returns `{ "providerJobId": "..." }`.
+- `GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL`: receives a `GenerationRequest` JSON payload and returns `{ "providerJobId": "..." }`. Image-to-GIF requests include `sourceImage` plus optional `sourceImageContext` metadata derived locally by the app, such as dimensions, orientation, aspect ratio, and a short summary.
 - `GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`: absolute URL template for downloading the provider result. Supports `{providerJobId}` and `{jobId}` placeholders.
 - `GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION`: optional `Authorization` header value such as `Bearer <token>`.
 - `GIFSTER_EXTERNAL_PROVIDER_NAME`: optional health/status display name.

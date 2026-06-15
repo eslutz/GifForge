@@ -47,6 +47,69 @@ public struct ProcessedSourceImage: Codable, Equatable, Sendable {
   }
 }
 
+public struct SourceImageContext: Codable, Equatable, Sendable {
+  public var width: Int
+  public var height: Int
+  public var orientation: String
+  public var aspectRatio: String
+  public var summary: String
+
+  public init(
+    width: Int,
+    height: Int,
+    orientation: String,
+    aspectRatio: String,
+    summary: String
+  ) {
+    self.width = width
+    self.height = height
+    self.orientation = orientation
+    self.aspectRatio = aspectRatio
+    self.summary = summary
+  }
+
+  public init(sourceImage: ProcessedSourceImage) {
+    let orientation = Self.orientation(width: sourceImage.width, height: sourceImage.height)
+    let aspectRatio = Self.aspectRatio(width: sourceImage.width, height: sourceImage.height)
+
+    self.width = sourceImage.width
+    self.height = sourceImage.height
+    self.orientation = orientation
+    self.aspectRatio = aspectRatio
+    self.summary = "User-selected \(orientation) JPEG source image, \(sourceImage.width)x\(sourceImage.height), aspect \(aspectRatio)."
+  }
+
+  private static func orientation(width: Int, height: Int) -> String {
+    if width == height {
+      return "square"
+    }
+
+    return width > height ? "landscape" : "portrait"
+  }
+
+  private static func aspectRatio(width: Int, height: Int) -> String {
+    guard width > 0, height > 0 else {
+      return "unknown"
+    }
+
+    let divisor = greatestCommonDivisor(width, height)
+    return "\(width / divisor):\(height / divisor)"
+  }
+
+  private static func greatestCommonDivisor(_ lhs: Int, _ rhs: Int) -> Int {
+    var a = abs(lhs)
+    var b = abs(rhs)
+
+    while b != 0 {
+      let remainder = a % b
+      a = b
+      b = remainder
+    }
+
+    return max(a, 1)
+  }
+}
+
 public struct GenerationIntent: Codable, Equatable, Sendable {
   public var prompt: String
   public var sourceImage: ProcessedSourceImage?
@@ -75,6 +138,7 @@ public struct StructuredGenerationRequest: Codable, Equatable, Identifiable, Sen
   public var negativePrompt: String
   public var caption: CaptionRequest
   public var sourceImage: ProcessedSourceImage?
+  public var sourceImageContext: SourceImageContext?
   public var options: PromptStyleOptions
   public var clientTraceID: String
 
@@ -87,6 +151,7 @@ public struct StructuredGenerationRequest: Codable, Equatable, Identifiable, Sen
     negativePrompt: String,
     caption: CaptionRequest,
     sourceImage: ProcessedSourceImage?,
+    sourceImageContext: SourceImageContext? = nil,
     options: PromptStyleOptions,
     clientTraceID: String = UUID().uuidString
   ) {
@@ -98,6 +163,7 @@ public struct StructuredGenerationRequest: Codable, Equatable, Identifiable, Sen
     self.negativePrompt = negativePrompt
     self.caption = caption
     self.sourceImage = sourceImage
+    self.sourceImageContext = sourceImageContext
     self.options = options
     self.clientTraceID = clientTraceID
   }

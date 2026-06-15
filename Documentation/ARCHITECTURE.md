@@ -36,6 +36,7 @@ The app submits `POST /v1/generations` with:
 - `caption.renderLocally = true`.
 - `options` such as size, loop length, style preset, and motion intensity.
 - Optional `sourceImage` with metadata-stripped JPEG bytes encoded as base64.
+- Optional `sourceImageContext` with app-derived, metadata-only dimensions, orientation, aspect ratio, and summary text for provider planning. Semantic image understanding remains gated on an extension-safe Apple API path.
 
 The backend returns a job id, status URL, and expiration timestamp. The app polls `GET /v1/generations/:jobId`. On success the backend returns a temporary `downloadUrl`. Expired status and result requests return HTTP `410 Gone`. The demo provider serves a frame sequence JSON result; real adapters can serve MP4 or frame-sequence assets under the same app-facing contract.
 

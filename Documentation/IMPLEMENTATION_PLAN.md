@@ -19,7 +19,8 @@ Status: implemented in this scaffold.
 - `FoundationModelsPromptPlanner` now uses Apple Foundation Models guided generation on iOS/macOS 26+ when `SystemLanguageModel.default.isAvailable`.
 - Keep `LocalPromptPlanner` as the deterministic fallback for Simulator, CI, unsupported OS versions, unavailable Apple Intelligence, or local-model errors.
 - Maintain structured output schemas for prompt planning and caption suggestions.
-- Add image-understanding support only where Apple exposes it for extension-safe use.
+- Include app-derived, metadata-only source-image context for image-to-GIF planning.
+- Add semantic image-understanding support only where Apple exposes it for extension-safe use.
 - Add graceful unavailable states for devices without Apple Intelligence support.
 
 ## Phase 3: Production Backend

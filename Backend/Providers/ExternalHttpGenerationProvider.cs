@@ -104,6 +104,7 @@ public sealed record ExternalProviderJobResponse(string ProviderJobId);
 [JsonSerializable(typeof(GenerationRequest))]
 [JsonSerializable(typeof(CaptionRequest))]
 [JsonSerializable(typeof(SourceImageRequest))]
+[JsonSerializable(typeof(SourceImageContextRequest))]
 [JsonSerializable(typeof(GenerationOptions))]
 [JsonSerializable(typeof(ExternalProviderJobResponse))]
 internal partial class ExternalHttpProviderJsonSerializerContext : JsonSerializerContext;

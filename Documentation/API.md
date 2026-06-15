@@ -71,6 +71,7 @@ Authorization: Bearer <sessionToken>
     "text": "ship it"
   },
   "sourceImage": null,
+  "sourceImageContext": null,
   "options": {
     "width": 480,
     "height": 360,
@@ -93,6 +94,7 @@ Validation rules:
 - `options.motionIntensity`, when present, must be `subtle`, `medium`, or `high`.
 - `image_to_gif` requests must include `sourceImage`.
 - `sourceImage` must be the app-processed, metadata-stripped JPEG payload (`image/jpeg`), valid base64, no larger than the processed upload limit, and no wider or taller than 1,024 pixels.
+- `sourceImageContext`, when present, is metadata-only local context such as dimensions, orientation, aspect ratio, and a short summary. Its dimensions must match `sourceImage`.
 
 Response:
 

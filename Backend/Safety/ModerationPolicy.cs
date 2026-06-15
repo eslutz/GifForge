@@ -80,9 +80,21 @@ public static class ModerationPolicy
       {
         return imageValidation;
       }
+
+      var sourceImageContextValidation = ValidateSourceImageContext(request.SourceImage, request.SourceImageContext);
+      if (!sourceImageContextValidation.IsValid)
+      {
+        return sourceImageContextValidation;
+      }
     }
 
-    var searchable = string.Join(' ', request.CleanedPrompt, request.ExpandedPrompt, request.Caption?.Text).ToLowerInvariant();
+    var searchable = string.Join(
+      ' ',
+      request.CleanedPrompt,
+      request.ExpandedPrompt,
+      request.Caption?.Text,
+      request.SourceImageContext?.Summary
+    ).ToLowerInvariant();
     if (BlockedTerms.Any(searchable.Contains))
     {
       return ValidationResult.Invalid(StatusCodes.Status422UnprocessableEntity, "Request failed moderation checks.");
@@ -174,6 +186,60 @@ public static class ModerationPolicy
       return ValidationResult.Invalid(
         StatusCodes.Status413PayloadTooLarge,
         "sourceImage exceeds the processed upload limit."
+      );
+    }
+
+    return ValidationResult.Valid;
+  }
+
+  private static ValidationResult ValidateSourceImageContext(
+    SourceImageRequest sourceImage,
+    SourceImageContextRequest? sourceImageContext
+  )
+  {
+    if (sourceImageContext is null)
+    {
+      return ValidationResult.Valid;
+    }
+
+    if (sourceImageContext.Width != sourceImage.Width || sourceImageContext.Height != sourceImage.Height)
+    {
+      return ValidationResult.Invalid(
+        StatusCodes.Status400BadRequest,
+        "sourceImageContext dimensions must match sourceImage dimensions."
+      );
+    }
+
+    if (sourceImageContext.Width is < 1 or > MaxProcessedImageDimension ||
+        sourceImageContext.Height is < 1 or > MaxProcessedImageDimension)
+    {
+      return ValidationResult.Invalid(
+        StatusCodes.Status400BadRequest,
+        "sourceImageContext dimensions must be between 1 and 1024 pixels."
+      );
+    }
+
+    if (!string.IsNullOrEmpty(sourceImageContext.Summary) && sourceImageContext.Summary.Length > 240)
+    {
+      return ValidationResult.Invalid(
+        StatusCodes.Status400BadRequest,
+        "sourceImageContext summary is too long."
+      );
+    }
+
+    if (!string.IsNullOrEmpty(sourceImageContext.Orientation) && sourceImageContext.Orientation.Length > 32)
+    {
+      return ValidationResult.Invalid(
+        StatusCodes.Status400BadRequest,
+        "sourceImageContext orientation is too long."
+      );
+    }
+
+    if (!string.IsNullOrEmpty(sourceImageContext.AspectRatio) && sourceImageContext.AspectRatio.Length > 32)
+    {
+      return ValidationResult.Invalid(
+        StatusCodes.Status400BadRequest,
+        "sourceImageContext aspectRatio is too long."
       );
     }
 
