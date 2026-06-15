@@ -20,10 +20,10 @@ open Gifster.xcodeproj
 
 Select the `Gifster` scheme. Configure signing for the app and extension bundle ids:
 
-- `dev.ericslutz.Gifster`
-- `dev.ericslutz.Gifster.MessagesExtension`
+- `dev.ericslutz.gifforge`
+- `dev.ericslutz.gifforge.messagesextension`
 
-Update the app-group identifier if your Apple Developer account requires a different prefix.
+The shared App Group is `group.dev.ericslutz.gifforge`.
 
 The XcodeGen project declares the shared App Group and App Attest capability for both targets. `APP_ATTEST_ENVIRONMENT` is `development` for Debug and `production` for Release, so confirm both values are allowed by the Apple Developer portal before archiving.
 
@@ -33,7 +33,7 @@ Validate the source signing configuration before device or archive work:
 scripts/validate-client-signing.rb
 ```
 
-The Messages extension bundle id must be prefixed by the containing app bundle id, and both targets must share the same App Group. If you intentionally change the production bundle id or App Group, update `Client/project.yml`, regenerate the Xcode project, and keep both entitlement files in sync.
+The Messages extension bundle id must be prefixed by the containing app bundle id, and both targets must share the same App Group. If you intentionally change the production bundle id or App Group, update `Client/project.yml`, regenerate the Xcode project, and keep both entitlement files plus `AppStorageDirectories.appGroupIdentifier` in sync.
 
 Run the release readiness invariant check before screenshots, archive validation, or App Store submission prep:
 
@@ -134,7 +134,7 @@ Deployed environments set `GIFSTER_APP_ATTEST_REQUIRED=true`. Local development 
 
 Real App Attest verification requires:
 
-- `GIFSTER_APP_ATTEST_APP_IDENTIFIER`: Apple Team ID plus bundle id, such as `TEAMID.dev.ericslutz.Gifster`.
+- `GIFSTER_APP_ATTEST_APP_IDENTIFIER`: Apple Team ID plus bundle id, such as `TEAMID.dev.ericslutz.gifforge`.
 - `GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM`: PEM-encoded Apple App Attest root certificate.
 
 The scaffold includes a demo-only App Attest bypass for local and nonprod smoke testing:
