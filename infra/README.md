@@ -57,13 +57,31 @@ Required GitHub environment or repository secrets:
 - `AZURE_TENANT_ID`
 - `AZURE_SUBSCRIPTION_ID`
 
-Create a federated credential on the Azure app registration for the GitHub `nonprod` environment:
+Use the setup helper in dry-run mode first:
+
+```bash
+scripts/setup-nonprod-oidc.sh \
+  --subscription-id <subscription-id> \
+  --tenant-id <tenant-id>
+```
+
+After reviewing the planned Azure trust, GitHub secrets, and resource-group-scoped RBAC changes, apply them intentionally:
+
+```bash
+scripts/setup-nonprod-oidc.sh --apply \
+  --subscription-id <subscription-id> \
+  --tenant-id <tenant-id>
+```
+
+The helper creates or reuses an Azure app registration, creates its service principal if needed, creates a federated credential on the Azure app registration for the GitHub `nonprod` environment, sets the three GitHub environment secrets, and assigns only resource-group-scoped Azure roles.
+
+Federated credential values:
 
 - issuer: `https://token.actions.githubusercontent.com`
 - subject: `repo:eslutz/Gifster:environment:nonprod`
 - audience: `api://AzureADTokenExchange`
 
-Grant the GitHub Actions service principal these roles at the `rg-gifster-nonprod` resource-group scope:
+GitHub Actions service principal roles at the `rg-gifster-nonprod` resource-group scope:
 
 - `Contributor`, to create and update the Container Apps, storage account, Key Vault, managed identity, and related resources.
 - `Role Based Access Control Administrator`, to create the managed identity role assignments declared by `infra/main.bicep` for Storage data-plane access and Key Vault secret access.
