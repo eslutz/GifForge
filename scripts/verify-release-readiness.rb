@@ -32,6 +32,7 @@ PROVIDER_PREFLIGHT = File.join(ROOT, "scripts", "validate-external-provider-cont
 SCREENSHOT_CAPTURE_SCRIPT = File.join(ROOT, "scripts", "capture-app-store-screenshots.sh")
 APP_STORE_METADATA_VALIDATOR = File.join(ROOT, "scripts", "validate-app-store-metadata.rb")
 DEPLOYMENT_EVIDENCE_COLLECTOR = File.join(ROOT, "scripts", "collect-deployment-evidence.rb")
+DEVICE_EVIDENCE_VALIDATOR = File.join(ROOT, "scripts", "validate-device-evidence.rb")
 
 DOCS_WITH_RELEASE_COPY = [
   "Documentation/APP_STORE_METADATA.md",
@@ -481,6 +482,35 @@ def validate_deployment_evidence_tooling(errors)
   end
 end
 
+def validate_device_evidence_tooling(errors)
+  unless File.executable?(DEVICE_EVIDENCE_VALIDATOR)
+    errors << "#{relative(DEVICE_EVIDENCE_VALIDATOR)} must be executable so physical-device and App Store evidence validation is repeatable."
+    return unless File.file?(DEVICE_EVIDENCE_VALIDATOR)
+  end
+
+  script = File.read(DEVICE_EVIDENCE_VALIDATOR)
+  {
+    "--template PATH" => "template generation",
+    "messagesCompact" => "Messages compact-mode evidence",
+    "messagesExpanded" => "Messages expanded-mode evidence",
+    "resumeAndJobState" => "extension resume evidence",
+    "appAttestPhysicalDevice" => "physical-device App Attest evidence",
+    "appleDeveloperPortal" => "Apple Developer portal evidence",
+    "appStoreConnect" => "App Store Connect evidence",
+    "messagesRequiresManualSend" => "manual-send assertion",
+    "unauthorizedRoutesReturn401" => "App Attest rejection assertion",
+    "sessionTokenIssued" => "App Attest session issuance assertion",
+    "FORBIDDEN_KEY_PATTERNS" => "sensitive evidence key rejection",
+    "Device evidence validation passed" => "successful validation output"
+  }.each do |needle, label|
+    require_text_include(script, needle, "#{relative(DEVICE_EVIDENCE_VALIDATOR)} #{label}", errors)
+  end
+
+  if script.include?("/token/i")
+    errors << "#{relative(DEVICE_EVIDENCE_VALIDATOR)} must not reject every key containing token; sessionTokenIssued is required evidence."
+  end
+end
+
 project = YAML.load_file(PROJECT_PATH)
 deployment_target = project.dig("options", "deploymentTarget", "iOS")
 iphoneos_target = project.dig("settings", "base", "IPHONEOS_DEPLOYMENT_TARGET")
@@ -538,6 +568,7 @@ validate_app_store_screenshot_tooling(errors)
 validate_app_store_metadata_tooling(errors)
 validate_app_store_metadata_content(errors)
 validate_deployment_evidence_tooling(errors)
+validate_device_evidence_tooling(errors)
 
 if errors.any?
   warn "Release readiness validation failed:"
@@ -558,3 +589,4 @@ puts "Checked provider health mode and external-provider preflight invariants."
 puts "Checked containing-app App Store screenshot capture tooling."
 puts "Checked App Store metadata validation tooling."
 puts "Checked deployment evidence capture tooling."
+puts "Checked physical-device and App Store evidence validation tooling."

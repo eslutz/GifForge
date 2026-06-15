@@ -161,6 +161,24 @@ Evidence:
 - Screenshot set:
 - Notes:
 
+## Structured Evidence Template
+
+Create a structured evidence file before the physical-device pass:
+
+```bash
+scripts/validate-device-evidence.rb --template Documentation/DeviceEvidence/nonprod-device-pass.json
+```
+
+`Documentation/DeviceEvidence/` is ignored by git. Keep private contact details, credentials, bearer tokens, and raw App Attest material out of the evidence file; store those only in App Store Connect, GitHub environment secrets, Azure, or the release record system.
+
+After the pass, fill every required field and run:
+
+```bash
+scripts/validate-device-evidence.rb Documentation/DeviceEvidence/nonprod-device-pass.json
+```
+
+The validator requires containing-app, compact Messages, expanded Messages, resume/job-state, physical App Attest, Apple Developer portal, and App Store Connect evidence before the pass can count toward release readiness.
+
 ### Containing-App Screenshot Capture
 
 Run the deterministic containing-app screenshot pass before assembling App Store Connect screenshots:

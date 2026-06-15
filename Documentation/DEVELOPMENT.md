@@ -72,6 +72,15 @@ scripts/validate-app-store-metadata.rb
 
 The validator checks App Store field lengths, required support/privacy URLs, no-tracking privacy claims, review-note coverage for attachment insertion and manual sending, no sticker mode, no Image Playground dependency, and privacy-policy retention/provider disclosures.
 
+## Validate Physical-Device Evidence
+
+```bash
+scripts/validate-device-evidence.rb --template Documentation/DeviceEvidence/nonprod-device-pass.json
+scripts/validate-device-evidence.rb Documentation/DeviceEvidence/nonprod-device-pass.json
+```
+
+The generated evidence directory is ignored by git. Use the template while testing the containing app, Messages compact mode, Messages expanded mode, resume behavior, physical-device App Attest, Apple Developer portal capabilities, and App Store Connect readiness. Do not place private phone numbers, credentials, authorization headers, bearer tokens, or App Attest secrets in the evidence file.
+
 ## Run the Local Backend
 
 ```bash

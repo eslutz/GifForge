@@ -13,10 +13,11 @@
 - App Store metadata, App Review notes, and a public privacy policy draft are maintained in `Documentation/APP_STORE_METADATA.md`, `Documentation/APP_REVIEW_NOTES.md`, and `Documentation/PRIVACY_POLICY.md`.
 - The containing app asks for confirmation before deleting generated GIF history and resumable active-job metadata.
 - Physical-device and App Store evidence should be collected with `Documentation/DEVICE_AND_APP_STORE_TEST_PLAN.md`.
+- Physical-device, App Attest, Apple Developer portal, and App Store Connect evidence can be templated and validated with `scripts/validate-device-evidence.rb`; evidence output under `Documentation/DeviceEvidence/` is ignored by git.
 - Containing-app App Store screenshot capture is repeatable with `scripts/capture-app-store-screenshots.sh`; Messages extension screenshots still require the physical Messages app flow from the device test plan.
 - App Store metadata, App Review notes, and privacy-policy release claims are checked with `scripts/validate-app-store-metadata.rb` for field limits, URL shape, no-tracking claims, attachment/manual-send review copy, no sticker mode, and no Image Playground dependency.
 - The client workflow regenerates the Xcode project, checks generated files, runs Swift package tests, and builds the app, Messages extension, and UI tests for iOS Simulator.
-- The client workflow runs `scripts/verify-release-readiness.rb` to check the iOS 26.5 target, v1 no-sticker/no-Image-Playground source-code invariants, iMessage extension metadata, local caption re-render wiring, backend expiration propagation, deploy workflow scale-to-zero and production safety invariants, provider health/preflight invariants, containing-app screenshot tooling, App Store metadata validation, known App Store metadata placeholders, and tracked app/iMessage icon catalog completeness.
+- The client workflow runs `scripts/verify-release-readiness.rb` to check the iOS 26.5 target, v1 no-sticker/no-Image-Playground source-code invariants, iMessage extension metadata, local caption re-render wiring, backend expiration propagation, deploy workflow scale-to-zero and production safety invariants, provider health/preflight invariants, containing-app screenshot tooling, App Store metadata validation, physical-device evidence validation tooling, known App Store metadata placeholders, and tracked app/iMessage icon catalog completeness.
 - `scripts/smoke-backend.sh` covers the backend demo loop by checking `/health`, submitting a fake-provider generation job, polling status, and downloading the generated frame-sequence result.
 - The manual `Deploy Nonprod` workflow deploys an immutable GHCR backend image tag to the existing `rg-gifster-nonprod` resource group and runs the backend smoke test against the resulting Container Apps URL.
 - The manual `Deploy Prod` workflow deploys an immutable GHCR backend image tag to `rg-gifster-prod` through the `prod` GitHub environment, requires production App Attest and external-provider configuration, disables the demo bypass, and health-checks `/health`.
@@ -78,7 +79,7 @@ Use `Documentation/APP_REVIEW_NOTES.md` as the submission draft.
 
 ## Release Blockers
 
-- Complete at least one physical-device Messages pass for compact and expanded modes.
+- Complete at least one physical-device Messages pass for compact and expanded modes, then validate the filled evidence file with `scripts/validate-device-evidence.rb`.
 - Configure production App Attest app identifier/root certificate values and validate the flow on a physical device.
 - Validate production signing, bundle identifiers, App Group/App Attest capabilities, and extension metadata in the Apple Developer portal.
 - Confirm the App Review phone number has been entered directly in App Store Connect, confirm the public GitHub fallback URLs are acceptable or replace them with product-site URLs, and confirm in-app wording matches backend retention and deletion behavior.
