@@ -13,6 +13,8 @@ APP_ICON_CONTENTS = File.join(ROOT, "Client", "App", "Gifster", "Assets.xcassets
 MESSAGES_ICON_CONTENTS = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "Assets.xcassets", "iMessage App Icon.stickersiconset", "Contents.json")
 MESSAGES_INFO_PLIST = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "Info.plist")
 MESSAGES_VIEW_CONTROLLER = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesViewController.swift")
+MESSAGES_APP_VIEW = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesAppView.swift")
+MESSAGES_COMPOSER_MODEL = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesComposerModel.swift")
 
 DOCS_WITH_RELEASE_COPY = [
   "Documentation/APP_STORE_METADATA.md",
@@ -150,6 +152,43 @@ def validate_messages_extension_metadata(project, errors)
   end
 end
 
+def method_body(source, method_name)
+  match = source.match(/func #{Regexp.escape(method_name)}\([^)]*\)\s*\{/)
+  return nil unless match
+
+  index = match.end(0)
+  depth = 1
+
+  while index < source.length
+    case source[index]
+    when "{"
+      depth += 1
+    when "}"
+      depth -= 1
+      return source[match.begin(0)..index] if depth.zero?
+    end
+
+    index += 1
+  end
+
+  nil
+end
+
+def validate_local_caption_rerender(errors)
+  view_source = File.read(MESSAGES_APP_VIEW)
+  model_source = File.read(MESSAGES_COMPOSER_MODEL)
+  apply_body = method_body(model_source, "applyCaptionEdit")
+
+  errors << "#{relative(MESSAGES_APP_VIEW)} must expose an Apply Caption command for local caption edits." unless view_source.include?("model.applyCaptionEdit()")
+  errors << "#{relative(MESSAGES_COMPOSER_MODEL)} must cache the downloaded motion asset for caption re-rendering." unless model_source.include?("lastMotionAsset = asset")
+
+  if apply_body.nil?
+    errors << "#{relative(MESSAGES_COMPOSER_MODEL)} must implement applyCaptionEdit for local caption re-rendering."
+  elsif apply_body.include?("createJob(") || apply_body.include?("JobPollingService(")
+    errors << "#{relative(MESSAGES_COMPOSER_MODEL)} applyCaptionEdit must not create or poll a backend generation job."
+  end
+end
+
 project = YAML.load_file(PROJECT_PATH)
 deployment_target = project.dig("options", "deploymentTarget", "iOS")
 iphoneos_target = project.dig("settings", "base", "IPHONEOS_DEPLOYMENT_TARGET")
@@ -199,6 +238,7 @@ end
 validate_icon_catalog(APP_ICON_CONTENTS, errors)
 validate_icon_catalog(MESSAGES_ICON_CONTENTS, errors)
 validate_messages_extension_metadata(project, errors)
+validate_local_caption_rerender(errors)
 
 if errors.any?
   warn "Release readiness validation failed:"
@@ -212,3 +252,4 @@ puts "Checked Swift sources for v1 no-sticker/no-Image-Playground invariants."
 puts "Checked App Store/review/privacy docs for known placeholders."
 puts "Checked app and Messages icon catalogs."
 puts "Checked iMessage extension metadata for attachment-insertion app mode."
+puts "Checked caption edits can re-render locally without another backend generation job."

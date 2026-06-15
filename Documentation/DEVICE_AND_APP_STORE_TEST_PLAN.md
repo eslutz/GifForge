@@ -69,7 +69,7 @@ Evidence:
 - [ ] Caption suggestions can be requested.
 - [ ] Suggested captions can be reviewed, selected, and edited.
 - [ ] Explicit caption text is preserved unless too long or unsafe.
-- [ ] Caption edits re-render the GIF locally without creating a new backend job.
+- [ ] Caption edits re-render the GIF locally with Apply Caption and do not create a new backend job.
 - [ ] Finished GIF preview is visible.
 - [ ] Regenerate starts a new backend generation job.
 - [ ] Insert adds the GIF to the Messages compose field as an attachment.

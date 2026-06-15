@@ -4,6 +4,7 @@
 
 - Backend xUnit tests cover health, request shape/payload validation, moderation, fake provider behavior, durable Table Storage job state, minimized persisted generation payloads, shared App Attest state storage, sanitized operational generation events, queue worker processing and retry behavior, App Attest authorization gates, demo-only App Attest bypass behavior, and cryptographic App Attest verifier checks using a generated certificate fixture.
 - Swift package tests cover prompt planning fallback, metadata-only source-image context for image-to-GIF planning, backend authorization, App Attest client routes, active-job persistence, MP4 ingestion, frame-sequence rendering, GIF downsampling, caption line fitting, and user-facing error copy for provider downtime, unavailable local models, network failures, moderation rejections, and App Attest unavailable states.
+- The Messages extension caches the downloaded provider motion asset after generation so caption edits can re-render a local GIF without creating another backend generation job.
 - The Xcode scheme includes `GifsterUITests` for the containing app shell, history tab, history clear confirmation, settings tab, backend URL field, and App Attest setting.
 - The app and Messages extension include privacy manifests declaring no tracking, app-functionality use of user content/images, and the UserDefaults required-reason API.
 - App group entitlements are configured for the containing app and Messages extension. App Attest entitlement uses `development` for Debug and `production` for Release.
@@ -12,7 +13,7 @@
 - The containing app asks for confirmation before deleting generated GIF history and resumable active-job metadata.
 - Physical-device and App Store evidence should be collected with `Documentation/DEVICE_AND_APP_STORE_TEST_PLAN.md`.
 - The client workflow regenerates the Xcode project, checks generated files, runs Swift package tests, and builds the app, Messages extension, and UI tests for iOS Simulator.
-- The client workflow runs `scripts/verify-release-readiness.rb` to check the iOS 26.5 target, v1 no-sticker/no-Image-Playground source-code invariants, iMessage extension metadata, known App Store metadata placeholders, and tracked app/iMessage icon catalog completeness.
+- The client workflow runs `scripts/verify-release-readiness.rb` to check the iOS 26.5 target, v1 no-sticker/no-Image-Playground source-code invariants, iMessage extension metadata, local caption re-render wiring, known App Store metadata placeholders, and tracked app/iMessage icon catalog completeness.
 - `scripts/smoke-backend.sh` covers the backend demo loop by checking `/health`, submitting a fake-provider generation job, polling status, and downloading the generated frame-sequence result.
 - The manual `Deploy Nonprod` workflow deploys the selected GHCR backend image to the existing `rg-gifster-nonprod` resource group and runs the backend smoke test against the resulting Container Apps URL.
 - The manual `Deploy Prod` workflow deploys an immutable GHCR backend image tag to `rg-gifster-prod` through the `prod` GitHub environment, requires production App Attest and external-provider configuration, disables the demo bypass, and health-checks `/health`.
