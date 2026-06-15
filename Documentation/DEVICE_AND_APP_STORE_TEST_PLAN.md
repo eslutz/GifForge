@@ -161,6 +161,18 @@ Evidence:
 - Screenshot set:
 - Notes:
 
+### Containing-App Screenshot Capture
+
+Run the deterministic containing-app screenshot pass before assembling App Store Connect screenshots:
+
+```bash
+scripts/capture-app-store-screenshots.sh
+```
+
+The script writes PNG files to `Documentation/AppStoreScreenshots/containing-app` by default and preserves an XCTest result bundle under `/private/tmp/gifster-app-store-screenshots.xcresult`. Override the simulator with `GIFSTER_SCREENSHOT_DESTINATION` or pass a custom output directory as the first argument.
+
+This script covers the containing app overview, seeded history, clear-history confirmation, and settings screens. Capture Messages extension screenshots separately from the physical Messages flow above because the App Store screenshot set must show the real compact/expanded iMessage extension experience.
+
 ## Pass Criteria
 
 Gifster is ready for App Store submission only after every checklist item above is complete, evidence is attached or linked, and `Documentation/APP_STORE_READINESS.md` no longer lists unresolved release blockers.

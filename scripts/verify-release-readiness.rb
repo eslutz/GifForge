@@ -15,6 +15,7 @@ MESSAGES_INFO_PLIST = File.join(ROOT, "Client", "Extensions", "GifsterMessages",
 MESSAGES_VIEW_CONTROLLER = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesViewController.swift")
 MESSAGES_APP_VIEW = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesAppView.swift")
 MESSAGES_COMPOSER_MODEL = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesComposerModel.swift")
+UI_TESTS = File.join(ROOT, "Client", "Tests", "GifsterUITests", "GifsterUITests.swift")
 GENERATION_MODELS = File.join(ROOT, "Client", "Packages", "GifsterCore", "Sources", "GifsterCore", "Models", "GenerationModels.swift")
 BACKEND_CLIENT = File.join(ROOT, "Client", "Packages", "GifsterCore", "Sources", "GifsterCore", "Networking", "BackendClient.swift")
 ACTIVE_GENERATION_STORE = File.join(ROOT, "Client", "Packages", "GifsterCore", "Sources", "GifsterCore", "Storage", "ActiveGenerationStore.swift")
@@ -27,6 +28,7 @@ FAKE_PROVIDER = File.join(ROOT, "Backend", "Providers", "FakeFrameSequenceProvid
 EXTERNAL_PROVIDER = File.join(ROOT, "Backend", "Providers", "ExternalHttpGenerationProvider.cs")
 BACKEND_PROGRAM = File.join(ROOT, "Backend", "Program.cs")
 PROVIDER_PREFLIGHT = File.join(ROOT, "scripts", "validate-external-provider-contract.rb")
+SCREENSHOT_CAPTURE_SCRIPT = File.join(ROOT, "scripts", "capture-app-store-screenshots.sh")
 
 DOCS_WITH_RELEASE_COPY = [
   "Documentation/APP_STORE_METADATA.md",
@@ -381,6 +383,38 @@ def validate_provider_operational_readiness(errors)
   end
 end
 
+def validate_app_store_screenshot_tooling(errors)
+  unless File.executable?(SCREENSHOT_CAPTURE_SCRIPT)
+    errors << "#{relative(SCREENSHOT_CAPTURE_SCRIPT)} must be executable so App Store screenshot capture is repeatable."
+    return unless File.file?(SCREENSHOT_CAPTURE_SCRIPT)
+  end
+
+  script = File.read(SCREENSHOT_CAPTURE_SCRIPT)
+  {
+    "GIFSTER_SCREENSHOT_ATTACHMENTS" => "configurable intermediate attachment directory",
+    "GIFSTER_SCREENSHOT_DESTINATION" => "configurable simulator destination",
+    "testCaptureContainingAppScreenshotsForAppStorePrep" => "screenshot UI test selection",
+    "-resultBundlePath" => "XCTest result bundle preservation",
+    "xcrun xcresulttool export attachments" => "XCTest attachment export",
+    "suggestedHumanReadableName" => "stable screenshot file naming"
+  }.each do |needle, label|
+    require_text_include(script, needle, "#{relative(SCREENSHOT_CAPTURE_SCRIPT)} #{label}", errors)
+  end
+
+  tests = File.read(UI_TESTS)
+  {
+    "func testCaptureContainingAppScreenshotsForAppStorePrep()" => "App Store screenshot UI test",
+    "GIFSTER_UI_TEST_SEED_HISTORY" => "deterministic screenshot history seed",
+    "01-containing-app-overview" => "overview screenshot",
+    "02-containing-app-history" => "history screenshot",
+    "03-containing-app-clear-history" => "clear-history screenshot",
+    "04-containing-app-settings" => "settings screenshot",
+    "XCTAttachment(screenshot:" => "XCTest screenshot attachments"
+  }.each do |needle, label|
+    require_text_include(tests, needle, "#{relative(UI_TESTS)} #{label}", errors)
+  end
+end
+
 project = YAML.load_file(PROJECT_PATH)
 deployment_target = project.dig("options", "deploymentTarget", "iOS")
 iphoneos_target = project.dig("settings", "base", "IPHONEOS_DEPLOYMENT_TARGET")
@@ -434,6 +468,7 @@ validate_local_caption_rerender(errors)
 validate_backend_expiration_contract(errors)
 validate_deployment_safety_invariants(errors)
 validate_provider_operational_readiness(errors)
+validate_app_store_screenshot_tooling(errors)
 
 if errors.any?
   warn "Release readiness validation failed:"
@@ -451,3 +486,4 @@ puts "Checked caption edits can re-render locally without another backend genera
 puts "Checked client preserves backend generation expiration for active-job resume."
 puts "Checked deployment scale-to-zero and production safety invariants."
 puts "Checked provider health mode and external-provider preflight invariants."
+puts "Checked containing-app App Store screenshot capture tooling."
