@@ -15,6 +15,9 @@ MESSAGES_INFO_PLIST = File.join(ROOT, "Client", "Extensions", "GifsterMessages",
 MESSAGES_VIEW_CONTROLLER = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesViewController.swift")
 MESSAGES_APP_VIEW = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesAppView.swift")
 MESSAGES_COMPOSER_MODEL = File.join(ROOT, "Client", "Extensions", "GifsterMessages", "MessagesComposerModel.swift")
+GENERATION_MODELS = File.join(ROOT, "Client", "Packages", "GifsterCore", "Sources", "GifsterCore", "Models", "GenerationModels.swift")
+BACKEND_CLIENT = File.join(ROOT, "Client", "Packages", "GifsterCore", "Sources", "GifsterCore", "Networking", "BackendClient.swift")
+ACTIVE_GENERATION_STORE = File.join(ROOT, "Client", "Packages", "GifsterCore", "Sources", "GifsterCore", "Storage", "ActiveGenerationStore.swift")
 
 DOCS_WITH_RELEASE_COPY = [
   "Documentation/APP_STORE_METADATA.md",
@@ -189,6 +192,18 @@ def validate_local_caption_rerender(errors)
   end
 end
 
+def validate_backend_expiration_contract(errors)
+  generation_models = File.read(GENERATION_MODELS)
+  backend_client = File.read(BACKEND_CLIENT)
+  active_store = File.read(ACTIVE_GENERATION_STORE)
+
+  errors << "#{relative(GENERATION_MODELS)} GenerationJob must preserve backend expiresAt." unless generation_models.include?("public var expiresAt: String?")
+  errors << "#{relative(GENERATION_MODELS)} JobSubmissionResponse must decode backend expiresAt." unless generation_models.match?(/struct JobSubmissionResponse[\s\S]*public var expiresAt: String/)
+  errors << "#{relative(GENERATION_MODELS)} JobStatusResponse must decode backend expiresAt." unless generation_models.match?(/struct JobStatusResponse[\s\S]*public var expiresAt: String/)
+  errors << "#{relative(BACKEND_CLIENT)} createJob must copy response.expiresAt into GenerationJob." unless backend_client.include?("expiresAt: response.expiresAt")
+  errors << "#{relative(ACTIVE_GENERATION_STORE)} must clear snapshots whose backend job expiration has passed." unless active_store.include?("snapshot.job.expirationDate")
+end
+
 project = YAML.load_file(PROJECT_PATH)
 deployment_target = project.dig("options", "deploymentTarget", "iOS")
 iphoneos_target = project.dig("settings", "base", "IPHONEOS_DEPLOYMENT_TARGET")
@@ -239,6 +254,7 @@ validate_icon_catalog(APP_ICON_CONTENTS, errors)
 validate_icon_catalog(MESSAGES_ICON_CONTENTS, errors)
 validate_messages_extension_metadata(project, errors)
 validate_local_caption_rerender(errors)
+validate_backend_expiration_contract(errors)
 
 if errors.any?
   warn "Release readiness validation failed:"
@@ -253,3 +269,4 @@ puts "Checked App Store/review/privacy docs for known placeholders."
 puts "Checked app and Messages icon catalogs."
 puts "Checked iMessage extension metadata for attachment-insertion app mode."
 puts "Checked caption edits can re-render locally without another backend generation job."
+puts "Checked client preserves backend generation expiration for active-job resume."

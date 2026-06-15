@@ -182,19 +182,26 @@ public struct GenerationJob: Codable, Equatable, Identifiable, Sendable {
   public var statusURL: URL
   public var downloadURL: URL?
   public var message: String?
+  public var expiresAt: String?
+
+  public var expirationDate: Date? {
+    GifsterISO8601DateParser.date(from: expiresAt)
+  }
 
   public init(
     id: String,
     status: GenerationStatus,
     statusURL: URL,
     downloadURL: URL? = nil,
-    message: String? = nil
+    message: String? = nil,
+    expiresAt: String? = nil
   ) {
     self.id = id
     self.status = status
     self.statusURL = statusURL
     self.downloadURL = downloadURL
     self.message = message
+    self.expiresAt = expiresAt
   }
 }
 
@@ -202,11 +209,13 @@ public struct JobSubmissionResponse: Codable, Equatable, Sendable {
   public var jobId: String
   public var status: GenerationStatus
   public var statusUrl: URL
+  public var expiresAt: String
 
-  public init(jobId: String, status: GenerationStatus, statusUrl: URL) {
+  public init(jobId: String, status: GenerationStatus, statusUrl: URL, expiresAt: String) {
     self.jobId = jobId
     self.status = status
     self.statusUrl = statusUrl
+    self.expiresAt = expiresAt
   }
 }
 
@@ -215,17 +224,20 @@ public struct JobStatusResponse: Codable, Equatable, Sendable {
   public var status: GenerationStatus
   public var downloadUrl: URL?
   public var message: String?
+  public var expiresAt: String
 
   public init(
     jobId: String,
     status: GenerationStatus,
     downloadUrl: URL? = nil,
-    message: String? = nil
+    message: String? = nil,
+    expiresAt: String
   ) {
     self.jobId = jobId
     self.status = status
     self.downloadUrl = downloadUrl
     self.message = message
+    self.expiresAt = expiresAt
   }
 }
 
@@ -248,5 +260,23 @@ public struct GenerationHistoryItem: Codable, Equatable, Identifiable, Sendable 
     self.captionText = captionText
     self.gifURL = gifURL
     self.createdAt = createdAt
+  }
+}
+
+public enum GifsterISO8601DateParser {
+  public static func date(from value: String?) -> Date? {
+    guard let value else {
+      return nil
+    }
+
+    let fractionalFormatter = ISO8601DateFormatter()
+    fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = fractionalFormatter.date(from: value) {
+      return date
+    }
+
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    return formatter.date(from: value)
   }
 }

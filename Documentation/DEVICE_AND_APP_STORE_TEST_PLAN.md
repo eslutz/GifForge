@@ -92,7 +92,8 @@ Evidence:
 - [ ] Reopen Gifster from Messages.
 - [ ] The extension resumes polling the existing job instead of creating a duplicate job.
 - [ ] Completed result renders and can be inserted.
-- [ ] Failed or expired active jobs show a user-facing error and can be cleared.
+- [ ] Failed active jobs show a user-facing error and can be cleared.
+- [ ] Backend-expired active jobs are not resumed after the stored `expiresAt` time.
 
 Evidence:
 
