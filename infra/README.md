@@ -115,6 +115,36 @@ Dispatch inputs:
 
 The workflow deploys the API and worker with `minReplicas=0` and `workerMinReplicas=0`. The API wakes on HTTP traffic, and the worker wakes from the `generation-jobs` queue scaler so the smoke test can still create and process a queued fake-provider generation job.
 
+## GitHub Prod Deployment
+
+The `Deploy Prod` workflow is manually dispatched from GitHub Actions. It uses the `prod` GitHub environment, deploys `infra/main.bicep` into `rg-gifster-prod`, and health-checks `/health`. It intentionally does not run a fake generation smoke test, because production generation requires a real App Attest session and a selected external provider.
+
+Before dispatching production, configure OIDC with:
+
+```bash
+scripts/setup-azure-oidc.sh --apply \
+  --environment prod \
+  --subscription-id <subscription-id> \
+  --tenant-id <tenant-id>
+```
+
+Required `prod` GitHub environment secrets:
+
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+- `GIFSTER_APP_ATTEST_APP_IDENTIFIER`
+- `GIFSTER_APP_ATTEST_ROOT_CERTIFICATE_PEM`
+- `GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL`
+- `GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`
+
+Optional `prod` GitHub environment secrets and variables:
+
+- `GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION`: server-side Authorization header for the external provider gateway.
+- `GIFSTER_EXTERNAL_PROVIDER_NAME`: optional GitHub environment variable for health/status display.
+
+Production dispatch rejects `latest` and requires an immutable 40-character commit SHA image tag. It deploys with `providerAdapter=external-http`, `appAttestDemoBypassEnabled=false`, and the selected `minReplicas`, `workerMinReplicas`, and `maxReplicas` values.
+
 ## Smoke Test Nonprod
 
 After deployment, run the backend smoke test against the Container Apps URL:
@@ -156,6 +186,7 @@ The API and worker Container Apps receive these environment variables:
 - `GIFSTER_EXTERNAL_PROVIDER_NAME`
 - `GIFSTER_EXTERNAL_PROVIDER_SUBMIT_URL`
 - `GIFSTER_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`
+- `GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION`
 
 The worker also sets `GIFSTER_WORKER_ENABLED=true` and processes jobs from the `generation-jobs` queue. Worker baseline availability is controlled by the `workerMinReplicas` deployment parameter; queue depth controls scale-out from zero through the Azure Queue scale rule.
 
@@ -163,4 +194,4 @@ The templates intentionally do not set `GIFSTER_APP_ATTEST_DEMO_BYPASS`. That by
 
 Set `providerAdapter=external-http` only after a provider gateway or vendor-specific wrapper implements the documented external HTTP provider contract. Keep `providerAdapter=fake` for local/demo deployments.
 
-Provider credentials should be added to Key Vault after deployment, then read by the backend through managed identity. Do not store provider secrets in Bicep parameter files.
+Provider credentials should be added as Container Apps secrets through the secure `externalProviderAuthorization` deployment parameter or added to Key Vault for provider-specific adapter work. Do not store provider secrets in Bicep parameter files.

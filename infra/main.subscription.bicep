@@ -44,6 +44,10 @@ param externalProviderSubmitUrl string = ''
 @description('External HTTP provider result URL template. Supports {providerJobId} and {jobId}.')
 param externalProviderResultUrlTemplate string = ''
 
+@secure()
+@description('Optional Authorization header value for the external HTTP provider, such as "Bearer <token>". Stored as a Container Apps secret.')
+param externalProviderAuthorization string = ''
+
 @description('Minimum Container Apps replicas. Use 0 for scale-to-zero, or 1+ when warm API capacity is required.')
 @minValue(0)
 @maxValue(10)
@@ -91,6 +95,7 @@ module backend './main.bicep' = {
     externalProviderName: externalProviderName
     externalProviderSubmitUrl: externalProviderSubmitUrl
     externalProviderResultUrlTemplate: externalProviderResultUrlTemplate
+    externalProviderAuthorization: externalProviderAuthorization
     minReplicas: minReplicas
     maxReplicas: maxReplicas
     workerMinReplicas: workerMinReplicas

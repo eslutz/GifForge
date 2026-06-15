@@ -99,6 +99,8 @@ Bootstrap an environment with `az deployment sub create` after setting the `cont
 
 The `Deploy Nonprod` GitHub Actions workflow can deploy and smoke-test `rg-gifster-nonprod` manually. It uses resource-group-scope deployment against the existing nonprod resource group. Run `scripts/setup-azure-oidc.sh --environment nonprod` first in dry-run mode to review the Azure OIDC trust, GitHub environment secrets, and resource-group-scoped RBAC changes. After approval, run it with `--apply` to configure `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, the federated credential subject `repo:eslutz/Gifster:environment:nonprod`, and the `Contributor` plus `Role Based Access Control Administrator` roles at the `rg-gifster-nonprod` scope. `scripts/setup-nonprod-oidc.sh` is a compatibility wrapper for the same nonprod defaults. Dispatch the workflow with the backend GHCR image tag to deploy. Use its demo App Attest bypass input only for controlled nonprod smoke tests.
 
+The `Deploy Prod` workflow deploys to `rg-gifster-prod` through the `prod` GitHub environment. Run `scripts/setup-azure-oidc.sh --environment prod` first, configure the required production App Attest and external provider secrets in that GitHub environment, and dispatch only with an immutable commit SHA image tag. Production deployment forces `providerAdapter=external-http`, disables the demo App Attest bypass, and performs only a `/health` check; generation validation still requires a physical-device App Attest session and the selected provider.
+
 ## App Store Submission Drafts
 
 - `Documentation/APP_STORE_METADATA.md` contains App Store Connect copy, keywords, privacy-answer notes, public GitHub fallback URLs, and owner-entered fields that should not be committed to source control.
@@ -131,6 +133,7 @@ GitHub Actions is split into path-scoped workflows:
 - `Infrastructure` runs for `infra/**` and infrastructure workflow changes.
 - `Client` runs for `Client/**` and client workflow changes.
 - `Deploy Nonprod` is manual-only and deploys the selected backend image to Azure, then smoke-tests the Container Apps URL.
+- `Deploy Prod` is manual-only and deploys an immutable backend image tag to Azure production, then health-checks the Container Apps URL.
 
 The client workflow also builds the containing app, Messages extension, and UI test target for iOS Simulator. Documentation-only changes do not run these workflows. Pushes to `main` that touch backend code also authenticate to GHCR and publish the backend image.
 

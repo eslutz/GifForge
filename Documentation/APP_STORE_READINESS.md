@@ -12,6 +12,7 @@
 - The client workflow regenerates the Xcode project, checks generated files, runs Swift package tests, and builds the app, Messages extension, and UI tests for iOS Simulator.
 - `scripts/smoke-backend.sh` covers the backend demo loop by checking `/health`, submitting a fake-provider generation job, polling status, and downloading the generated frame-sequence result.
 - The manual `Deploy Nonprod` workflow deploys the selected GHCR backend image to the existing `rg-gifster-nonprod` resource group and runs the backend smoke test against the resulting Container Apps URL.
+- The manual `Deploy Prod` workflow deploys an immutable GHCR backend image tag to `rg-gifster-prod` through the `prod` GitHub environment, requires production App Attest and external-provider configuration, disables the demo bypass, and health-checks `/health`.
 
 ## Verified Nonprod Evidence
 
@@ -29,6 +30,7 @@
 - Attempted to dispatch `deploy-nonprod.yml` from `main` as GitHub Actions run `27540776242`; the run reached `azure/login@v2` and failed because `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` were not configured for the `nonprod` environment.
 - The workflow now uses resource-group-scope deployment against `rg-gifster-nonprod` so the GitHub OIDC identity can use resource-group-scoped `Contributor` and `Role Based Access Control Administrator` grants instead of subscription-scoped grants. Workflow-dispatch proof remains pending until the Azure federated credential, GitHub environment secrets, and scoped RBAC assignments are configured.
 - `scripts/setup-azure-oidc.sh` provides a dry-run-first setup path for per-environment GitHub OIDC configuration. `scripts/setup-nonprod-oidc.sh` wraps it for nonprod compatibility, and both only apply Azure/GitHub trust changes when explicitly run with `--apply`.
+- `Deploy Prod` workflow proof remains pending until `rg-gifster-prod`, the `prod` GitHub OIDC identity, production App Attest values, external provider settings, and an immutable image tag are available.
 
 ## Required Physical Device Checks
 
@@ -59,4 +61,5 @@ Use `Documentation/APP_REVIEW_NOTES.md` as the submission draft.
 - Validate production signing, bundle identifiers, App Group/App Attest capabilities, and extension metadata in the Apple Developer portal.
 - Confirm the App Review phone number has been entered directly in App Store Connect, confirm the public GitHub fallback URLs are acceptable or replace them with product-site URLs, and confirm in-app wording matches backend retention and deletion behavior.
 - Review and apply `scripts/setup-azure-oidc.sh --apply --environment nonprod` to configure the GitHub OIDC federated credential, nonprod environment secrets, and `rg-gifster-nonprod`-scoped Azure RBAC grants, then run the `Deploy Nonprod` workflow with an immutable GHCR image tag and preserve the successful workflow run as deployment evidence.
+- Review and apply `scripts/setup-azure-oidc.sh --apply --environment prod`, configure production App Attest and external provider secrets, run `Deploy Prod` with an immutable GHCR image tag, and preserve the successful workflow run as production deployment evidence.
 - Smoke-test GIF preview and Messages insertion from a device against the nonprod backend.

@@ -6,6 +6,8 @@ on:
       - infra/**
       - scripts/setup-azure-oidc.sh
       - scripts/setup-nonprod-oidc.sh
+      - .github/workflows/deploy-nonprod.yml
+      - .github/workflows/deploy-prod.yml
       - .github/workflows/infra.yml
   push:
     branches:
@@ -14,6 +16,8 @@ on:
       - infra/**
       - scripts/setup-azure-oidc.sh
       - scripts/setup-nonprod-oidc.sh
+      - .github/workflows/deploy-nonprod.yml
+      - .github/workflows/deploy-prod.yml
       - .github/workflows/infra.yml
 
 permissions:

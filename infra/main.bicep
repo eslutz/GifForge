@@ -41,6 +41,10 @@ param externalProviderSubmitUrl string = ''
 @description('External HTTP provider result URL template. Supports {providerJobId} and {jobId}.')
 param externalProviderResultUrlTemplate string = ''
 
+@secure()
+@description('Optional Authorization header value for the external HTTP provider, such as "Bearer <token>". Stored as a Container Apps secret.')
+param externalProviderAuthorization string = ''
+
 @description('Minimum Container Apps replicas. Use 0 for scale-to-zero in lower environments.')
 @minValue(0)
 @maxValue(10)
@@ -89,6 +93,7 @@ var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 var storageTableDataContributorRoleId = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
+var externalProviderAuthorizationSecretName = 'external-provider-authorization'
 
 resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: '${prefix}-logs'
@@ -249,6 +254,12 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
+      secrets: empty(externalProviderAuthorization) ? [] : [
+        {
+          name: externalProviderAuthorizationSecretName
+          value: externalProviderAuthorization
+        }
+      ]
       ingress: {
         external: true
         targetPort: 8080
@@ -267,7 +278,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
         {
           name: 'api'
           image: containerImage
-          env: [
+          env: concat([
             {
               name: 'ASPNETCORE_HTTP_PORTS'
               value: '8080'
@@ -348,7 +359,12 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               name: 'AZURE_CLIENT_ID'
               value: appIdentity.properties.clientId
             }
-          ]
+          ], empty(externalProviderAuthorization) ? [] : [
+            {
+              name: 'GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION'
+              secretRef: externalProviderAuthorizationSecretName
+            }
+          ])
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
@@ -409,13 +425,19 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
+      secrets: empty(externalProviderAuthorization) ? [] : [
+        {
+          name: externalProviderAuthorizationSecretName
+          value: externalProviderAuthorization
+        }
+      ]
     }
     template: {
       containers: [
         {
           name: 'worker'
           image: containerImage
-          env: [
+          env: concat([
             {
               name: 'ASPNETCORE_HTTP_PORTS'
               value: '8080'
@@ -500,7 +522,12 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               name: 'AZURE_CLIENT_ID'
               value: appIdentity.properties.clientId
             }
-          ]
+          ], empty(externalProviderAuthorization) ? [] : [
+            {
+              name: 'GIFSTER_EXTERNAL_PROVIDER_AUTHORIZATION'
+              secretRef: externalProviderAuthorizationSecretName
+            }
+          ])
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'

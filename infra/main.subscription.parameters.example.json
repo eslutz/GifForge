@@ -38,6 +38,9 @@
     "externalProviderResultUrlTemplate": {
       "value": ""
     },
+    "externalProviderAuthorization": {
+      "value": ""
+    },
     "minReplicas": {
       "value": 0
     },
