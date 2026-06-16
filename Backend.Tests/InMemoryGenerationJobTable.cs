@@ -39,4 +39,21 @@ internal sealed class InMemoryGenerationJobTable : IGenerationJobTable
 
     return Task.FromResult(expiredKeys.Length);
   }
+
+  public Task<IReadOnlyList<GenerationJob>> GetExpiredAsync(
+    DateTimeOffset expiresBefore,
+    int maxCount,
+    CancellationToken cancellationToken
+  )
+  {
+    IReadOnlyList<GenerationJob> expired = rows
+      .Values
+      .Where(row => row.ExpiresAt <= expiresBefore)
+      .OrderBy(row => row.ExpiresAt)
+      .Take(maxCount)
+      .Select(row => row.ToJob())
+      .ToArray();
+
+    return Task.FromResult(expired);
+  }
 }

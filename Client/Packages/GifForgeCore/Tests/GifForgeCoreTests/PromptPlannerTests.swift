@@ -44,6 +44,28 @@ struct PromptPlannerTests {
     #expect(request.expandedPrompt.contains("aspect 4:3"))
   }
 
+  @Test("Live Photo paired MOV input switches the request to video-to-GIF")
+  func livePhotoMovInputSelectsVideoMode() async throws {
+    let planner = LocalPromptPlanner()
+    let sourceMedia = SourceMedia(
+      dataBase64: "mov-data",
+      mimeType: "video/quicktime",
+      fileName: "IMG_0001.MOV",
+      role: "livePhotoPairedVideo",
+      livePhotoIdentifier: "live-photo-1"
+    )
+
+    let request = try await planner.makeStructuredRequest(from: GenerationIntent(
+      prompt: "make the live photo cinematic",
+      sourceMedia: sourceMedia
+    ))
+
+    #expect(request.mode == .videoToGIF)
+    #expect(request.sourceMedia == sourceMedia)
+    #expect(request.sourceImage == nil)
+    #expect(request.expandedPrompt.contains("silent video"))
+  }
+
   @Test("Explicit captions reject text that is too long to render well")
   func rejectsLongCaptions() async throws {
     let planner = LocalPromptPlanner()

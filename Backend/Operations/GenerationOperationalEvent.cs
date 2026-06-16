@@ -15,6 +15,7 @@ public sealed record GenerationOperationalEvent(
   string Mode,
   string Status,
   bool HasSourceImage,
+  bool HasSourceMedia,
   string CaptionMode,
   string? ResultContentType = null,
   string? FailureKind = null
@@ -33,6 +34,7 @@ public sealed record GenerationOperationalEvent(
       job.Request.Mode,
       job.Status.JsonValue(),
       job.Request.SourceImage is not null,
+      job.Request.SourceMedia is not null,
       job.Request.Caption?.Mode ?? "none",
       resultContentType,
       failureKind
@@ -51,13 +53,14 @@ public sealed class LoggingGenerationEventSink : IGenerationEventSink
   public void Record(GenerationOperationalEvent generationEvent)
   {
     logger.LogInformation(
-      "Generation event {GenerationEventName} for job {GenerationJobId}: provider={GenerationProvider} mode={GenerationMode} status={GenerationStatus} hasSourceImage={HasSourceImage} captionMode={CaptionMode} resultContentType={ResultContentType} failureKind={FailureKind}",
+      "Generation event {GenerationEventName} for job {GenerationJobId}: provider={GenerationProvider} mode={GenerationMode} status={GenerationStatus} hasSourceImage={HasSourceImage} hasSourceMedia={HasSourceMedia} captionMode={CaptionMode} resultContentType={ResultContentType} failureKind={FailureKind}",
       generationEvent.Name,
       generationEvent.JobId,
       generationEvent.Provider,
       generationEvent.Mode,
       generationEvent.Status,
       generationEvent.HasSourceImage,
+      generationEvent.HasSourceMedia,
       generationEvent.CaptionMode,
       generationEvent.ResultContentType,
       generationEvent.FailureKind

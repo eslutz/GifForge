@@ -78,12 +78,12 @@ public struct FoundationModelsPromptPlanner: PromptPlanning {
   private func makeFoundationStructuredRequest(from intent: GenerationIntent) async throws -> StructuredGenerationRequest {
     do {
       let session = LanguageModelSession()
+      let mode = generationMode(for: intent)
       let response = try await session.respond(
-        to: generationPrompt(for: intent, mode: intent.sourceImage == nil ? .textToGIF : .imageToGIF),
+        to: generationPrompt(for: intent, mode: mode),
         generating: FoundationGenerationPlan.self
       )
       let plan = response.content
-      let mode: GenerationMode = intent.sourceImage == nil ? .textToGIF : .imageToGIF
       let caption = try normalizeCaption(intent.caption)
       let sourceImageContext = intent.sourceImage.map(SourceImageContext.init(sourceImage:))
       let cleaned = clean(plan.cleanedPrompt)
@@ -98,6 +98,7 @@ public struct FoundationModelsPromptPlanner: PromptPlanning {
         expandedPrompt: clean(plan.expandedPrompt),
         negativePrompt: clean(plan.negativePrompt),
         caption: caption,
+        sourceMedia: intent.sourceMedia,
         sourceImage: intent.sourceImage,
         sourceImageContext: sourceImageContext,
         options: intent.options
@@ -159,9 +160,15 @@ public struct FoundationModelsPromptPlanner: PromptPlanning {
 
   private func generationPrompt(for intent: GenerationIntent, mode: GenerationMode) -> String {
     let sourceImageSummary = intent.sourceImage.map { SourceImageContext(sourceImage: $0).summary } ?? ""
-    let source = mode == .imageToGIF
-      ? "The user selected a static source image. Plan how to animate that image. \(sourceImageSummary)"
-      : "The user wants a text-to-GIF animation."
+    let source: String
+    switch mode {
+    case .imageToGIF:
+      source = "The user selected a static source image. Plan how to animate that image. \(sourceImageSummary)"
+    case .videoToGIF:
+      source = "The user selected a GIF, video, MOV, or Live Photo paired MOV. Plan a silent video-to-video transformation."
+    case .textToGIF:
+      source = "The user wants a text-to-GIF animation."
+    }
 
     return """
     \(source)
@@ -172,5 +179,23 @@ public struct FoundationModelsPromptPlanner: PromptPlanning {
     Motion intensity: \(intent.options.motionIntensity.rawValue)
     Loop duration: \(String(format: "%.1f", intent.options.loopSeconds)) seconds
     """
+  }
+
+  private func generationMode(for intent: GenerationIntent) -> GenerationMode {
+    if let sourceMedia = intent.sourceMedia {
+      let mimeType = sourceMedia.mimeType.lowercased()
+      let role = sourceMedia.role?.lowercased()
+      if mimeType == "image/gif" ||
+          mimeType.hasPrefix("video/") ||
+          role == "video" ||
+          role == "livephotopairedvideo" ||
+          role == "live-photo-paired-video" {
+        return .videoToGIF
+      }
+
+      return .imageToGIF
+    }
+
+    return intent.sourceImage == nil ? .textToGIF : .imageToGIF
   }
 }

@@ -36,12 +36,12 @@ REQUIRED_REVIEW_NOTE_SNIPPETS = [
 ].freeze
 
 REQUIRED_PRIVACY_SNIPPETS = [
-  "GifForge uses only images selected by the user",
-  "Before upload, selected images are downscaled and rewritten as JPEG data",
+  "GifForge uses only media selected by the user",
+  "Before upload, selected still images may be downscaled and rewritten as JPEG data",
   "External AI media providers are used only through the backend",
   "Captions are rendered locally into the final GIF",
   "Deployed defaults expire remaining job records after 24 hours",
-  "Temporary provider result and source-image blobs are deleted by Azure Storage lifecycle policy after 2 days",
+  "Temporary generated MP4/provider result blobs are deleted by Azure Storage lifecycle policy after 2 days",
   "GifForge does not use data for tracking"
 ].freeze
 

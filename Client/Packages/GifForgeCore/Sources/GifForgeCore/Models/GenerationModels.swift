@@ -3,6 +3,7 @@ import Foundation
 public enum GenerationMode: String, Codable, CaseIterable, Sendable {
   case textToGIF = "text_to_gif"
   case imageToGIF = "image_to_gif"
+  case videoToGIF = "video_to_gif"
 }
 
 public enum MotionIntensity: String, Codable, CaseIterable, Sendable {
@@ -44,6 +45,28 @@ public struct ProcessedSourceImage: Codable, Equatable, Sendable {
     self.width = width
     self.height = height
     self.dataBase64 = dataBase64
+  }
+}
+
+public struct SourceMedia: Codable, Equatable, Sendable {
+  public var dataBase64: String
+  public var mimeType: String
+  public var fileName: String?
+  public var role: String?
+  public var livePhotoIdentifier: String?
+
+  public init(
+    dataBase64: String,
+    mimeType: String,
+    fileName: String? = nil,
+    role: String? = nil,
+    livePhotoIdentifier: String? = nil
+  ) {
+    self.dataBase64 = dataBase64
+    self.mimeType = mimeType
+    self.fileName = fileName
+    self.role = role
+    self.livePhotoIdentifier = livePhotoIdentifier
   }
 }
 
@@ -112,17 +135,20 @@ public struct SourceImageContext: Codable, Equatable, Sendable {
 
 public struct GenerationIntent: Codable, Equatable, Sendable {
   public var prompt: String
+  public var sourceMedia: SourceMedia?
   public var sourceImage: ProcessedSourceImage?
   public var caption: CaptionRequest
   public var options: PromptStyleOptions
 
   public init(
     prompt: String,
+    sourceMedia: SourceMedia? = nil,
     sourceImage: ProcessedSourceImage? = nil,
     caption: CaptionRequest = CaptionRequest(mode: .none),
     options: PromptStyleOptions = PromptStyleOptions()
   ) {
     self.prompt = prompt
+    self.sourceMedia = sourceMedia
     self.sourceImage = sourceImage
     self.caption = caption
     self.options = options
@@ -137,10 +163,12 @@ public struct StructuredGenerationRequest: Codable, Equatable, Identifiable, Sen
   public var expandedPrompt: String
   public var negativePrompt: String
   public var caption: CaptionRequest
+  public var sourceMedia: SourceMedia?
   public var sourceImage: ProcessedSourceImage?
   public var sourceImageContext: SourceImageContext?
   public var options: PromptStyleOptions
   public var clientTraceID: String
+  public var retryOfJobId: String?
 
   public init(
     id: UUID = UUID(),
@@ -150,10 +178,12 @@ public struct StructuredGenerationRequest: Codable, Equatable, Identifiable, Sen
     expandedPrompt: String,
     negativePrompt: String,
     caption: CaptionRequest,
+    sourceMedia: SourceMedia? = nil,
     sourceImage: ProcessedSourceImage?,
     sourceImageContext: SourceImageContext? = nil,
     options: PromptStyleOptions,
-    clientTraceID: String = UUID().uuidString
+    clientTraceID: String = UUID().uuidString,
+    retryOfJobId: String? = nil
   ) {
     self.id = id
     self.mode = mode
@@ -162,10 +192,12 @@ public struct StructuredGenerationRequest: Codable, Equatable, Identifiable, Sen
     self.expandedPrompt = expandedPrompt
     self.negativePrompt = negativePrompt
     self.caption = caption
+    self.sourceMedia = sourceMedia
     self.sourceImage = sourceImage
     self.sourceImageContext = sourceImageContext
     self.options = options
     self.clientTraceID = clientTraceID
+    self.retryOfJobId = retryOfJobId
   }
 }
 
@@ -183,6 +215,9 @@ public struct GenerationJob: Codable, Equatable, Identifiable, Sendable {
   public var downloadURL: URL?
   public var message: String?
   public var expiresAt: String?
+  public var retryAvailable: Bool
+  public var retryReason: String?
+  public var retryOfJobId: String?
 
   public var expirationDate: Date? {
     GifForgeISO8601DateParser.date(from: expiresAt)
@@ -194,7 +229,10 @@ public struct GenerationJob: Codable, Equatable, Identifiable, Sendable {
     statusURL: URL,
     downloadURL: URL? = nil,
     message: String? = nil,
-    expiresAt: String? = nil
+    expiresAt: String? = nil,
+    retryAvailable: Bool = false,
+    retryReason: String? = nil,
+    retryOfJobId: String? = nil
   ) {
     self.id = id
     self.status = status
@@ -202,6 +240,9 @@ public struct GenerationJob: Codable, Equatable, Identifiable, Sendable {
     self.downloadURL = downloadURL
     self.message = message
     self.expiresAt = expiresAt
+    self.retryAvailable = retryAvailable
+    self.retryReason = retryReason
+    self.retryOfJobId = retryOfJobId
   }
 }
 
@@ -225,19 +266,28 @@ public struct JobStatusResponse: Codable, Equatable, Sendable {
   public var downloadUrl: URL?
   public var message: String?
   public var expiresAt: String
+  public var retryAvailable: Bool?
+  public var retryReason: String?
+  public var retryOfJobId: String?
 
   public init(
     jobId: String,
     status: GenerationStatus,
     downloadUrl: URL? = nil,
     message: String? = nil,
-    expiresAt: String
+    expiresAt: String,
+    retryAvailable: Bool? = nil,
+    retryReason: String? = nil,
+    retryOfJobId: String? = nil
   ) {
     self.jobId = jobId
     self.status = status
     self.downloadUrl = downloadUrl
     self.message = message
     self.expiresAt = expiresAt
+    self.retryAvailable = retryAvailable
+    self.retryReason = retryReason
+    self.retryOfJobId = retryOfJobId
   }
 }
 

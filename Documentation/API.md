@@ -12,7 +12,7 @@ Returns backend health and active provider mode for Container Apps probes.
 }
 ```
 
-`mode` is `demo` for the built-in fake provider and `external` when `GIFFORGE_PROVIDER_ADAPTER=external-http` is active.
+Deployed environments use the direct video router and report `provider=routed-video`, `mode=video`. Tests may inject the fake provider, which reports `mode=demo`.
 
 ## POST `/v1/app-attest/challenges`
 
@@ -72,6 +72,7 @@ Authorization: Bearer <sessionToken>
     "mode": "userText",
     "text": "ship it"
   },
+  "sourceMedia": null,
   "sourceImage": null,
   "sourceImageContext": null,
   "options": {
@@ -81,22 +82,27 @@ Authorization: Bearer <sessionToken>
     "stylePreset": "expressive-loop",
     "motionIntensity": "medium"
   },
-  "clientTraceId": "trace-id"
+  "clientTraceId": "trace-id",
+  "retryOfJobId": null
 }
 ```
 
 Validation rules:
 
-- `mode` must be `text_to_gif` or `image_to_gif`.
+- `mode` must be `text_to_gif`, `image_to_gif`, or `video_to_gif`.
 - `cleanedPrompt` is required and limited to 600 characters.
 - `expandedPrompt` is limited to 1,600 characters.
 - Caption mode must be `none`, `userText`, or `suggestWithAI`; caption text is limited to 64 characters.
 - `options.width` and `options.height`, when present, must be between 64 and 1,024 pixels.
 - `options.loopSeconds`, when present, must be between 0.5 and 6.0 seconds.
 - `options.motionIntensity`, when present, must be `subtle`, `medium`, or `high`.
-- `image_to_gif` requests must include `sourceImage`.
+- `image_to_gif` requests must include either `sourceImage` or `sourceMedia`.
 - `sourceImage` must be the app-processed, metadata-stripped JPEG payload (`image/jpeg`), valid base64, no larger than the processed upload limit, and no wider or taller than 1,024 pixels.
 - `sourceImageContext`, when present, is metadata-only local context such as dimensions, orientation, aspect ratio, and a short summary. Its dimensions must match `sourceImage`.
+- `sourceMedia`, when present, supports JPEG, PNG, HEIC/HEIF, GIF, MP4, MOV, and Live Photo paired MOV uploads. GIF, MP4, MOV, and Live Photo paired MOV route to video-to-video provider models. JPEG, PNG, and HEIC/HEIF route to image-to-video provider models.
+- `video_to_gif` requests must include `sourceMedia`.
+- Live Photo requests must send the paired MOV as `sourceMedia` with `mimeType=video/quicktime` and `role=livePhotoPairedVideo`; sending only the still image is rejected for the Live Photo workflow.
+- `retryOfJobId`, when present, must reference a failed generation job whose attempt count has not reached `GIFFORGE_GENERATION_MAX_ATTEMPTS`. The backend uses the previous job's attempted provider/model metadata to select the next cheapest compatible candidate.
 
 Response:
 
@@ -119,15 +125,18 @@ Returns job state.
   "status": "succeeded",
   "downloadUrl": "http://127.0.0.1:8787/v1/generations/uuid/result",
   "message": null,
-  "expiresAt": "2026-06-16T12:00:00Z"
+  "expiresAt": "2026-06-16T12:00:00Z",
+  "retryAvailable": false,
+  "retryReason": null,
+  "retryOfJobId": null
 }
 ```
 
-Expired jobs return HTTP `410 Gone` from both the status and result routes. After validation, moderation, and provider submission, persisted job state clears raw `originalPrompt`, visible caption text, and processed source-image bytes. Deployed environments default to expiring remaining job metadata and result links after 24 hours.
+Failed jobs can return `"retryAvailable": true`, `"retryReason": "provider_failed"`, and `"retryOfJobId": "<failed-job-id>"`. Expired jobs return HTTP `410 Gone` from both the status and result routes. After validation, moderation, and provider submission, persisted job state clears raw `originalPrompt`, visible caption text, source-media bytes, and processed source-image bytes. Deployed environments default to expiring remaining job metadata and result links after 24 hours.
 
 ## GET `/v1/generations/:jobId/result`
 
-Returns a temporary generated motion asset. The demo provider returns a frame sequence JSON payload:
+Returns a temporary generated motion asset. Real provider-backed jobs return MP4 assets from GifForge-controlled storage. Tests may inject the demo provider, which returns a frame sequence JSON payload:
 
 ```json
 {
@@ -147,32 +156,60 @@ Returns a temporary generated motion asset. The demo provider returns a frame se
 }
 ```
 
-Real provider adapters can return either a frame sequence JSON payload or a direct `video/mp4` payload from the result URL. The iOS app converts either result type into frames, renders captions locally, and writes the final GIF before Messages insertion.
+The iOS app converts downloaded MP4 videos into frames, renders captions locally, and writes the final GIF before Messages insertion.
 
-## External HTTP Provider Contract
+## Direct Video Provider Router
 
-Set `GIFFORGE_PROVIDER_ADAPTER=external-http` to use the provider-neutral HTTP adapter. The backend maps the app request into a sanitized provider payload before posting to `GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL`; that payload includes motion prompt fields, options, optional source-image/source-image-context data, `captionMode`, and `renderCaptionLocally=true`, but omits raw `originalPrompt` and visible caption text.
+The backend always starts the direct provider router. The router classifies each request:
 
-Submission response:
+- prompt only -> text-to-video
+- still image -> image-to-video
+- GIF, MP4, MOV, or Live Photo paired MOV -> video-to-video
+
+Enabled provider/model candidates are ordered by effective estimated cost. Provider/model identity lives in the backend C# model catalog; App Configuration can enable providers and override model costs, but it must not define provider model IDs. When an enabled flag is omitted, a provider is enabled only if its API key is configured; explicitly enabling a provider without its API key fails startup. fal.ai Wan 2.2 defaults are cheaper and selected first. Luma Ray 3.2 defaults are configured as retry candidates. The backend submits to the cheapest compatible candidate for the request. If the provider fails, the job response can include retry metadata; the iOS client keeps the original request media locally, asks the user, and only resubmits with `retryOfJobId` after confirmation. The retry submission skips providers/models already attempted for the previous job.
+
+Provider configuration should come from Azure App Configuration, with API keys stored in Azure Key Vault and referenced by App Configuration or loaded directly from Key Vault. Supported settings include:
+
+- `GIFFORGE_FAL_ENABLED`
+- `GIFFORGE_FAL_API_KEY`
+- `GIFFORGE_FAL_SUBMIT_URL_TEMPLATE`
+- `GIFFORGE_FAL_RESULT_URL_TEMPLATE`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_TEXT_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_IMAGE_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_VIDEO_TO_VIDEO`
+- `GIFFORGE_LUMA_ENABLED`
+- `GIFFORGE_LUMA_API_KEY`
+- `GIFFORGE_LUMA_SUBMIT_URL_TEMPLATE`
+- `GIFFORGE_LUMA_RESULT_URL_TEMPLATE`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_TEXT_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_IMAGE_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_VIDEO_TO_VIDEO`
+
+The backend downloads provider result assets and stores generated MP4s in GifForge-controlled storage. The app receives only `/v1/generations/:jobId/result` URLs, never provider URLs.
+
+The backend does not persist source media for retry/fallback. After validation and provider submission, durable job state clears raw source-media and source-image bytes. Retry material remains on the client device in the active-generation snapshot until the job succeeds, expires, or the user declines retry. `GIFFORGE_GENERATION_MAX_ATTEMPTS` caps total client-mediated retry attempts, defaulting to 3.
+
+Failed job status responses include `retryAvailable`, `retryReason`, and `retryOfJobId` when the backend can accept a user-confirmed retry.
+
+## POST `/v1/provider-callbacks/:jobId`
+
+Provider gateways can push completion to this endpoint instead of waiting for queue polling. If `GIFFORGE_PROVIDER_CALLBACK_SECRET` is configured, callbacks must include:
+
+```http
+X-GifForge-Provider-Callback-Secret: <secret>
+```
+
+Successful callback:
 
 ```json
 {
-  "providerJobId": "provider-specific-job-id"
+  "status": "succeeded",
+  "providerJobId": "provider-job-id",
+  "assetUrl": "https://provider.example/video.mp4",
+  "contentType": "video/mp4"
 }
 ```
 
-Submission failure handling:
+The backend validates the provider job id, downloads the asset, stores it in GifForge-controlled result storage, marks the job succeeded, and keeps returning the stable `/v1/generations/:jobId/result` URL to the iOS client. Failed callbacks mark the job failed with generic app-safe copy and retry metadata when another configured provider/model remains available. Unknown in-progress statuses are accepted without changing the job.
 
-- Provider `400`, `401`, `403`, and `422` responses are treated as permanent provider rejections. The app-facing generation route returns HTTP `422` with generic safe copy and does not persist or dispatch a generation job.
-- Provider `408`, `429`, `5xx`, network, and timeout-style failures are treated as retryable availability failures. The app-facing generation route returns HTTP `503` with generic safe copy and does not expose provider error bodies.
-
-The backend later downloads the motion asset from `GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`, replacing `{providerJobId}` and `{jobId}` placeholders. The result response must use either:
-
-- `application/vnd.gifforge.frame-sequence+json`
-- `video/mp4`
-
-Result responses of `202` or `204` are treated as retryable not-ready states, so the queue worker can retry instead of storing an empty asset. Result responses with unsupported content types or empty motion assets are treated as permanent provider failures.
-
-Before deploying a real provider gateway, run `scripts/validate-external-provider-contract.rb` with `GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL`, `GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`, and optional `GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION`. The script submits the same sanitized provider payload shape, validates that the submit response returns `providerJobId`, polls the result URL until the configured timeout, and verifies that the result is either non-empty `video/mp4` or a valid `frame-sequence-v1` payload. Use `--print-payload` to inspect the exact JSON without making network calls.
-
-Use `Documentation/PROVIDER_ONBOARDING.md` and `scripts/validate-provider-onboarding.rb` to record the selected provider decision, text/image preflight evidence, privacy/security review, cost/rate-limit review, and production secret plan before switching production to `providerAdapter=external-http`.
+Use `Documentation/PROVIDER_ONBOARDING.md` and `scripts/validate-provider-onboarding.rb` to record the provider decision, text/image/video preflight evidence, privacy/security review, cost/rate-limit review, and production secret plan before enabling paid providers in production.

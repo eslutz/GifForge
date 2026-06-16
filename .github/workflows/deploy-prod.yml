@@ -62,8 +62,6 @@ jobs:
             AZURE_SUBSCRIPTION_ID
             GIFFORGE_APP_ATTEST_APP_IDENTIFIER
             GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM
-            GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL
-            GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE
           )
 
           for secret_name in "${required_secrets[@]}"; do
@@ -72,10 +70,6 @@ jobs:
               exit 1
             fi
           done
-
-          if [[ -z "${GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION}" ]]; then
-            echo "::warning::GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION is empty. Continue only if the provider gateway uses another server-side authentication mechanism."
-          fi
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
           MIN_REPLICAS: ${{ inputs.min_replicas }}
@@ -86,9 +80,6 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           GIFFORGE_APP_ATTEST_APP_IDENTIFIER: ${{ secrets.GIFFORGE_APP_ATTEST_APP_IDENTIFIER }}
           GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM }}
-          GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL }}
-          GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE }}
-          GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION }}
 
       - name: Azure login
         uses: azure/login@v2
@@ -108,7 +99,6 @@ jobs:
           set -euo pipefail
 
           image="${BACKEND_IMAGE}:${IMAGE_TAG}"
-          external_provider_name="${GIFFORGE_EXTERNAL_PROVIDER_NAME:-external-http}"
 
           az deployment group create \
             --name "gifforge-prod-${GITHUB_RUN_ID}" \
@@ -121,11 +111,6 @@ jobs:
               appAttestAppIdentifier="$GIFFORGE_APP_ATTEST_APP_IDENTIFIER" \
               appAttestRootCertificatePem="$GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM" \
               appAttestDemoBypassEnabled=false \
-              providerAdapter=external-http \
-              externalProviderName="$external_provider_name" \
-              externalProviderSubmitUrl="$GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL" \
-              externalProviderResultUrlTemplate="$GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE" \
-              externalProviderAuthorization="$GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION" \
               minReplicas="${MIN_REPLICAS}" \
               workerMinReplicas="${WORKER_MIN_REPLICAS}" \
               maxReplicas="${MAX_REPLICAS}" \
@@ -149,10 +134,6 @@ jobs:
           MAX_REPLICAS: ${{ inputs.max_replicas }}
           GIFFORGE_APP_ATTEST_APP_IDENTIFIER: ${{ secrets.GIFFORGE_APP_ATTEST_APP_IDENTIFIER }}
           GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM }}
-          GIFFORGE_EXTERNAL_PROVIDER_NAME: ${{ vars.GIFFORGE_EXTERNAL_PROVIDER_NAME }}
-          GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL }}
-          GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE }}
-          GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION: ${{ secrets.GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION }}
 
       - name: Health check prod backend
         run: |

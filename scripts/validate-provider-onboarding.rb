@@ -5,22 +5,26 @@ require "json"
 require "optparse"
 require "time"
 
-FRAME_SEQUENCE_CONTENT_TYPE = "application/vnd.gifforge.frame-sequence+json"
 MP4_CONTENT_TYPE = "video/mp4"
-REQUIRED_PROD_SECRETS = %w[
-  GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL
-  GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE
+REQUIRED_KEY_VAULT_SECRETS = %w[
+  GIFFORGE_FAL_API_KEY
+  GIFFORGE_LUMA_API_KEY
 ].freeze
-OPTIONAL_PROD_SECRETS = %w[
-  GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION
+REQUIRED_APP_CONFIG_KEYS = %w[
+  GIFFORGE_FAL_ENABLED
+  GIFFORGE_LUMA_ENABLED
+  GIFFORGE_MODEL_COST_USD_FAL_WAN22_TEXT_TO_VIDEO
+  GIFFORGE_MODEL_COST_USD_FAL_WAN22_IMAGE_TO_VIDEO
+  GIFFORGE_MODEL_COST_USD_FAL_WAN22_VIDEO_TO_VIDEO
+  GIFFORGE_MODEL_COST_USD_LUMA_RAY32_TEXT_TO_VIDEO
+  GIFFORGE_MODEL_COST_USD_LUMA_RAY32_IMAGE_TO_VIDEO
+  GIFFORGE_MODEL_COST_USD_LUMA_RAY32_VIDEO_TO_VIDEO
 ].freeze
 REQUIRED_TOP_LEVEL_STRINGS = %w[
-  providerName
   decisionOwner
   decisionDate
-  adapter
-  gatewaySubmitUrl
-  gatewayResultUrlTemplate
+  providerSelection
+  modelCatalogSource
   authenticationLocation
   costModel
   expectedLatency
@@ -32,24 +36,26 @@ REQUIRED_TOP_LEVEL_STRINGS = %w[
   rollbackPlan
 ].freeze
 REQUIRED_ARRAYS = %w[
+  providerNames
   supportedResultContentTypes
-  requiredProductionSecrets
-  optionalProductionSecrets
+  requiredKeyVaultSecrets
+  requiredAppConfigurationKeys
 ].freeze
 REQUIRED_CHECKS = {
   "contract" => %w[
-    usesExternalHttpAdapter
-    supportsTextToAnimation
-    supportsImageToAnimation
+    usesDirectVideoRouter
+    supportsTextToVideo
+    supportsImageToVideo
+    supportsVideoToVideo
     returnsProviderJobId
-    resultUrlSupportsProviderJobId
-    acceptsCaptionModeMetadata
-    acceptsRenderCaptionLocallyTrue
-    doesNotRequireReadableTextRendering
-    supportsMp4OrFrameSequence
+    exposesResultPollingOrCallback
+    supportsMp4Result
     handlesNotReadyResultState
+    generatedGifRemainsClientSide
+    doesNotRequireReadableTextRendering
     preflightTextPassed
     preflightImagePassed
+    preflightVideoPassed
   ],
   "securityPrivacy" => %w[
     credentialsBackendOnly
@@ -63,10 +69,12 @@ REQUIRED_CHECKS = {
     abuseReportingPathDefined
   ],
   "productionReadiness" => %w[
-    productionSecretsNamed
+    keyVaultSecretsNamed
+    appConfigurationProviderFlagsDefined
+    appConfigurationCostKeysDefined
     nonprodSmokePlanDefined
     prodDeployPlanDefined
-    healthModeExternalExpected
+    healthModeVideoExpected
     appAttestRequired
     costLimitDefined
     rateLimitHandlingDefined
@@ -103,19 +111,20 @@ end
 def evidence_template
   {
     collectedAt: Time.now.utc.iso8601,
-    providerName: "",
+    providerNames: [
+      "fal.ai",
+      "luma"
+    ],
     decisionOwner: "",
     decisionDate: "",
-    adapter: "external-http",
-    gatewaySubmitUrl: "",
-    gatewayResultUrlTemplate: "",
+    providerSelection: "Direct fal.ai/Luma video router",
+    modelCatalogSource: "Backend C# model catalog; App Configuration only overrides provider enablement and costs.",
     supportedResultContentTypes: [
-      MP4_CONTENT_TYPE,
-      FRAME_SEQUENCE_CONTENT_TYPE
+      MP4_CONTENT_TYPE
     ],
-    authenticationLocation: "GitHub environment secret or Azure Container Apps secret; do not store secret values here.",
-    requiredProductionSecrets: REQUIRED_PROD_SECRETS,
-    optionalProductionSecrets: OPTIONAL_PROD_SECRETS,
+    authenticationLocation: "Azure Key Vault secrets referenced through Azure App Configuration; do not store secret values here.",
+    requiredKeyVaultSecrets: REQUIRED_KEY_VAULT_SECRETS,
+    requiredAppConfigurationKeys: REQUIRED_APP_CONFIG_KEYS,
     costModel: "",
     expectedLatency: "",
     rateLimits: "",
@@ -125,9 +134,10 @@ def evidence_template
     termsReview: "",
     rollbackPlan: "",
     contract: checklist(REQUIRED_CHECKS.fetch("contract")).merge(
-      providerPayloadInvariant: "Provider-facing requests include renderCaptionLocally=true and never ask providers to render readable caption text.",
+      providerPayloadInvariant: "Provider-facing requests generate silent MP4 video assets; GIF conversion and caption rendering remain client-side.",
       textPreflightEvidence: "",
       imagePreflightEvidence: "",
+      videoPreflightEvidence: "",
       notes: ""
     ),
     securityPrivacy: checklist(REQUIRED_CHECKS.fetch("securityPrivacy")).merge(
@@ -211,31 +221,27 @@ REQUIRED_CHECKS.each do |section, checks|
   checks.each { |check| require_true(value, check, "$.#{section}", errors) }
 end
 
-unless evidence["adapter"] == "external-http"
-  errors << "$.adapter must be external-http for the first real provider path."
-end
-
 result_types = Array(evidence["supportedResultContentTypes"])
-unless result_types.include?(MP4_CONTENT_TYPE) || result_types.include?(FRAME_SEQUENCE_CONTENT_TYPE)
-  errors << "$.supportedResultContentTypes must include #{MP4_CONTENT_TYPE} or #{FRAME_SEQUENCE_CONTENT_TYPE}."
+unless result_types.include?(MP4_CONTENT_TYPE)
+  errors << "$.supportedResultContentTypes must include #{MP4_CONTENT_TYPE}."
 end
 
-required_secrets = Array(evidence["requiredProductionSecrets"])
-REQUIRED_PROD_SECRETS.each do |secret|
-  errors << "$.requiredProductionSecrets must include #{secret}." unless required_secrets.include?(secret)
+required_key_vault_secrets = Array(evidence["requiredKeyVaultSecrets"])
+REQUIRED_KEY_VAULT_SECRETS.each do |secret|
+  errors << "$.requiredKeyVaultSecrets must include #{secret}." unless required_key_vault_secrets.include?(secret)
 end
 
-optional_secrets = Array(evidence["optionalProductionSecrets"])
-OPTIONAL_PROD_SECRETS.each do |secret|
-  errors << "$.optionalProductionSecrets should include #{secret}, even when the selected provider gateway does not require Authorization." unless optional_secrets.include?(secret)
+required_app_config_keys = Array(evidence["requiredAppConfigurationKeys"])
+REQUIRED_APP_CONFIG_KEYS.each do |key|
+  errors << "$.requiredAppConfigurationKeys must include #{key}." unless required_app_config_keys.include?(key)
 end
 
-gateway_result_template = evidence["gatewayResultUrlTemplate"].to_s
-unless gateway_result_template.include?("{providerJobId}") || gateway_result_template.include?("{jobId}")
-  errors << "$.gatewayResultUrlTemplate must include {providerJobId} or {jobId}."
+provider_names = Array(evidence["providerNames"])
+%w[fal.ai luma].each do |provider|
+  errors << "$.providerNames must include #{provider}." unless provider_names.include?(provider)
 end
 
-%w[textPreflightEvidence imagePreflightEvidence].each do |key|
+%w[textPreflightEvidence imagePreflightEvidence videoPreflightEvidence].each do |key|
   require_string(evidence.fetch("contract", {}), key, "$.contract", errors)
 end
 

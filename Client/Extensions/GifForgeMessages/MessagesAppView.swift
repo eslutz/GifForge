@@ -30,6 +30,20 @@ struct MessagesAppView: View {
     } message: {
       Text(model.errorMessage ?? "")
     }
+    .alert("Try again?", isPresented: Binding(
+      get: { model.retryPromptMessage != nil },
+      set: { if !$0 { model.dismissRetryPrompt() } }
+    )) {
+      Button("Cancel", role: .cancel) {
+        model.cancelPendingRetry()
+      }
+      Button("Retry") {
+        model.retryGeneration()
+      }
+      .disabled(!model.canRetryGeneration)
+    } message: {
+      Text(model.retryPromptMessage ?? "")
+    }
     .onChange(of: selectedPhotoItem) { _, newValue in
       Task {
         let data = try? await newValue?.loadTransferable(type: Data.self)

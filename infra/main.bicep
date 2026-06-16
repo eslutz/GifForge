@@ -25,26 +25,6 @@ param appAttestRootCertificatePem string = ''
 @description('Enable demo App Attest session bypass for direct lower-environment experiments. GitHub deploy workflows pass false, and the value is ignored for prod.')
 param appAttestDemoBypassEnabled bool = false
 
-@description('Generation provider adapter. Use fake for demo/nonprod or external-http for a provider-compatible backend adapter.')
-@allowed([
-  'fake'
-  'external-http'
-])
-param providerAdapter string = 'fake'
-
-@description('Display name for the external HTTP provider adapter.')
-param externalProviderName string = 'external-http'
-
-@description('External HTTP provider job submission URL.')
-param externalProviderSubmitUrl string = ''
-
-@description('External HTTP provider result URL template. Supports {providerJobId} and {jobId}.')
-param externalProviderResultUrlTemplate string = ''
-
-@secure()
-@description('Optional Authorization header value for the external HTTP provider, such as "Bearer <token>". Stored as a Container Apps secret.')
-param externalProviderAuthorization string = ''
-
 @description('Minimum Container Apps replicas. Use 0 for scale-to-zero in lower environments.')
 @minValue(0)
 @maxValue(10)
@@ -65,12 +45,17 @@ param workerMinReplicas int = 0
 @maxValue(1000)
 param concurrentRequests int = 50
 
-@description('Hours before generated job metadata, prompts, selected source-image payloads, and result links expire.')
+@description('Hours before generated job metadata and result links expire.')
 @minValue(1)
 @maxValue(168)
 param generationJobRetentionHours int = 24
 
-@description('Days before temporary provider result and source-image blobs are deleted by Azure Storage lifecycle policy.')
+@description('Maximum total provider attempts across the initial job and user-confirmed retries.')
+@minValue(1)
+@maxValue(5)
+param generationMaxAttempts int = 3
+
+@description('Days before temporary provider result blobs are deleted by Azure Storage lifecycle policy.')
 @minValue(1)
 @maxValue(30)
 param temporaryBlobRetentionDays int = 2
@@ -100,12 +85,12 @@ var nameSeed = toLower(uniqueString(subscription().subscriptionId, resourceGroup
 var prefix = 'gifforge-${environmentName}-${nameSeed}'
 var containerAppPrefix = 'gifforge-${environmentName}-${take(nameSeed, 7)}'
 var keyVaultName = take('gkv-${environmentName}-${nameSeed}', 24)
+var appConfigurationName = take('gac-${environmentName}-${nameSeed}', 50)
 
 var generationQueueName = 'generation-jobs'
 var providerCallbackQueueName = 'provider-callbacks'
 var deletionQueueName = 'media-deletions'
 var resultContainerName = 'provider-results'
-var sourceContainerName = 'source-images'
 var jobTableName = 'GenerationJobs'
 var appAttestStateTableName = 'AppAttestState'
 
@@ -113,7 +98,7 @@ var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 var storageTableDataContributorRoleId = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
-var externalProviderAuthorizationSecretName = 'external-provider-authorization'
+var appConfigurationDataReaderRoleId = '516239f1-63e1-4d78-a4de-a74fb236a071'
 
 resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: '${prefix}-logs'
@@ -174,14 +159,6 @@ resource resultContainer 'Microsoft.Storage/storageAccounts/blobServices/contain
   }
 }
 
-resource sourceContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
-  parent: blobService
-  name: sourceContainerName
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
 resource temporaryMediaLifecyclePolicy 'Microsoft.Storage/storageAccounts/managementPolicies@2023-05-01' = {
   parent: storage
   name: 'default'
@@ -206,7 +183,6 @@ resource temporaryMediaLifecyclePolicy 'Microsoft.Storage/storageAccounts/manage
               ]
               prefixMatch: [
                 '${resultContainerName}/'
-                '${sourceContainerName}/'
               ]
             }
           }
@@ -216,7 +192,6 @@ resource temporaryMediaLifecyclePolicy 'Microsoft.Storage/storageAccounts/manage
   }
   dependsOn: [
     resultContainer
-    sourceContainer
   ]
 }
 
@@ -276,6 +251,20 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
+resource appConfiguration 'Microsoft.AppConfiguration/configurationStores@2023-03-01' = {
+  name: appConfigurationName
+  location: location
+  tags: tags
+  sku: {
+    name: 'free'
+  }
+  properties: {
+    disableLocalAuth: true
+    publicNetworkAccess: 'Enabled'
+    enablePurgeProtection: environmentName == 'prod'
+  }
+}
+
 resource containerEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: '${prefix}-env'
   location: location
@@ -312,12 +301,6 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
-      secrets: empty(externalProviderAuthorization) ? [] : [
-        {
-          name: externalProviderAuthorizationSecretName
-          value: externalProviderAuthorization
-        }
-      ]
       ingress: {
         external: true
         targetPort: 8080
@@ -336,7 +319,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
         {
           name: 'api'
           image: containerImage
-          env: concat([
+          env: [
             {
               name: 'ASPNETCORE_HTTP_PORTS'
               value: '8080'
@@ -366,10 +349,6 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: resultContainerName
             }
             {
-              name: 'GIFFORGE_SOURCE_IMAGES_CONTAINER_NAME'
-              value: sourceContainerName
-            }
-            {
               name: 'GIFFORGE_JOBS_TABLE_NAME'
               value: jobTableName
             }
@@ -382,20 +361,12 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: keyVault.properties.vaultUri
             }
             {
-              name: 'GIFFORGE_PROVIDER_ADAPTER'
-              value: providerAdapter
+              name: 'AZURE_KEY_VAULT_ENDPOINT'
+              value: keyVault.properties.vaultUri
             }
             {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_NAME'
-              value: externalProviderName
-            }
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL'
-              value: externalProviderSubmitUrl
-            }
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE'
-              value: externalProviderResultUrlTemplate
+              name: 'AZURE_APP_CONFIG_ENDPOINT'
+              value: appConfiguration.properties.endpoint
             }
             {
               name: 'GIFFORGE_APP_ATTEST_REQUIRED'
@@ -418,6 +389,10 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: string(generationJobRetentionHours)
             }
             {
+              name: 'GIFFORGE_GENERATION_MAX_ATTEMPTS'
+              value: string(generationMaxAttempts)
+            }
+            {
               name: 'GIFFORGE_RETENTION_CLEANUP_ENABLED'
               value: 'true'
             }
@@ -433,12 +408,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               name: 'AZURE_CLIENT_ID'
               value: appIdentity.properties.clientId
             }
-          ], empty(externalProviderAuthorization) ? [] : [
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION'
-              secretRef: externalProviderAuthorizationSecretName
-            }
-          ])
+          ]
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
@@ -499,19 +469,13 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
-      secrets: empty(externalProviderAuthorization) ? [] : [
-        {
-          name: externalProviderAuthorizationSecretName
-          value: externalProviderAuthorization
-        }
-      ]
     }
     template: {
       containers: [
         {
           name: 'worker'
           image: containerImage
-          env: concat([
+          env: [
             {
               name: 'ASPNETCORE_HTTP_PORTS'
               value: '8080'
@@ -545,10 +509,6 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: resultContainerName
             }
             {
-              name: 'GIFFORGE_SOURCE_IMAGES_CONTAINER_NAME'
-              value: sourceContainerName
-            }
-            {
               name: 'GIFFORGE_JOBS_TABLE_NAME'
               value: jobTableName
             }
@@ -561,20 +521,12 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: keyVault.properties.vaultUri
             }
             {
-              name: 'GIFFORGE_PROVIDER_ADAPTER'
-              value: providerAdapter
+              name: 'AZURE_KEY_VAULT_ENDPOINT'
+              value: keyVault.properties.vaultUri
             }
             {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_NAME'
-              value: externalProviderName
-            }
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL'
-              value: externalProviderSubmitUrl
-            }
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE'
-              value: externalProviderResultUrlTemplate
+              name: 'AZURE_APP_CONFIG_ENDPOINT'
+              value: appConfiguration.properties.endpoint
             }
             {
               name: 'GIFFORGE_APP_ATTEST_REQUIRED'
@@ -597,6 +549,10 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: string(generationJobRetentionHours)
             }
             {
+              name: 'GIFFORGE_GENERATION_MAX_ATTEMPTS'
+              value: string(generationMaxAttempts)
+            }
+            {
               name: 'GIFFORGE_RETENTION_CLEANUP_ENABLED'
               value: 'true'
             }
@@ -612,12 +568,7 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               name: 'AZURE_CLIENT_ID'
               value: appIdentity.properties.clientId
             }
-          ], empty(externalProviderAuthorization) ? [] : [
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION'
-              secretRef: externalProviderAuthorizationSecretName
-            }
-          ])
+          ]
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
@@ -706,12 +657,23 @@ resource keyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04
   }
 }
 
+resource appConfigurationRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(appConfiguration.id, appIdentity.id, appConfigurationDataReaderRoleId)
+  scope: appConfiguration
+  properties: {
+    principalId: appIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', appConfigurationDataReaderRoleId)
+  }
+}
+
 output containerAppName string = containerApp.name
 output containerAppFqdn string = containerApp.properties.configuration.ingress.fqdn
 output workerContainerAppName string = workerContainerApp.name
 output managedIdentityClientId string = appIdentity.properties.clientId
 output storageAccountName string = storage.name
 output keyVaultUri string = keyVault.properties.vaultUri
+output appConfigurationEndpoint string = appConfiguration.properties.endpoint
 output generationQueueName string = generationQueueName
 output resultsContainerName string = resultContainerName
 output jobsTableName string = jobTableName

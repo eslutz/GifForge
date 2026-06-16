@@ -162,6 +162,49 @@ public sealed class BackendRouteTests
   }
 
   [Fact]
+  public async Task CreateGenerationDoesNotPersistRawSourceMediaOrServerRetryBlob()
+  {
+    const string sourceMediaPayload = "source media bytes that should stay out of table state";
+    var dispatcher = new RecordingGenerationJobDispatcher();
+    var jobStore = new MemoryJobStore();
+    var provider = new RecordingGenerationProvider();
+    await using var app = GifForgeBackendApp.Create(
+      provider: provider,
+      jobStore: jobStore,
+      jobDispatcher: dispatcher
+    );
+    var baseAddress = await BackendRouteTestHost.StartAsync(app);
+    using var client = new HttpClient { BaseAddress = baseAddress };
+    var request = TestGenerationRequests.Valid("make this move") with
+    {
+      Mode = "video_to_gif",
+      SourceMedia = new SourceMediaRequest(
+        Convert.ToBase64String(Encoding.UTF8.GetBytes(sourceMediaPayload)),
+        "video/quicktime",
+        "IMG_0001.MOV",
+        "livePhotoPairedVideo",
+        "live-photo-1"
+      )
+    };
+    var requestJson = JsonSerializer.Serialize(request, JsonOptions());
+    using var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+    var response = await client.PostAsync("/v1/generations", content);
+
+    Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+    Assert.NotNull(provider.SubmittedRequest?.SourceMedia);
+    Assert.Equal(
+      Convert.ToBase64String(Encoding.UTF8.GetBytes(sourceMediaPayload)),
+      provider.SubmittedRequest.SourceMedia.DataBase64
+    );
+    var jobId = Assert.Single(dispatcher.JobIds);
+    var stored = await jobStore.GetAsync(jobId, CancellationToken.None);
+    Assert.NotNull(stored);
+    Assert.Equal(string.Empty, stored.Request.SourceMedia?.DataBase64);
+    Assert.Equal("video/quicktime", stored.Request.SourceMedia?.MimeType);
+  }
+
+  [Fact]
   public async Task CreateGenerationReturnsUnprocessableEntityForPermanentProviderSubmissionFailure()
   {
     var dispatcher = new RecordingGenerationJobDispatcher();
@@ -286,13 +329,88 @@ public sealed class BackendRouteTests
   }
 
   [Fact]
-  public async Task HealthEndpointReportsConfiguredExternalProvider()
+  public async Task FailedGenerationStatusIncludesClientRetryMetadata()
+  {
+    var jobStore = new MemoryJobStore();
+    var failedJob = GenerationJob.Create(
+      TestGenerationRequests.Valid(),
+      new ProviderJob("fal.ai", "provider-job-1", "fal-wan-text"),
+      TimeSpan.FromHours(1)
+    ) with
+    {
+      Status = GenerationJobStatus.Failed,
+      FailedMessage = "Generation provider reported failure."
+    };
+    await jobStore.SaveAsync(failedJob, CancellationToken.None);
+    await using var app = GifForgeBackendApp.Create(
+      provider: new FakeFrameSequenceProvider(),
+      jobStore: jobStore
+    );
+    var baseAddress = await BackendRouteTestHost.StartAsync(app);
+    using var client = new HttpClient { BaseAddress = baseAddress };
+
+    var response = await client.GetAsync($"/v1/generations/{failedJob.Id}");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var body = await response.Content.ReadAsStringAsync();
+    var status = JsonSerializer.Deserialize<JobStatusResponse>(body, JsonOptions());
+    Assert.NotNull(status);
+    Assert.Equal("failed", status.Status);
+    Assert.True(status.RetryAvailable);
+    Assert.Equal("provider_failed", status.RetryReason);
+    Assert.Equal(failedJob.Id, status.RetryOfJobId);
+  }
+
+  [Fact]
+  public async Task CreateGenerationRetryUsesPreviousAttemptMetadataWithoutStoredMedia()
+  {
+    var dispatcher = new RecordingGenerationJobDispatcher();
+    var jobStore = new MemoryJobStore();
+    var provider = new RecordingRetryGenerationProvider();
+    var failedJob = GenerationJob.Create(
+      TestGenerationRequests.Valid(),
+      new ProviderJob("fal.ai", "provider-job-1", "fal-wan-text"),
+      TimeSpan.FromHours(1)
+    ) with
+    {
+      Status = GenerationJobStatus.Failed,
+      FailedMessage = "Generation provider reported failure."
+    };
+    await jobStore.SaveAsync(failedJob, CancellationToken.None);
+    await using var app = GifForgeBackendApp.Create(
+      provider: provider,
+      jobStore: jobStore,
+      jobDispatcher: dispatcher
+    );
+    var baseAddress = await BackendRouteTestHost.StartAsync(app);
+    using var client = new HttpClient { BaseAddress = baseAddress };
+    var request = TestGenerationRequests.Valid("retry this") with
+    {
+      RetryOfJobId = failedJob.Id,
+      SourceMedia = TestSourceMedia.Mp4()
+    };
+    var requestJson = JsonSerializer.Serialize(request, JsonOptions());
+    using var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+    var response = await client.PostAsync("/v1/generations", content);
+
+    Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+    Assert.Equal(failedJob.Id, provider.RetryOfJobId);
+    Assert.Contains("fal.ai", provider.AttemptedProviders);
+    Assert.Contains("fal-wan-text", provider.AttemptedModelIds);
+    Assert.Equal(TestSourceMedia.Mp4().DataBase64, provider.SubmittedRequest?.SourceMedia?.DataBase64);
+    var newJobId = Assert.Single(dispatcher.JobIds);
+    var stored = await jobStore.GetAsync(newJobId, CancellationToken.None);
+    Assert.NotNull(stored);
+    Assert.Equal(string.Empty, stored.Request.SourceMedia?.DataBase64);
+  }
+
+  [Fact]
+  public async Task HealthEndpointReportsRoutedVideoProviderByDefault()
   {
     await using var app = GifForgeBackendApp.Create(args: [
-      "--GIFFORGE_PROVIDER_ADAPTER=external-http",
-      "--GIFFORGE_EXTERNAL_PROVIDER_NAME=test-provider",
-      "--GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL=https://provider.example.test/jobs",
-      "--GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE=https://provider.example.test/jobs/{providerJobId}/result"
+      "--GIFFORGE_FAL_API_KEY=fal-test-key",
+      "--GIFFORGE_LUMA_API_KEY=luma-test-key"
     ]);
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
@@ -301,9 +419,56 @@ public sealed class BackendRouteTests
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     var body = await response.Content.ReadAsStringAsync();
-    Assert.Contains("\"provider\":\"test-provider\"", body);
-    Assert.Contains("\"mode\":\"external\"", body);
+    Assert.Contains("\"provider\":\"routed-video\"", body);
+    Assert.Contains("\"mode\":\"video\"", body);
     Assert.DoesNotContain("\"mode\":\"demo\"", body);
+  }
+
+  [Fact]
+  public async Task HealthEndpointAllowsOnlyConfiguredProvidersByDefault()
+  {
+    await using var app = GifForgeBackendApp.Create(args: [
+      "--GIFFORGE_FAL_API_KEY=fal-test-key"
+    ]);
+    var baseAddress = await BackendRouteTestHost.StartAsync(app);
+    using var client = new HttpClient { BaseAddress = baseAddress };
+
+    var response = await client.GetAsync("/health");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var body = await response.Content.ReadAsStringAsync();
+    Assert.Contains("\"provider\":\"routed-video\"", body);
+    Assert.Contains("\"mode\":\"video\"", body);
+  }
+
+  [Fact]
+  public async Task ProviderCallbackRequiresConfiguredSecret()
+  {
+    await using var app = GifForgeBackendApp.Create(provider: new FakeFrameSequenceProvider());
+    var baseAddress = await BackendRouteTestHost.StartAsync(app);
+    using var client = new HttpClient { BaseAddress = baseAddress };
+    using var content = new StringContent(
+      """{"status":"succeeded","providerJobId":"provider-job-1","assetUrl":"https://example.invalid/video.mp4"}""",
+      Encoding.UTF8,
+      "application/json"
+    );
+
+    var response = await client.PostAsync("/v1/provider-callbacks/job-1", content);
+
+    Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    var body = await response.Content.ReadAsStringAsync();
+    Assert.Contains("Provider callbacks are not configured.", body);
+  }
+
+  [Fact]
+  public void CreateThrowsWhenEnabledProviderIsMissingApiKey()
+  {
+    var error = Assert.Throws<InvalidOperationException>(() => GifForgeBackendApp.Create(args: [
+      "--GIFFORGE_FAL_ENABLED=true",
+      "--GIFFORGE_LUMA_ENABLED=false"
+    ]));
+
+    Assert.Contains("GIFFORGE_FAL_API_KEY", error.Message);
   }
 
   private static JsonSerializerOptions JsonOptions() =>
@@ -354,6 +519,44 @@ internal sealed class SubmitFailureProvider : IGenerationProvider
 
   public Task<ProviderJob> SubmitGenerationAsync(GenerationRequest request, CancellationToken cancellationToken) =>
     Task.FromException<ProviderJob>(error);
+
+  public Task<GeneratedMotionResult> GetResultAsync(GenerationJob job, CancellationToken cancellationToken) =>
+    throw new NotSupportedException();
+}
+
+internal sealed class RecordingRetryGenerationProvider : IRetryAwareGenerationProvider
+{
+  public string Name => "retry-recording-provider";
+
+  public string Mode => "test";
+
+  public string? RetryOfJobId { get; private set; }
+
+  public HashSet<string> AttemptedProviders { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
+
+  public HashSet<string> AttemptedModelIds { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
+
+  public GenerationRequest? SubmittedRequest { get; private set; }
+
+  public Task<ProviderJob> SubmitGenerationAsync(GenerationRequest request, CancellationToken cancellationToken)
+  {
+    SubmittedRequest = request;
+    return Task.FromResult(new ProviderJob(Name, "provider-job-1", "first-model"));
+  }
+
+  public Task<ProviderJob> SubmitRetryGenerationAsync(
+    GenerationRequest request,
+    IReadOnlySet<string> attemptedProviders,
+    IReadOnlySet<string> attemptedModelIds,
+    CancellationToken cancellationToken
+  )
+  {
+    SubmittedRequest = request;
+    RetryOfJobId = request.RetryOfJobId;
+    AttemptedProviders = attemptedProviders.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    AttemptedModelIds = attemptedModelIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    return Task.FromResult(new ProviderJob(Name, "provider-job-2", "retry-model"));
+  }
 
   public Task<GeneratedMotionResult> GetResultAsync(GenerationJob job, CancellationToken cancellationToken) =>
     throw new NotSupportedException();

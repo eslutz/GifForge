@@ -15,7 +15,9 @@ internal static class TestGenerationRequests
       new CaptionRequest("none", null),
       null,
       null,
+      null,
       new GenerationOptions(480, 360, 2.4, "expressive", "medium"),
-      "test-trace"
+      "test-trace",
+      null
     );
 }

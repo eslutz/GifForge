@@ -14,6 +14,12 @@ public static class GenerationRequestPrivacy
         {
           Text = null
         },
+      SourceMedia = request.SourceMedia is null
+        ? null
+        : request.SourceMedia with
+        {
+          DataBase64 = string.Empty
+        },
       SourceImage = request.SourceImage is null
         ? null
         : request.SourceImage with

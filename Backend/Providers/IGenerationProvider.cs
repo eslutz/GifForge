@@ -11,4 +11,4 @@ public interface IGenerationProvider
   Task<GeneratedMotionResult> GetResultAsync(GenerationJob job, CancellationToken cancellationToken);
 }
 
-public sealed record ProviderJob(string Provider, string ProviderJobId);
+public sealed record ProviderJob(string Provider, string ProviderJobId, string? ModelId = null);

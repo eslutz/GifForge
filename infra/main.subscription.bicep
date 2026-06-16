@@ -28,26 +28,6 @@ param appAttestRootCertificatePem string = ''
 @description('Enable demo App Attest session bypass for direct lower-environment experiments. GitHub deploy workflows pass false, and the value is ignored for prod.')
 param appAttestDemoBypassEnabled bool = false
 
-@description('Generation provider adapter. Use fake for demo/nonprod or external-http for a provider-compatible backend adapter.')
-@allowed([
-  'fake'
-  'external-http'
-])
-param providerAdapter string = 'fake'
-
-@description('Display name for the external HTTP provider adapter.')
-param externalProviderName string = 'external-http'
-
-@description('External HTTP provider job submission URL.')
-param externalProviderSubmitUrl string = ''
-
-@description('External HTTP provider result URL template. Supports {providerJobId} and {jobId}.')
-param externalProviderResultUrlTemplate string = ''
-
-@secure()
-@description('Optional Authorization header value for the external HTTP provider, such as "Bearer <token>". Stored as a Container Apps secret.')
-param externalProviderAuthorization string = ''
-
 @description('Minimum Container Apps replicas. Use 0 for scale-to-zero, or 1+ when warm API capacity is required.')
 @minValue(0)
 @maxValue(10)
@@ -73,7 +53,7 @@ param concurrentRequests int = 50
 @maxValue(168)
 param generationJobRetentionHours int = 24
 
-@description('Days before temporary provider result and source-image blobs are deleted by Azure Storage lifecycle policy.')
+@description('Days before temporary provider result blobs are deleted by Azure Storage lifecycle policy.')
 @minValue(1)
 @maxValue(30)
 param temporaryBlobRetentionDays int = 2
@@ -111,11 +91,6 @@ module backend './main.bicep' = {
     appAttestAppIdentifier: appAttestAppIdentifier
     appAttestRootCertificatePem: appAttestRootCertificatePem
     appAttestDemoBypassEnabled: appAttestDemoBypassEnabled
-    providerAdapter: providerAdapter
-    externalProviderName: externalProviderName
-    externalProviderSubmitUrl: externalProviderSubmitUrl
-    externalProviderResultUrlTemplate: externalProviderResultUrlTemplate
-    externalProviderAuthorization: externalProviderAuthorization
     minReplicas: minReplicas
     maxReplicas: maxReplicas
     workerMinReplicas: workerMinReplicas

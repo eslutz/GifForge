@@ -49,6 +49,53 @@ public sealed class ModerationPolicyTests
     Assert.True(validation.IsValid);
   }
 
+  [Theory]
+  [InlineData("image/png", "image", "source.png", "image_to_gif")]
+  [InlineData("image/heic", "image", "source.heic", "image_to_gif")]
+  [InlineData("image/gif", "video", "source.gif", "video_to_gif")]
+  [InlineData("video/mp4", "video", "source.mp4", "video_to_gif")]
+  [InlineData("video/quicktime", "video", "source.mov", "video_to_gif")]
+  public void ValidateAcceptsSupportedSourceMedia(string mimeType, string role, string fileName, string mode)
+  {
+    var request = TestGenerationRequests.Valid() with
+    {
+      Mode = mode,
+      SourceMedia = new SourceMediaRequest(
+        Convert.ToBase64String("media"u8.ToArray()),
+        mimeType,
+        fileName,
+        role,
+        null
+      )
+    };
+
+    var validation = ModerationPolicy.Validate(request);
+
+    Assert.True(validation.IsValid);
+  }
+
+  [Fact]
+  public void ValidateRejectsLivePhotoSourceMediaWithoutPairedMov()
+  {
+    var request = TestGenerationRequests.Valid() with
+    {
+      Mode = "video_to_gif",
+      SourceMedia = new SourceMediaRequest(
+        Convert.ToBase64String("image"u8.ToArray()),
+        "image/jpeg",
+        "IMG_0001.JPG",
+        "livePhotoPairedVideo",
+        "live-photo-1"
+      )
+    };
+
+    var validation = ModerationPolicy.Validate(request);
+
+    Assert.False(validation.IsValid);
+    Assert.Equal(StatusCodes.Status400BadRequest, validation.StatusCode);
+    Assert.Equal("Live Photo sourceMedia must include the paired MOV as video/quicktime.", validation.Message);
+  }
+
   [Fact]
   public void ValidateAcceptsMatchingSourceImageContext()
   {

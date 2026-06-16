@@ -84,7 +84,6 @@ jobs:
               appAttestAppIdentifier="$app_attest_app_identifier" \
               appAttestRootCertificatePem="$app_attest_root_certificate_pem" \
               appAttestDemoBypassEnabled=false \
-              providerAdapter=fake \
               minReplicas=0 \
               workerMinReplicas=0 \
             --query properties.outputs \

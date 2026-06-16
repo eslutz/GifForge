@@ -14,7 +14,11 @@ public sealed record GenerationJob(
   DateTimeOffset ExpiresAt,
   string? ResultBlobName = null,
   string? ResultContentType = null,
-  string? FailedMessage = null
+  string? FailedMessage = null,
+  string? ProviderModelId = null,
+  int AttemptCount = 1,
+  string AttemptedProviders = "",
+  string AttemptedModelIds = ""
 )
 {
   public static readonly TimeSpan DefaultLifetime = TimeSpan.FromHours(24);
@@ -22,19 +26,26 @@ public sealed record GenerationJob(
   public static GenerationJob Create(
     GenerationRequest request,
     ProviderJob providerJob,
-    TimeSpan? lifetime = null
+    TimeSpan? lifetime = null,
+    string? id = null,
+    string? modelId = null
   )
   {
     var now = DateTimeOffset.UtcNow;
+    var providerModelId = providerJob.ModelId ?? modelId;
     return new GenerationJob(
-      Guid.NewGuid().ToString("D"),
+      id ?? Guid.NewGuid().ToString("D"),
       request,
       providerJob.Provider,
       providerJob.ProviderJobId,
       GenerationJobStatus.Queued,
       now,
       now,
-      now.Add(lifetime ?? DefaultLifetime)
+      now.Add(lifetime ?? DefaultLifetime),
+      ProviderModelId: providerModelId,
+      AttemptCount: 1,
+      AttemptedProviders: providerJob.Provider,
+      AttemptedModelIds: providerModelId ?? string.Empty
     );
   }
 

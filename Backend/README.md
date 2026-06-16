@@ -45,7 +45,7 @@ Runtime settings:
 - `GIFFORGE_RETENTION_CLEANUP_INTERVAL_MINUTES`: cleanup interval. Default deployment value: `360`.
 - `GIFFORGE_RETENTION_CLEANUP_BATCH_SIZE`: maximum expired job rows removed per cleanup pass. Default deployment value: `100`.
 
-Azure deployments also configure Storage lifecycle deletion for temporary provider result and source-image blobs. The default Bicep value is `temporaryBlobRetentionDays=2`.
+Azure deployments also configure Storage lifecycle deletion for temporary provider result blobs. The default Bicep value is `temporaryBlobRetentionDays=2`. Source media used for retry remains on the client device and is not retained in backend blob storage.
 
 ## Azure Container Apps Direction
 
@@ -64,31 +64,29 @@ Native AOT is enabled in `GifForge.Backend.csproj` to reduce cold-start overhead
 
 Linux Native AOT publishing requires native linker dependencies. The Dockerfile and backend workflow install `clang`, `libssl-dev`, and `zlib1g-dev` before `dotnet publish` so HTTPS, compression, and native linking succeed in the container build.
 
-## Provider Adapter Modes
+## Direct Video Providers
 
-`GIFFORGE_PROVIDER_ADAPTER=fake` keeps the deterministic local/demo frame-sequence provider.
+The runtime backend always starts with the direct video provider router. The router builds enabled providers from configuration, classifies each request as text-to-video, image-to-video, or video-to-video, and submits to the cheapest compatible C# model catalog entry.
 
-`GIFFORGE_PROVIDER_ADAPTER=external-http` enables a provider-neutral HTTP adapter for a compatible provider gateway or vendor-specific wrapper service. It requires:
+Provider/model identity is defined in backend code. App Configuration can enable or disable providers and override model costs, but it must not define provider model IDs. Store `GIFFORGE_FAL_API_KEY` and `GIFFORGE_LUMA_API_KEY` in Azure Key Vault. When an enabled flag is omitted, a provider is enabled only if its API key is configured. If a provider is explicitly enabled without its API key, startup fails closed with a clear configuration error.
 
-- `GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL`: receives a sanitized provider request JSON payload and returns `{ "providerJobId": "..." }`. Image-to-GIF requests include `sourceImage` plus optional `sourceImageContext` metadata derived locally by the app, such as dimensions, orientation, aspect ratio, and a short summary. The provider-facing payload omits `originalPrompt` and caption text, includes `captionMode`, and sets `renderCaptionLocally=true`.
-- `GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`: absolute URL template for downloading the provider result. Supports `{providerJobId}` and `{jobId}` placeholders.
-- `GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION`: optional `Authorization` header value such as `Bearer <token>`.
-- `GIFFORGE_EXTERNAL_PROVIDER_NAME`: optional health/status display name.
+Supported operational settings:
 
-The `/health` response reports `mode=demo` for the fake provider and `mode=external` for the external HTTP adapter so deployment evidence can distinguish smoke/demo backends from real provider-backed environments.
+- `GIFFORGE_FAL_ENABLED`, `GIFFORGE_LUMA_ENABLED`
+- `GIFFORGE_FAL_SUBMIT_URL_TEMPLATE`, `GIFFORGE_FAL_RESULT_URL_TEMPLATE`
+- `GIFFORGE_LUMA_SUBMIT_URL_TEMPLATE`, `GIFFORGE_LUMA_RESULT_URL_TEMPLATE`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_TEXT_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_IMAGE_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_VIDEO_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_TEXT_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_IMAGE_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_VIDEO_TO_VIDEO`
+
+The `/health` response reports `provider=routed-video` and `mode=video` for deployed provider-backed environments.
 
 Provider submit responses of `400`, `401`, `403`, or `422` are treated as permanent provider rejections and return a generic app-facing HTTP `422` without persisting a job. Availability failures such as `408`, `429`, `5xx`, network errors, and timeout-style failures are treated as retryable provider outages and return a generic app-facing HTTP `503`. Provider error bodies are not exposed to the app.
 
-The result endpoint may return `application/vnd.gifforge.frame-sequence+json` or `video/mp4`. Result `202` and `204` responses are treated as retryable not-ready states, while unsupported content types and empty motion assets are treated as permanent provider failures. The iOS app still renders captions locally and creates the final GIF.
-
-Validate a compatible provider gateway before wiring it into production:
-
-```bash
-GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL=https://provider.example.test/jobs \
-GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE='https://provider.example.test/jobs/{providerJobId}/result' \
-GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION='Bearer <token>' \
-scripts/validate-external-provider-contract.rb
-```
+The backend stores generated provider MP4 assets in application-controlled storage and returns stable GifForge result URLs. The iOS app still renders captions locally and creates the final GIF.
 
 Before selecting the first paid provider, create and validate provider onboarding evidence:
 
@@ -97,6 +95,4 @@ scripts/validate-provider-onboarding.rb --template Documentation/ProviderEvidenc
 scripts/validate-provider-onboarding.rb Documentation/ProviderEvidence/first-provider.json
 ```
 
-The onboarding evidence covers text/image preflight results, accepted result content types, no provider-rendered captions, server-side-only credentials, data-use and retention review, cost/rate-limit review, outage fallback, and production rollback. Do not store credential values in the evidence file.
-
-Use `--mode image_to_gif` with `GIFFORGE_PROVIDER_PRECHECK_IMAGE_BASE64`, `GIFFORGE_PROVIDER_PRECHECK_IMAGE_WIDTH`, and `GIFFORGE_PROVIDER_PRECHECK_IMAGE_HEIGHT` to validate the image-to-animation path.
+The onboarding evidence covers text/image/video preflight results, accepted MP4 result handling, no provider-rendered captions, server-side-only credentials, data-use and retention review, cost/rate-limit review, outage fallback, and production rollback. Do not store credential values in the evidence file.

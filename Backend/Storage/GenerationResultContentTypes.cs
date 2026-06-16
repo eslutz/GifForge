@@ -10,6 +10,12 @@ public static class GenerationResultContentTypes
     {
       FrameSequence => ".json",
       Mp4 => ".mp4",
+      "image/jpeg" => ".jpg",
+      "image/png" => ".png",
+      "image/heic" => ".heic",
+      "image/heif" => ".heif",
+      "image/gif" => ".gif",
+      "video/quicktime" => ".mov",
       _ => ".bin"
     };
 }

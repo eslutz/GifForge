@@ -8,13 +8,23 @@ public sealed record GenerationRequest(
   string? ExpandedPrompt,
   string? NegativePrompt,
   CaptionRequest? Caption,
+  SourceMediaRequest? SourceMedia,
   SourceImageRequest? SourceImage,
   SourceImageContextRequest? SourceImageContext,
   GenerationOptions? Options,
-  string? ClientTraceId
+  string? ClientTraceId,
+  string? RetryOfJobId
 );
 
 public sealed record CaptionRequest(string Mode, string? Text);
+
+public sealed record SourceMediaRequest(
+  string DataBase64,
+  string MimeType,
+  string? FileName,
+  string? Role,
+  string? LivePhotoIdentifier
+);
 
 public sealed record SourceImageRequest(
   string DataBase64,
