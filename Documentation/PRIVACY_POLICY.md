@@ -2,30 +2,30 @@
 
 Effective date: June 15, 2026
 
-GifForge is an iMessage app for creating custom animated GIFs from prompts and optional user-selected images. This policy explains what data GifForge handles, why it is used, and how users can control local data.
+GifForge is an iMessage app for creating custom animated GIFs from prompts and optional user-selected media. This policy explains what data GifForge handles, why it is used, and how users can control local data.
 
 ## Data GifForge Handles
 
 GifForge may process:
 
 - Text prompts entered by the user.
-- Optional images selected by the user.
+- Optional images, GIFs, videos, or Live Photo paired MOV files selected by the user.
 - Optional caption text entered or selected by the user.
-- Generated GIF files and local generation history.
+- Generated MP4 source videos, generated GIF files, and local generation history.
 - Backend job identifiers, status URLs, and temporary result URLs.
 - Development settings such as the backend base URL and App Attest toggle.
 
 GifForge does not provide a public GIF gallery, social feed, browsing of other users' content, or direct AI provider access from the iOS app.
 
-## User-Selected Images
+## User-Selected Media
 
-GifForge uses only images selected by the user. The app does not request broad photo library access for v1.
+GifForge uses only media selected by the user. The app does not request broad photo library access for v1.
 
-Before upload, selected images are downscaled and rewritten as JPEG data. This process is intended to reduce payload size and remove original image metadata.
+Before upload, selected still images may be downscaled and rewritten as JPEG data. This process is intended to reduce payload size and remove original image metadata. GIF, MP4, MOV, and Live Photo workflows require the motion source. For Live Photos, GifForge uses the paired MOV file for animation workflows; the still image alone is not enough for Live Photo video-to-video generation.
 
 ## Backend and AI Providers
 
-Prompts, optional processed images, and structured generation requests are sent to the developer-operated GifForge backend. The backend validates requests, applies safety checks, hides provider credentials, submits jobs to configured AI media providers, tracks long-running jobs, and returns temporary result URLs to the app.
+Prompts, optional processed media, and structured generation requests are sent to the developer-operated GifForge backend. The backend validates requests, applies safety checks, hides provider credentials, submits jobs to configured AI media providers, tracks long-running jobs, downloads generated MP4 assets from providers, stores generated videos in GifForge-controlled temporary storage, and returns temporary result URLs to the app.
 
 External AI media providers are used only through the backend. The iOS app does not store or ship external provider credentials.
 
@@ -45,7 +45,7 @@ Users can clear local generation history from the containing app. Clearing local
 
 The app stores generated GIFs locally only as needed for recent history and user sharing.
 
-After validation, safety checks, and provider submission, the backend stores minimized generation job state. It keeps the structured prompt, caption mode, source-image dimensions/context, job status, and result-link metadata needed to complete the job, but clears raw prompt text, visible caption text, and processed source-image bytes from persisted job records. Deployed defaults expire remaining job records after 24 hours and return HTTP `410 Gone` for expired status or result requests. Temporary provider result and source-image blobs are deleted by Azure Storage lifecycle policy after 2 days.
+After validation, safety checks, and provider submission, the backend stores minimized generation job state. It keeps the structured prompt, caption mode, source-media metadata, source-image dimensions/context, job status, provider attempt metadata, retry metadata, and result-link metadata needed to complete the job, but clears raw prompt text, visible caption text, processed source-media bytes, and processed source-image bytes from persisted job records. The backend does not store raw source media for automatic provider fallback. If a provider fails and another compatible provider/model is available, GifForge reports that retry is available; the app keeps the original request media locally only in the active-generation snapshot, prompts the user, and resubmits only if the user chooses to retry. Local retry material is cleared when generation succeeds, when the job expires or local cleanup runs, or when the user declines retry. Deployed defaults expire remaining job records after 24 hours and return HTTP `410 Gone` for expired status or result requests. Temporary generated MP4/provider result blobs are deleted by Azure Storage lifecycle policy after 2 days as a backstop.
 
 ## Tracking
 
@@ -59,7 +59,7 @@ Deployed backends are intended to require App Attest-backed access. The backend 
 
 Users can:
 
-- Choose whether to provide an image.
+- Choose whether to provide an image, GIF, video, or Live Photo.
 - Review and edit caption text before final GIF rendering.
 - Insert generated GIFs manually into Messages.
 - Delete local history from the containing app.

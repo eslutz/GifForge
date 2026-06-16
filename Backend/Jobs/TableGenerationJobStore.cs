@@ -17,10 +17,11 @@ public sealed class TableGenerationJobStore : IJobStore
   public async Task<GenerationJob> CreateAsync(
     GenerationRequest request,
     ProviderJob providerJob,
-    CancellationToken cancellationToken
+    CancellationToken cancellationToken,
+    string? id = null
   )
   {
-    var job = GenerationJob.Create(request, providerJob, jobLifetime);
+    var job = GenerationJob.Create(request, providerJob, jobLifetime, id);
     await SaveAsync(job, cancellationToken).ConfigureAwait(false);
     return job;
   }
@@ -33,6 +34,13 @@ public sealed class TableGenerationJobStore : IJobStore
 
   public Task SaveAsync(GenerationJob job, CancellationToken cancellationToken) =>
     table.UpsertAsync(GenerationJobTableEntity.FromJob(job), cancellationToken);
+
+  public Task<IReadOnlyList<GenerationJob>> GetExpiredAsync(
+    DateTimeOffset expiresBefore,
+    int maxCount,
+    CancellationToken cancellationToken
+  ) =>
+    table.GetExpiredAsync(expiresBefore, maxCount, cancellationToken);
 
   public Task<int> DeleteExpiredAsync(
     DateTimeOffset expiresBefore,

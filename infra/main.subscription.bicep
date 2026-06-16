@@ -73,7 +73,7 @@ param concurrentRequests int = 50
 @maxValue(168)
 param generationJobRetentionHours int = 24
 
-@description('Days before temporary provider result and source-image blobs are deleted by Azure Storage lifecycle policy.')
+@description('Days before temporary provider result blobs are deleted by Azure Storage lifecycle policy.')
 @minValue(1)
 @maxValue(30)
 param temporaryBlobRetentionDays int = 2

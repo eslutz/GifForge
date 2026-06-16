@@ -22,6 +22,10 @@ public actor JobPollingService {
       case .succeeded:
         return current
       case .failed:
+        if current.retryAvailable {
+          throw GifForgeError.retryAvailable(current, current.message ?? "Generation failed. You can try again with another provider.")
+        }
+
         throw GifForgeError.jobFailed(message: current.message ?? "Generation failed.")
       case .queued, .running:
         try await Task.sleep(nanoseconds: UInt64(pollIntervalSeconds * 1_000_000_000))

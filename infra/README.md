@@ -6,8 +6,9 @@ This folder contains the Azure Bicep deployment for the production backend targe
 - Log Analytics workspace for Container Apps logs.
 - User-assigned managed identity for the backend.
 - Storage account with private blob containers, queues, a job-state table, and an App Attest state table.
+- Azure App Configuration for provider/model routing settings.
 - Key Vault for external AI provider credentials.
-- RBAC assignments for managed identity access to storage data and Key Vault secrets.
+- RBAC assignments for managed identity access to storage data, App Configuration, and Key Vault secrets.
 
 ## Environments
 
@@ -47,7 +48,7 @@ Prefer the commit SHA tag for repeatable environment deployments. The template e
 
 The default deployment uses `minReplicas=0` and `workerMinReplicas=0` so the API and worker can scale to zero and reduce idle cost. The worker has an Azure Queue scale rule that wakes it when generation jobs are waiting. Use `minReplicas=1` or `workerMinReplicas=1` only when you intentionally need warm capacity.
 
-Retention defaults are cost- and privacy-oriented: `generationJobRetentionHours=24`, `temporaryBlobRetentionDays=2`, `retentionCleanupIntervalMinutes=360`, and `retentionCleanupBatchSize=100`. Generation status/result routes return HTTP `410 Gone` after the job expiry time, cleanup passes prune expired job rows from Table Storage, and Azure Storage lifecycle policy deletes temporary provider result and source-image blobs.
+Retention defaults are cost- and privacy-oriented: `generationJobRetentionHours=24`, `temporaryBlobRetentionDays=2`, `retentionCleanupIntervalMinutes=360`, and `retentionCleanupBatchSize=100`. Generation status/result routes return HTTP `410 Gone` after the job expiry time, cleanup passes prune expired job rows from Table Storage, and Azure Storage lifecycle policy deletes temporary provider result blobs. Source media retry material stays on the client device and is not retained in backend blob storage.
 
 ## GitHub Environment OIDC Setup
 
@@ -165,7 +166,7 @@ Optional `prod` GitHub environment secrets and variables:
 - `GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION`: server-side Authorization header for the external provider gateway.
 - `GIFFORGE_EXTERNAL_PROVIDER_NAME`: optional GitHub environment variable for health/status display.
 
-Production dispatch rejects `latest` and requires an immutable 40-character commit SHA image tag. It deploys with `providerAdapter=external-http`, `appAttestDemoBypassEnabled=false`, and the selected `minReplicas`, `workerMinReplicas`, and `maxReplicas` values.
+Production dispatch rejects `latest` and requires an immutable 40-character commit SHA image tag. It can deploy with `providerAdapter=external-http` for a gateway provider or `providerAdapter=video`/`fal-luma` for direct fal.ai/Luma routing. Production always uses `appAttestDemoBypassEnabled=false` and the selected `minReplicas`, `workerMinReplicas`, and `maxReplicas` values.
 
 Before creating production resources, run a subscription-scope what-if with placeholder provider/App Attest values and the intended image tag:
 
@@ -183,7 +184,7 @@ az deployment sub what-if \
     appAttestAppIdentifier=TEAMID.dev.ericslutz.gifforge \
     appAttestRootCertificatePem=placeholder \
     appAttestDemoBypassEnabled=false \
-    providerAdapter=external-http \
+    providerAdapter=video \
     externalProviderName=external-http \
     externalProviderSubmitUrl=https://provider.example.invalid/jobs \
     externalProviderResultUrlTemplate='https://provider.example.invalid/results/{providerJobId}' \
@@ -193,7 +194,7 @@ az deployment sub what-if \
     maxReplicas=10
 ```
 
-The production what-if should show creation of `rg-gifforge-prod`, the API and worker Container Apps, managed environment, Key Vault, managed identity, Log Analytics workspace, Storage account, queues, tables, blob containers, lifecycle policy, and role assignments. Do not run the real production deployment until the `prod` GitHub environment has OIDC secrets, production App Attest values, external-provider configuration, and an immutable GHCR image tag.
+The production what-if should show creation of `rg-gifforge-prod`, the API and worker Container Apps, managed environment, Key Vault, App Configuration, managed identity, Log Analytics workspace, Storage account, queues, tables, blob containers, lifecycle policy, and role assignments. Do not run the real production deployment until the `prod` GitHub environment has OIDC secrets, production App Attest values, provider configuration, provider API keys in Key Vault, and an immutable GHCR image tag.
 
 After production deployment, run:
 
@@ -230,24 +231,41 @@ The API and worker Container Apps receive these environment variables:
 - `GIFFORGE_PROVIDER_CALLBACK_QUEUE_NAME`
 - `GIFFORGE_DELETION_QUEUE_NAME`
 - `GIFFORGE_RESULTS_CONTAINER_NAME`
-- `GIFFORGE_SOURCE_IMAGES_CONTAINER_NAME`
 - `GIFFORGE_JOBS_TABLE_NAME`
 - `GIFFORGE_APP_ATTEST_STATE_TABLE_NAME`
 - `GIFFORGE_KEY_VAULT_URI`
+- `AZURE_KEY_VAULT_ENDPOINT`
+- `AZURE_APP_CONFIG_ENDPOINT`
 - `GIFFORGE_PROVIDER_ADAPTER`
 - `GIFFORGE_EXTERNAL_PROVIDER_NAME`
 - `GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL`
 - `GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`
 - `GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION`
 - `GIFFORGE_GENERATION_JOB_RETENTION_HOURS`
+- `GIFFORGE_GENERATION_MAX_ATTEMPTS`
 - `GIFFORGE_RETENTION_CLEANUP_ENABLED`
 - `GIFFORGE_RETENTION_CLEANUP_INTERVAL_MINUTES`
 - `GIFFORGE_RETENTION_CLEANUP_BATCH_SIZE`
+- `GIFFORGE_PROVIDER_CALLBACK_SECRET` (from App Configuration/Key Vault when provider callbacks are enabled)
 
 The worker also sets `GIFFORGE_WORKER_ENABLED=true` and processes jobs from the `generation-jobs` queue. Worker baseline availability is controlled by the `workerMinReplicas` deployment parameter; queue depth controls scale-out from zero through the Azure Queue scale rule.
 
 The templates set `GIFFORGE_APP_ATTEST_DEMO_BYPASS=false` for deployed environments. The bypass exists only for local development and must not be enabled in nonprod or production. Set `appAttestAppIdentifier` and `appAttestRootCertificatePem` before testing real App Attest enforcement.
 
+Set `providerAdapter=video` or `providerAdapter=fal-luma` to enable direct AI video generation routing. The backend reads provider/model routing settings from Azure App Configuration when `AZURE_APP_CONFIG_ENDPOINT` is present and reads secrets from Key Vault when `AZURE_KEY_VAULT_ENDPOINT` or `GIFFORGE_KEY_VAULT_URI` is present. Use Key Vault for `GIFFORGE_FAL_API_KEY` and `GIFFORGE_LUMA_API_KEY`; do not store provider API keys in parameter files.
+
+Useful App Configuration keys:
+
+- `GIFFORGE_FAL_SUBMIT_URL_TEMPLATE`
+- `GIFFORGE_FAL_RESULT_URL_TEMPLATE`
+- `GIFFORGE_FAL_TEXT_MODEL`, `GIFFORGE_FAL_IMAGE_MODEL`, `GIFFORGE_FAL_VIDEO_MODEL`
+- `GIFFORGE_FAL_TEXT_MODEL_COST_USD`, `GIFFORGE_FAL_IMAGE_MODEL_COST_USD`, `GIFFORGE_FAL_VIDEO_MODEL_COST_USD`
+- `GIFFORGE_LUMA_SUBMIT_URL_TEMPLATE`
+- `GIFFORGE_LUMA_RESULT_URL_TEMPLATE`
+- `GIFFORGE_LUMA_TEXT_MODEL`, `GIFFORGE_LUMA_IMAGE_MODEL`, `GIFFORGE_LUMA_VIDEO_MODEL`
+- `GIFFORGE_LUMA_TEXT_MODEL_COST_USD`, `GIFFORGE_LUMA_IMAGE_MODEL_COST_USD`, `GIFFORGE_LUMA_VIDEO_MODEL_COST_USD`
+- `OTEL_EXPORTER_OTLP_ENDPOINT`
+
 Set `providerAdapter=external-http` only after a provider gateway or vendor-specific wrapper implements the documented external HTTP provider contract. Keep `providerAdapter=fake` for local/demo deployments.
 
-Provider credentials should be added as Container Apps secrets through the secure `externalProviderAuthorization` deployment parameter or added to Key Vault for provider-specific adapter work. Do not store provider secrets in Bicep parameter files.
+Provider credentials should be added as Container Apps secrets through the secure `externalProviderAuthorization` deployment parameter for the legacy external HTTP adapter or added to Key Vault for provider-specific adapter work. Do not store provider secrets in Bicep parameter files.

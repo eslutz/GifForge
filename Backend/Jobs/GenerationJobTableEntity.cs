@@ -23,6 +23,10 @@ public sealed class GenerationJobTableEntity : ITableEntity
   public string? ResultBlobName { get; set; }
   public string? ResultContentType { get; set; }
   public string? FailedMessage { get; set; }
+  public string? ProviderModelId { get; set; }
+  public int AttemptCount { get; set; } = 1;
+  public string AttemptedProviders { get; set; } = string.Empty;
+  public string AttemptedModelIds { get; set; } = string.Empty;
 
   public GenerationJobTableEntity()
   {
@@ -42,7 +46,11 @@ public sealed class GenerationJobTableEntity : ITableEntity
       ExpiresAt = job.ExpiresAt,
       ResultBlobName = job.ResultBlobName,
       ResultContentType = job.ResultContentType,
-      FailedMessage = job.FailedMessage
+      FailedMessage = job.FailedMessage,
+      ProviderModelId = job.ProviderModelId,
+      AttemptCount = job.AttemptCount,
+      AttemptedProviders = job.AttemptedProviders,
+      AttemptedModelIds = job.AttemptedModelIds
     };
 
   public TableEntity ToTableEntity()
@@ -73,6 +81,11 @@ public sealed class GenerationJobTableEntity : ITableEntity
       entity[nameof(FailedMessage)] = FailedMessage;
     }
 
+    AddIfPresent(entity, nameof(ProviderModelId), ProviderModelId);
+    entity[nameof(AttemptCount)] = AttemptCount;
+    entity[nameof(AttemptedProviders)] = AttemptedProviders;
+    entity[nameof(AttemptedModelIds)] = AttemptedModelIds;
+
     return entity;
   }
 
@@ -92,7 +105,11 @@ public sealed class GenerationJobTableEntity : ITableEntity
       ExpiresAt = RequiredDateTimeOffset(entity, nameof(ExpiresAt)),
       ResultBlobName = OptionalString(entity, nameof(ResultBlobName)),
       ResultContentType = OptionalString(entity, nameof(ResultContentType)),
-      FailedMessage = OptionalString(entity, nameof(FailedMessage))
+      FailedMessage = OptionalString(entity, nameof(FailedMessage)),
+      ProviderModelId = OptionalString(entity, nameof(ProviderModelId)),
+      AttemptCount = OptionalInt(entity, nameof(AttemptCount)) ?? 1,
+      AttemptedProviders = OptionalString(entity, nameof(AttemptedProviders)) ?? string.Empty,
+      AttemptedModelIds = OptionalString(entity, nameof(AttemptedModelIds)) ?? string.Empty
     };
 
   public GenerationJob ToJob()
@@ -111,8 +128,20 @@ public sealed class GenerationJobTableEntity : ITableEntity
       ExpiresAt,
       ResultBlobName,
       ResultContentType,
-      FailedMessage
+      FailedMessage,
+      ProviderModelId,
+      AttemptCount,
+      AttemptedProviders,
+      AttemptedModelIds
     );
+  }
+
+  private static void AddIfPresent(TableEntity entity, string propertyName, string? value)
+  {
+    if (value is not null)
+    {
+      entity[propertyName] = value;
+    }
   }
 
   private static string RequiredString(TableEntity entity, string propertyName)
@@ -129,6 +158,21 @@ public sealed class GenerationJobTableEntity : ITableEntity
 
   private static string? OptionalString(TableEntity entity, string propertyName) =>
     entity.TryGetValue(propertyName, out var value) ? value as string : null;
+
+  private static int? OptionalInt(TableEntity entity, string propertyName)
+  {
+    if (!entity.TryGetValue(propertyName, out var value))
+    {
+      return null;
+    }
+
+    return value switch
+    {
+      int integer => integer,
+      long longValue => checked((int)longValue),
+      _ => null
+    };
+  }
 
   private static DateTimeOffset RequiredDateTimeOffset(TableEntity entity, string propertyName)
   {

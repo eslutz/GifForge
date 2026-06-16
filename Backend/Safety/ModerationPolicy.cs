@@ -5,6 +5,7 @@ namespace GifForge.Backend.Safety;
 public static class ModerationPolicy
 {
   private const int MaxProcessedImageBytes = 6_000_000;
+  private const int MaxSourceMediaBytes = 50_000_000;
   private const int MaxProcessedImageDimension = 1024;
   private const int MinOutputDimension = 64;
   private const int MaxOutputDimension = 1024;
@@ -26,9 +27,12 @@ public static class ModerationPolicy
       return ValidationResult.Invalid(StatusCodes.Status400BadRequest, "Request body must be a JSON object.");
     }
 
-    if (request.Mode is not ("text_to_gif" or "image_to_gif"))
+    if (request.Mode is not ("text_to_gif" or "image_to_gif" or "video_to_gif"))
     {
-      return ValidationResult.Invalid(StatusCodes.Status400BadRequest, "mode must be text_to_gif or image_to_gif.");
+      return ValidationResult.Invalid(
+        StatusCodes.Status400BadRequest,
+        "mode must be text_to_gif, image_to_gif, or video_to_gif."
+      );
     }
 
     if (string.IsNullOrWhiteSpace(request.CleanedPrompt))
@@ -60,7 +64,16 @@ public static class ModerationPolicy
       return optionsValidation;
     }
 
-    if (request.Mode == "image_to_gif")
+    if (request.SourceMedia is not null)
+    {
+      var mediaValidation = ValidateSourceMedia(request.SourceMedia);
+      if (!mediaValidation.IsValid)
+      {
+        return mediaValidation;
+      }
+    }
+
+    if (request.Mode == "image_to_gif" && request.SourceMedia is null)
     {
       if (request.SourceImage is null || string.IsNullOrWhiteSpace(request.SourceImage.DataBase64))
       {
@@ -88,12 +101,18 @@ public static class ModerationPolicy
       }
     }
 
+    if (request.Mode == "video_to_gif" && request.SourceMedia is null)
+    {
+      return ValidationResult.Invalid(StatusCodes.Status400BadRequest, "sourceMedia is required for video_to_gif.");
+    }
+
     var searchable = string.Join(
       ' ',
       request.CleanedPrompt,
       request.ExpandedPrompt,
       request.Caption?.Text,
-      request.SourceImageContext?.Summary
+      request.SourceImageContext?.Summary,
+      request.SourceMedia?.FileName
     ).ToLowerInvariant();
     if (BlockedTerms.Any(searchable.Contains))
     {
@@ -186,6 +205,81 @@ public static class ModerationPolicy
       return ValidationResult.Invalid(
         StatusCodes.Status413PayloadTooLarge,
         "sourceImage exceeds the processed upload limit."
+      );
+    }
+
+    return ValidationResult.Valid;
+  }
+
+  private static ValidationResult ValidateSourceMedia(SourceMediaRequest sourceMedia)
+  {
+    if (string.IsNullOrWhiteSpace(sourceMedia.DataBase64))
+    {
+      return ValidationResult.Invalid(StatusCodes.Status400BadRequest, "sourceMedia.dataBase64 is required.");
+    }
+
+    if (sourceMedia.DataBase64.Length > 70_000_000)
+    {
+      return ValidationResult.Invalid(
+        StatusCodes.Status413PayloadTooLarge,
+        "sourceMedia exceeds the upload limit."
+      );
+    }
+
+    var mimeType = sourceMedia.MimeType.Trim().ToLowerInvariant();
+    if (mimeType is not (
+        "image/jpeg" or
+        "image/png" or
+        "image/heic" or
+        "image/heif" or
+        "image/gif" or
+        "video/mp4" or
+        "video/quicktime"))
+    {
+      return ValidationResult.Invalid(
+        StatusCodes.Status400BadRequest,
+        "sourceMedia must be JPEG, PNG, HEIC, GIF, MP4, MOV, or a Live Photo paired MOV."
+      );
+    }
+
+    if (!string.IsNullOrEmpty(sourceMedia.FileName) && sourceMedia.FileName.Length > 160)
+    {
+      return ValidationResult.Invalid(StatusCodes.Status400BadRequest, "sourceMedia.fileName is too long.");
+    }
+
+    if (!string.IsNullOrEmpty(sourceMedia.Role) &&
+        sourceMedia.Role is not ("image" or "video" or "livePhotoPairedVideo" or "live-photo-paired-video"))
+    {
+      return ValidationResult.Invalid(
+        StatusCodes.Status400BadRequest,
+        "sourceMedia.role must be image, video, or livePhotoPairedVideo."
+      );
+    }
+
+    if (sourceMedia.Role is "livePhotoPairedVideo" or "live-photo-paired-video" &&
+        mimeType != "video/quicktime")
+    {
+      return ValidationResult.Invalid(
+        StatusCodes.Status400BadRequest,
+        "Live Photo sourceMedia must include the paired MOV as video/quicktime."
+      );
+    }
+
+    byte[] bytes;
+    try
+    {
+      bytes = Convert.FromBase64String(sourceMedia.DataBase64);
+    }
+    catch (FormatException)
+    {
+      return ValidationResult.Invalid(StatusCodes.Status400BadRequest, "sourceMedia.dataBase64 must be valid base64.");
+    }
+
+    if (bytes.Length > MaxSourceMediaBytes)
+    {
+      return ValidationResult.Invalid(
+        StatusCodes.Status413PayloadTooLarge,
+        "sourceMedia exceeds the upload limit."
       );
     }
 

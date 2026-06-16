@@ -78,4 +78,35 @@ public sealed class AzureGenerationJobTable : IGenerationJobTable
 
     return deleted;
   }
+
+  public async Task<IReadOnlyList<GenerationJob>> GetExpiredAsync(
+    DateTimeOffset expiresBefore,
+    int maxCount,
+    CancellationToken cancellationToken
+  )
+  {
+    if (maxCount <= 0)
+    {
+      return [];
+    }
+
+    var jobs = new List<GenerationJob>();
+    var filter = TableClient.CreateQueryFilter(
+      $"PartitionKey eq {GenerationJobTableEntity.JobPartitionKey} and ExpiresAt le {expiresBefore}"
+    );
+
+    await foreach (var entity in client
+      .QueryAsync<TableEntity>(filter, maxPerPage: Math.Min(maxCount, 100), cancellationToken: cancellationToken)
+      .ConfigureAwait(false))
+    {
+      if (jobs.Count >= maxCount)
+      {
+        break;
+      }
+
+      jobs.Add(GenerationJobTableEntity.FromTableEntity(entity).ToJob());
+    }
+
+    return jobs;
+  }
 }

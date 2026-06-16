@@ -12,7 +12,7 @@ Returns backend health and active provider mode for Container Apps probes.
 }
 ```
 
-`mode` is `demo` for the built-in fake provider and `external` when `GIFFORGE_PROVIDER_ADAPTER=external-http` is active.
+`mode` is `demo` for the built-in fake provider, `external` when `GIFFORGE_PROVIDER_ADAPTER=external-http` is active, and `video` when the direct fal.ai/Luma video router is active.
 
 ## POST `/v1/app-attest/challenges`
 
@@ -72,6 +72,7 @@ Authorization: Bearer <sessionToken>
     "mode": "userText",
     "text": "ship it"
   },
+  "sourceMedia": null,
   "sourceImage": null,
   "sourceImageContext": null,
   "options": {
@@ -81,22 +82,27 @@ Authorization: Bearer <sessionToken>
     "stylePreset": "expressive-loop",
     "motionIntensity": "medium"
   },
-  "clientTraceId": "trace-id"
+  "clientTraceId": "trace-id",
+  "retryOfJobId": null
 }
 ```
 
 Validation rules:
 
-- `mode` must be `text_to_gif` or `image_to_gif`.
+- `mode` must be `text_to_gif`, `image_to_gif`, or `video_to_gif`.
 - `cleanedPrompt` is required and limited to 600 characters.
 - `expandedPrompt` is limited to 1,600 characters.
 - Caption mode must be `none`, `userText`, or `suggestWithAI`; caption text is limited to 64 characters.
 - `options.width` and `options.height`, when present, must be between 64 and 1,024 pixels.
 - `options.loopSeconds`, when present, must be between 0.5 and 6.0 seconds.
 - `options.motionIntensity`, when present, must be `subtle`, `medium`, or `high`.
-- `image_to_gif` requests must include `sourceImage`.
+- `image_to_gif` requests must include either `sourceImage` or `sourceMedia`.
 - `sourceImage` must be the app-processed, metadata-stripped JPEG payload (`image/jpeg`), valid base64, no larger than the processed upload limit, and no wider or taller than 1,024 pixels.
 - `sourceImageContext`, when present, is metadata-only local context such as dimensions, orientation, aspect ratio, and a short summary. Its dimensions must match `sourceImage`.
+- `sourceMedia`, when present, supports JPEG, PNG, HEIC/HEIF, GIF, MP4, MOV, and Live Photo paired MOV uploads. GIF, MP4, MOV, and Live Photo paired MOV route to video-to-video provider models. JPEG, PNG, and HEIC/HEIF route to image-to-video provider models.
+- `video_to_gif` requests must include `sourceMedia`.
+- Live Photo requests must send the paired MOV as `sourceMedia` with `mimeType=video/quicktime` and `role=livePhotoPairedVideo`; sending only the still image is rejected for the Live Photo workflow.
+- `retryOfJobId`, when present, must reference a failed generation job whose attempt count has not reached `GIFFORGE_GENERATION_MAX_ATTEMPTS`. The backend uses the previous job's attempted provider/model metadata to select the next cheapest compatible candidate.
 
 Response:
 
@@ -119,11 +125,14 @@ Returns job state.
   "status": "succeeded",
   "downloadUrl": "http://127.0.0.1:8787/v1/generations/uuid/result",
   "message": null,
-  "expiresAt": "2026-06-16T12:00:00Z"
+  "expiresAt": "2026-06-16T12:00:00Z",
+  "retryAvailable": false,
+  "retryReason": null,
+  "retryOfJobId": null
 }
 ```
 
-Expired jobs return HTTP `410 Gone` from both the status and result routes. After validation, moderation, and provider submission, persisted job state clears raw `originalPrompt`, visible caption text, and processed source-image bytes. Deployed environments default to expiring remaining job metadata and result links after 24 hours.
+Failed jobs can return `"retryAvailable": true`, `"retryReason": "provider_failed"`, and `"retryOfJobId": "<failed-job-id>"`. Expired jobs return HTTP `410 Gone` from both the status and result routes. After validation, moderation, and provider submission, persisted job state clears raw `originalPrompt`, visible caption text, source-media bytes, and processed source-image bytes. Deployed environments default to expiring remaining job metadata and result links after 24 hours.
 
 ## GET `/v1/generations/:jobId/result`
 
@@ -148,6 +157,56 @@ Returns a temporary generated motion asset. The demo provider returns a frame se
 ```
 
 Real provider adapters can return either a frame sequence JSON payload or a direct `video/mp4` payload from the result URL. The iOS app converts either result type into frames, renders captions locally, and writes the final GIF before Messages insertion.
+
+## Direct Video Provider Router
+
+Set `GIFFORGE_PROVIDER_ADAPTER=video` or `GIFFORGE_PROVIDER_ADAPTER=fal-luma` to enable the built-in provider abstraction. The router classifies each request:
+
+- prompt only -> text-to-video
+- still image -> image-to-video
+- GIF, MP4, MOV, or Live Photo paired MOV -> video-to-video
+
+Enabled provider/model candidates are ordered by configured estimated cost. fal.ai Wan 2.2 defaults are cheaper and selected first. Luma Ray 3.2 defaults are configured as retry candidates. The backend submits to the cheapest compatible candidate for the request. If the provider fails, the job response can include retry metadata; the iOS client keeps the original request media locally, asks the user, and only resubmits with `retryOfJobId` after confirmation. The retry submission skips providers/models already attempted for the previous job.
+
+Provider configuration should come from Azure App Configuration, with API keys stored in Azure Key Vault and referenced by App Configuration or loaded directly from Key Vault. Supported settings include:
+
+- `GIFFORGE_FAL_API_KEY`
+- `GIFFORGE_FAL_SUBMIT_URL_TEMPLATE`
+- `GIFFORGE_FAL_RESULT_URL_TEMPLATE`
+- `GIFFORGE_FAL_TEXT_MODEL`, `GIFFORGE_FAL_IMAGE_MODEL`, `GIFFORGE_FAL_VIDEO_MODEL`
+- `GIFFORGE_FAL_TEXT_MODEL_COST_USD`, `GIFFORGE_FAL_IMAGE_MODEL_COST_USD`, `GIFFORGE_FAL_VIDEO_MODEL_COST_USD`
+- `GIFFORGE_LUMA_API_KEY`
+- `GIFFORGE_LUMA_SUBMIT_URL_TEMPLATE`
+- `GIFFORGE_LUMA_RESULT_URL_TEMPLATE`
+- `GIFFORGE_LUMA_TEXT_MODEL`, `GIFFORGE_LUMA_IMAGE_MODEL`, `GIFFORGE_LUMA_VIDEO_MODEL`
+- `GIFFORGE_LUMA_TEXT_MODEL_COST_USD`, `GIFFORGE_LUMA_IMAGE_MODEL_COST_USD`, `GIFFORGE_LUMA_VIDEO_MODEL_COST_USD`
+
+The backend downloads provider result assets and stores generated MP4s in GifForge-controlled storage. The app receives only `/v1/generations/:jobId/result` URLs, never provider URLs.
+
+The backend does not persist source media for retry/fallback. After validation and provider submission, durable job state clears raw source-media and source-image bytes. Retry material remains on the client device in the active-generation snapshot until the job succeeds, expires, or the user declines retry. `GIFFORGE_GENERATION_MAX_ATTEMPTS` caps total client-mediated retry attempts, defaulting to 3.
+
+Failed job status responses include `retryAvailable`, `retryReason`, and `retryOfJobId` when the backend can accept a user-confirmed retry.
+
+## POST `/v1/provider-callbacks/:jobId`
+
+Provider gateways can push completion to this endpoint instead of waiting for queue polling. If `GIFFORGE_PROVIDER_CALLBACK_SECRET` is configured, callbacks must include:
+
+```http
+X-GifForge-Provider-Callback-Secret: <secret>
+```
+
+Successful callback:
+
+```json
+{
+  "status": "succeeded",
+  "providerJobId": "provider-job-id",
+  "assetUrl": "https://provider.example/video.mp4",
+  "contentType": "video/mp4"
+}
+```
+
+The backend validates the provider job id, downloads the asset, stores it in GifForge-controlled result storage, marks the job succeeded, and keeps returning the stable `/v1/generations/:jobId/result` URL to the iOS client. Failed callbacks mark the job failed with generic app-safe copy and retry metadata when another configured provider/model remains available. Unknown in-progress statuses are accepted without changing the job.
 
 ## External HTTP Provider Contract
 

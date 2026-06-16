@@ -107,6 +107,56 @@ struct BackendClientTests {
     #expect(job.expirationDate != nil)
   }
 
+  @Test("Job status decodes retry metadata")
+  func jobStatusDecodesRetryMetadata() async throws {
+    final class MockProtocol: URLProtocol {
+      override class func canInit(with request: URLRequest) -> Bool { true }
+      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+      override func startLoading() {
+        let response = HTTPURLResponse(
+          url: request.url!,
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: ["Content-Type": "application/json"]
+        )!
+        let body = """
+        {
+          "jobId": "job-1",
+          "status": "failed",
+          "downloadUrl": null,
+          "message": "Generation provider reported failure.",
+          "expiresAt": "2026-06-16T12:00:00.123Z",
+          "retryAvailable": true,
+          "retryReason": "provider_failed",
+          "retryOfJobId": "job-1"
+        }
+        """.data(using: .utf8)!
+
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocolDidFinishLoading(self)
+      }
+
+      override func stopLoading() {}
+    }
+
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [MockProtocol.self]
+    let client = GifForgeBackendClient(
+      baseURL: URL(string: "https://example.test")!,
+      session: URLSession(configuration: configuration)
+    )
+
+    let job = try await client.fetchJobStatus(
+      statusURL: URL(string: "https://example.test/v1/generations/job-1")!
+    )
+
+    #expect(job.retryAvailable)
+    #expect(job.retryReason == "provider_failed")
+    #expect(job.retryOfJobId == "job-1")
+  }
+
   @Test("App Attest challenge request decodes backend challenge")
   func appAttestChallengeDecodesBackendResponse() async throws {
     final class MockProtocol: URLProtocol {

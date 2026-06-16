@@ -25,7 +25,7 @@
 - The manual `Deploy Prod` workflow deploys an immutable GHCR backend image tag to `rg-gifforge-prod` through the `prod` GitHub environment, requires production App Attest and external-provider configuration, disables the demo bypass, and health-checks `/health`.
 - First real provider selection should be recorded with `Documentation/PROVIDER_ONBOARDING.md` and validated with `scripts/validate-provider-onboarding.rb` before production uses `providerAdapter=external-http`.
 - `scripts/collect-deployment-evidence.rb` captures read-only deployment proof after nonprod/prod workflows: local git context, selected GitHub Actions run metadata, sanitized Container Apps image/scale/rule settings, and `/health` output.
-- Generation jobs include expiration metadata. After validation, moderation, and provider submission, persisted job state clears raw `originalPrompt`, visible caption text, and processed source-image bytes. Deployed defaults expire remaining job metadata and result links after 24 hours, prune expired job rows during cleanup passes, and delete temporary provider/source blobs after 2 days through Azure Storage lifecycle policy.
+- Generation jobs include expiration metadata. After validation, moderation, and provider submission, persisted job state clears raw `originalPrompt`, visible caption text, source-media bytes, and processed source-image bytes. The client retains retry media locally only for active user-confirmed retry. Deployed defaults expire remaining job metadata and result links after 24 hours, prune expired job rows during cleanup passes, and delete temporary provider result blobs after 2 days through Azure Storage lifecycle policy.
 
 ## Verified Nonprod Evidence
 

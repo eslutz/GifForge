@@ -149,6 +149,7 @@ public sealed record ExternalProviderGenerationRequest(
   string? NegativePrompt,
   string CaptionMode,
   bool RenderCaptionLocally,
+  SourceMediaRequest? SourceMedia,
   SourceImageRequest? SourceImage,
   SourceImageContextRequest? SourceImageContext,
   GenerationOptions? Options,
@@ -164,6 +165,7 @@ public sealed record ExternalProviderGenerationRequest(
       request.NegativePrompt,
       request.Caption?.Mode ?? "none",
       true,
+      request.SourceMedia,
       request.SourceImage,
       request.SourceImageContext,
       request.Options,
@@ -175,6 +177,7 @@ public sealed record ExternalProviderJobResponse(string ProviderJobId);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(ExternalProviderGenerationRequest))]
+[JsonSerializable(typeof(SourceMediaRequest))]
 [JsonSerializable(typeof(SourceImageRequest))]
 [JsonSerializable(typeof(SourceImageContextRequest))]
 [JsonSerializable(typeof(GenerationOptions))]

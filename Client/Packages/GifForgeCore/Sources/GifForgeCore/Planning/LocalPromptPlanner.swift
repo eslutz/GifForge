@@ -10,7 +10,7 @@ public struct LocalPromptPlanner: PromptPlanning {
     }
 
     let caption = try normalizeCaption(intent.caption)
-    let mode: GenerationMode = intent.sourceImage == nil ? .textToGIF : .imageToGIF
+    let mode = generationMode(for: intent)
     let sourceImageContext = intent.sourceImage.map(SourceImageContext.init(sourceImage:))
     let expansion = expandedPrompt(
       cleaned,
@@ -26,6 +26,7 @@ public struct LocalPromptPlanner: PromptPlanning {
       expandedPrompt: expansion,
       negativePrompt: "readable text, captions, subtitles, logos, watermarks, gore, hate symbols",
       caption: caption,
+      sourceMedia: intent.sourceMedia,
       sourceImage: intent.sourceImage,
       sourceImageContext: sourceImageContext,
       options: intent.options
@@ -76,9 +77,15 @@ public struct LocalPromptPlanner: PromptPlanning {
     sourceImageContext: SourceImageContext?,
     options: PromptStyleOptions
   ) -> String {
-    let source = mode == .imageToGIF
-      ? "Animate the user-selected image. \(sourceImageContext?.summary ?? "")"
-      : "Create a short looping animated scene."
+    let source: String
+    switch mode {
+    case .imageToGIF:
+      source = "Animate the user-selected image. \(sourceImageContext?.summary ?? "")"
+    case .videoToGIF:
+      source = "Transform the user-selected motion source into a short silent video."
+    case .textToGIF:
+      source = "Create a short looping animated scene."
+    }
 
     return [
       source,
@@ -88,5 +95,23 @@ public struct LocalPromptPlanner: PromptPlanning {
       "Duration: \(String(format: "%.1f", options.loopSeconds)) seconds.",
       "Do not render readable text in the animation."
     ].joined(separator: " ")
+  }
+
+  private func generationMode(for intent: GenerationIntent) -> GenerationMode {
+    if let sourceMedia = intent.sourceMedia {
+      let mimeType = sourceMedia.mimeType.lowercased()
+      let role = sourceMedia.role?.lowercased()
+      if mimeType == "image/gif" ||
+          mimeType.hasPrefix("video/") ||
+          role == "video" ||
+          role == "livephotopairedvideo" ||
+          role == "live-photo-paired-video" {
+        return .videoToGIF
+      }
+
+      return .imageToGIF
+    }
+
+    return intent.sourceImage == nil ? .textToGIF : .imageToGIF
   }
 }

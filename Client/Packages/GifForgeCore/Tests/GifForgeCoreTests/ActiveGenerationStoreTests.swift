@@ -25,6 +25,48 @@ struct ActiveGenerationStoreTests {
     #expect(restored == snapshot)
   }
 
+  @Test("Active generation snapshot retains local retry material")
+  func activeGenerationSnapshotRetainsRetryMaterial() async throws {
+    let directory = try temporaryDirectory()
+    let store = ActiveGenerationStore(directoryURL: directory)
+    let retryRequest = StructuredGenerationRequest(
+      mode: .videoToGIF,
+      originalPrompt: "animate this",
+      cleanedPrompt: "animate this",
+      expandedPrompt: "Transform the selected media.",
+      negativePrompt: "text",
+      caption: CaptionRequest(mode: .none),
+      sourceMedia: SourceMedia(
+        dataBase64: "client-retained-media",
+        mimeType: "video/mp4",
+        fileName: "clip.mp4",
+        role: "video"
+      ),
+      sourceImage: nil,
+      options: PromptStyleOptions()
+    )
+    let snapshot = ActiveGenerationSnapshot(
+      job: GenerationJob(
+        id: "job-retry",
+        status: .running,
+        statusURL: URL(string: "https://example.test/jobs/job-retry")!
+      ),
+      prompt: "animate this",
+      captionText: nil,
+      retryMaterial: GenerationRetryMaterial(
+        request: retryRequest,
+        createdAt: Date(timeIntervalSince1970: 1_000)
+      ),
+      createdAt: Date(timeIntervalSince1970: 1_000)
+    )
+
+    try await store.save(snapshot)
+    let restored = try await store.load(now: Date(timeIntervalSince1970: 1_100))
+
+    #expect(restored?.retryMaterial?.request.sourceMedia?.dataBase64 == "client-retained-media")
+    #expect(restored == snapshot)
+  }
+
   @Test("Clearing active generation removes the stored snapshot")
   func clearRemovesStoredSnapshot() async throws {
     let directory = try temporaryDirectory()

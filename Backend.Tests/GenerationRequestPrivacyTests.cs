@@ -11,6 +11,13 @@ public sealed class GenerationRequestPrivacyTests
     var request = TestGenerationRequests.Valid("raw original prompt") with
     {
       Mode = "image_to_gif",
+      SourceMedia = new SourceMediaRequest(
+        Convert.ToBase64String("source media bytes"u8.ToArray()),
+        "image/png",
+        "source.png",
+        "image",
+        null
+      ),
       SourceImage = new SourceImageRequest(
         Convert.ToBase64String("source image bytes"u8.ToArray()),
         "image/jpeg",
@@ -34,6 +41,10 @@ public sealed class GenerationRequestPrivacyTests
     Assert.Equal(request.ExpandedPrompt, sanitized.ExpandedPrompt);
     Assert.Equal("userText", sanitized.Caption?.Mode);
     Assert.Null(sanitized.Caption?.Text);
+    Assert.NotNull(sanitized.SourceMedia);
+    Assert.Equal(string.Empty, sanitized.SourceMedia.DataBase64);
+    Assert.Equal("image/png", sanitized.SourceMedia.MimeType);
+    Assert.Equal("source.png", sanitized.SourceMedia.FileName);
     Assert.NotNull(sanitized.SourceImage);
     Assert.Equal(string.Empty, sanitized.SourceImage.DataBase64);
     Assert.Equal(640, sanitized.SourceImage.Width);

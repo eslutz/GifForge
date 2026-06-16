@@ -1,20 +1,33 @@
 import Foundation
 
+public struct GenerationRetryMaterial: Codable, Equatable, Sendable {
+  public var request: StructuredGenerationRequest
+  public var createdAt: Date
+
+  public init(request: StructuredGenerationRequest, createdAt: Date = Date()) {
+    self.request = request
+    self.createdAt = createdAt
+  }
+}
+
 public struct ActiveGenerationSnapshot: Codable, Equatable, Sendable {
   public var job: GenerationJob
   public var prompt: String
   public var captionText: String?
+  public var retryMaterial: GenerationRetryMaterial?
   public var createdAt: Date
 
   public init(
     job: GenerationJob,
     prompt: String,
     captionText: String?,
+    retryMaterial: GenerationRetryMaterial? = nil,
     createdAt: Date = Date()
   ) {
     self.job = job
     self.prompt = prompt
     self.captionText = captionText
+    self.retryMaterial = retryMaterial
     self.createdAt = createdAt
   }
 }

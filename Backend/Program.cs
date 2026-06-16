@@ -5,13 +5,16 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Data.Tables;
 using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using GifForge.Backend.Configuration;
 using GifForge.Backend.Jobs;
+using GifForge.Backend.Media;
 using GifForge.Backend.Models;
 using GifForge.Backend.Operations;
 using GifForge.Backend.Providers;
@@ -21,6 +24,9 @@ using GifForge.Backend.Security;
 using GifForge.Backend.Storage;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.HttpOverrides;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")) &&
     string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS")))
@@ -45,10 +51,14 @@ public static class GifForgeBackendApp
   )
   {
     var builder = WebApplication.CreateSlimBuilder(args ?? []);
+    ConfigureAzureConfiguration(builder);
+    ConfigureOpenTelemetry(builder);
 
     builder.Services.ConfigureHttpJsonOptions(ConfigureJson);
     var retentionOptions = GenerationRetentionOptions.FromConfiguration(builder.Configuration);
     builder.Services.AddSingleton(retentionOptions);
+    builder.Services.AddSingleton(GenerationRetryOptions.FromConfiguration(builder.Configuration));
+    builder.Services.AddSingleton<MediaNormalizationService>();
     builder.Services.AddSingleton(provider ?? CreateGenerationProvider(builder.Configuration));
     builder.Services.AddSingleton(jobStore ?? CreateJobStore(builder.Configuration, retentionOptions));
     builder.Services.AddSingleton(jobDispatcher ?? CreateJobDispatcher(builder.Configuration));
@@ -104,8 +114,82 @@ public static class GifForgeBackendApp
         ExternalHttpProviderOptions.FromConfiguration(configuration),
         new HttpClient()
       ),
+      "video" or "fal-luma" => CreateRoutedVideoProvider(configuration),
       _ => throw new InvalidOperationException($"Unsupported generation provider adapter '{adapter}'.")
     };
+  }
+
+  private static IGenerationProvider CreateRoutedVideoProvider(IConfiguration configuration)
+  {
+    var providers = new List<IVideoGenerationProvider>();
+    if (VideoProviderConfiguration.IsEnabled(configuration, "FAL", true))
+    {
+      providers.Add(new FalVideoProvider(VideoProviderConfiguration.Fal(configuration), new HttpClient()));
+    }
+
+    if (VideoProviderConfiguration.IsEnabled(configuration, "LUMA", true))
+    {
+      providers.Add(new LumaVideoProvider(VideoProviderConfiguration.Luma(configuration), new HttpClient()));
+    }
+
+    return new RoutedVideoGenerationProvider(providers);
+  }
+
+  private static void ConfigureAzureConfiguration(WebApplicationBuilder builder)
+  {
+    var managedIdentityClientId = builder.Configuration["AZURE_CLIENT_ID"];
+    var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+    {
+      ManagedIdentityClientId = string.IsNullOrWhiteSpace(managedIdentityClientId) ? null : managedIdentityClientId
+    });
+
+    var appConfigEndpoint = builder.Configuration["AZURE_APP_CONFIG_ENDPOINT"];
+    if (!string.IsNullOrWhiteSpace(appConfigEndpoint))
+    {
+      builder.Configuration.AddAzureAppConfiguration(options =>
+      {
+        options.Connect(new Uri(appConfigEndpoint), credential)
+          .ConfigureKeyVault(keyVault => keyVault.SetCredential(credential));
+      });
+    }
+
+    var keyVaultEndpoint = builder.Configuration["AZURE_KEY_VAULT_ENDPOINT"] ?? builder.Configuration["GIFFORGE_KEY_VAULT_URI"];
+    if (!string.IsNullOrWhiteSpace(keyVaultEndpoint))
+    {
+      builder.Configuration.AddAzureKeyVault(
+        new SecretClient(new Uri(keyVaultEndpoint), credential),
+        new KeyVaultSecretManager()
+      );
+    }
+  }
+
+  private static void ConfigureOpenTelemetry(WebApplicationBuilder builder)
+  {
+    var serviceName = builder.Configuration["OTEL_SERVICE_NAME"] ?? "GifForge.Backend";
+    var openTelemetry = builder.Services.AddOpenTelemetry()
+      .ConfigureResource(resource => resource.AddService(serviceName));
+
+    openTelemetry.WithTracing(tracing =>
+    {
+      tracing
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation();
+      if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+      {
+        tracing.AddOtlpExporter();
+      }
+    });
+
+    openTelemetry.WithMetrics(metrics =>
+    {
+      metrics
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation();
+      if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+      {
+        metrics.AddOtlpExporter();
+      }
+    });
   }
 
   private static IJobStore CreateJobStore(
@@ -301,6 +385,8 @@ public static class GifForgeBackendApp
       IGenerationJobDispatcher jobDispatcher,
       IAppAttestService appAttest,
       BackendOptions options,
+      MediaNormalizationService mediaNormalization,
+      GenerationRetryOptions retryOptions,
       IGenerationEventSink generationEvents
     ) =>
     {
@@ -315,10 +401,27 @@ public static class GifForgeBackendApp
         return Error(validation.StatusCode, validation.Message);
       }
 
+      _ = mediaNormalization.Normalize(request);
+      var jobId = Guid.NewGuid().ToString("D");
+      var retryContext = await RetryContextForAsync(request, jobStore, retryOptions, context.RequestAborted);
+      if (!retryContext.IsValid)
+      {
+        return Error(StatusCodes.Status409Conflict, retryContext.ErrorMessage ?? "Retry is not available.");
+      }
+
       ProviderJob providerJob;
       try
       {
-        providerJob = await provider.SubmitGenerationAsync(request, context.RequestAborted);
+        providerJob = retryContext.IsRetry && provider is IRetryAwareGenerationProvider retryProvider
+          ? await retryProvider.SubmitRetryGenerationAsync(
+            request,
+            retryContext.AttemptedProviders,
+            retryContext.AttemptedModelIds,
+            context.RequestAborted
+          )
+          : retryContext.IsRetry
+            ? throw new GenerationPermanentFailureException("Configured provider does not support retry routing.")
+            : await provider.SubmitGenerationAsync(request, context.RequestAborted);
       }
       catch (GenerationPermanentFailureException)
       {
@@ -330,7 +433,21 @@ public static class GifForgeBackendApp
       }
 
       var jobRequest = GenerationRequestPrivacy.SanitizeForJobState(request);
-      var job = await jobStore.CreateAsync(jobRequest, providerJob, context.RequestAborted);
+      var job = await jobStore.CreateAsync(jobRequest, providerJob, context.RequestAborted, jobId);
+      if (retryContext.IsRetry)
+      {
+        job = job with
+        {
+          AttemptCount = retryContext.AttemptCount + 1,
+          AttemptedProviders = JoinAttempts(retryContext.AttemptedProviders.Append(providerJob.Provider)),
+          AttemptedModelIds = JoinAttempts(
+            string.IsNullOrWhiteSpace(providerJob.ModelId)
+              ? retryContext.AttemptedModelIds
+              : retryContext.AttemptedModelIds.Append(providerJob.ModelId)
+          )
+        };
+        await jobStore.SaveAsync(job, context.RequestAborted);
+      }
       await jobDispatcher.DispatchAsync(job, context.RequestAborted);
       generationEvents.Record(GenerationOperationalEvent.FromJob("generation.queued", job));
       var statusUrl = $"{RequestBaseUrl(context, options)}/v1/generations/{job.Id}";
@@ -347,7 +464,8 @@ public static class GifForgeBackendApp
       HttpContext context,
       IJobStore jobStore,
       IAppAttestService appAttest,
-      BackendOptions options
+      BackendOptions options,
+      GenerationRetryOptions retryOptions
     ) =>
     {
       if (!await appAttest.IsAuthorizedAsync(context, context.RequestAborted))
@@ -370,6 +488,7 @@ public static class GifForgeBackendApp
       var downloadUrl = status == GenerationJobStatus.Succeeded
         ? $"{RequestBaseUrl(context, options)}/v1/generations/{job.Id}/result"
         : null;
+      var retryAvailable = status == GenerationJobStatus.Failed && job.AttemptCount < retryOptions.MaxAttempts;
 
       return Json(
         new JobStatusResponse(
@@ -377,7 +496,10 @@ public static class GifForgeBackendApp
           status.JsonValue(),
           downloadUrl,
           status == GenerationJobStatus.Failed ? job.FailedMessage : null,
-          job.ExpiresAt
+          job.ExpiresAt,
+          retryAvailable,
+          retryAvailable ? "provider_failed" : null,
+          retryAvailable ? job.Id : null
         ),
         GifForgeJsonSerializerContext.Default.JobStatusResponse
       );
@@ -420,7 +542,147 @@ public static class GifForgeBackendApp
 
       return Results.Bytes(result.Bytes, result.ContentType);
     });
+
+    app.MapPost("/v1/provider-callbacks/{jobId}", async (
+      string jobId,
+      ProviderCallbackRequest callback,
+      HttpContext context,
+      IJobStore jobStore,
+      IGenerationResultStore resultStore,
+      IGenerationEventSink generationEvents,
+      IConfiguration configuration,
+      CancellationToken cancellationToken
+    ) =>
+    {
+      var expectedSecret = configuration["GIFFORGE_PROVIDER_CALLBACK_SECRET"];
+      if (!string.IsNullOrWhiteSpace(expectedSecret) &&
+          !string.Equals(
+            context.Request.Headers["X-GifForge-Provider-Callback-Secret"].ToString(),
+            expectedSecret,
+            StringComparison.Ordinal
+          ))
+      {
+        return Error(StatusCodes.Status401Unauthorized, "Provider callback authorization is required.");
+      }
+
+      var job = await jobStore.GetAsync(jobId, cancellationToken);
+      if (job is null)
+      {
+        return Error(StatusCodes.Status404NotFound, "Generation job was not found.");
+      }
+
+      if (!string.IsNullOrWhiteSpace(callback.ProviderJobId) &&
+          !string.Equals(callback.ProviderJobId, job.ProviderJobId, StringComparison.Ordinal))
+      {
+        return Error(StatusCodes.Status409Conflict, "Provider job id does not match the generation job.");
+      }
+
+      var status = callback.Status.Trim().ToLowerInvariant();
+      if (status is "failed" or "error")
+      {
+        var failed = job with
+        {
+          Status = GenerationJobStatus.Failed,
+          FailedMessage = "Generation provider reported failure.",
+          UpdatedAt = DateTimeOffset.UtcNow
+        };
+        await jobStore.SaveAsync(failed, cancellationToken);
+        generationEvents.Record(GenerationOperationalEvent.FromJob(
+          "generation.failed",
+          failed,
+          failureKind: "provider_callback_failure"
+        ));
+        return Results.Accepted();
+      }
+
+      if (status is not ("succeeded" or "completed" or "complete"))
+      {
+        return Results.Accepted();
+      }
+
+      if (string.IsNullOrWhiteSpace(callback.AssetUrl))
+      {
+        return Error(StatusCodes.Status400BadRequest, "Successful callbacks must include assetUrl.");
+      }
+
+      using var httpClient = new HttpClient();
+      var bytes = await httpClient.GetByteArrayAsync(callback.AssetUrl, cancellationToken);
+      if (bytes.Length == 0)
+      {
+        return Error(StatusCodes.Status400BadRequest, "Callback asset is empty.");
+      }
+
+      var stored = await resultStore
+        .SaveAsync(job.Id, new GeneratedMotionResult(GenerationResultContentTypes.Mp4, bytes), cancellationToken)
+        .ConfigureAwait(false);
+      var succeeded = job with
+      {
+        Status = GenerationJobStatus.Succeeded,
+        ResultBlobName = stored.BlobName,
+        ResultContentType = stored.ContentType,
+        UpdatedAt = DateTimeOffset.UtcNow
+      };
+      await jobStore.SaveAsync(succeeded, cancellationToken);
+      generationEvents.Record(GenerationOperationalEvent.FromJob(
+        "generation.succeeded",
+        succeeded,
+        resultContentType: stored.ContentType
+      ));
+      return Results.Accepted();
+    });
   }
+
+  private static async Task<RetryContext> RetryContextForAsync(
+    GenerationRequest request,
+    IJobStore jobStore,
+    GenerationRetryOptions retryOptions,
+    CancellationToken cancellationToken
+  )
+  {
+    if (string.IsNullOrWhiteSpace(request.RetryOfJobId))
+    {
+      return RetryContext.NotRetry;
+    }
+
+    var previous = await jobStore.GetAsync(request.RetryOfJobId, cancellationToken).ConfigureAwait(false);
+    if (previous is null)
+    {
+      return RetryContext.Invalid("Original generation job was not found.");
+    }
+
+    if (previous.IsExpired(DateTimeOffset.UtcNow))
+    {
+      return RetryContext.Invalid("Original generation job has expired.");
+    }
+
+    if (previous.Status != GenerationJobStatus.Failed)
+    {
+      return RetryContext.Invalid("Only failed generation jobs can be retried.");
+    }
+
+    if (previous.AttemptCount >= retryOptions.MaxAttempts)
+    {
+      return RetryContext.Invalid("Generation retry limit has been reached.");
+    }
+
+    var attemptedProviders = SplitAttempts(previous.AttemptedProviders);
+    attemptedProviders.Add(previous.Provider);
+    var attemptedModelIds = SplitAttempts(previous.AttemptedModelIds);
+    if (!string.IsNullOrWhiteSpace(previous.ProviderModelId))
+    {
+      attemptedModelIds.Add(previous.ProviderModelId);
+    }
+
+    return RetryContext.Valid(previous.AttemptCount, attemptedProviders, attemptedModelIds);
+  }
+
+  private static HashSet<string> SplitAttempts(string attempts) =>
+    attempts
+      .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+      .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+  private static string JoinAttempts(IEnumerable<string> attempts) =>
+    string.Join(',', attempts.Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase));
 
   private static IResult Json<T>(T value, JsonTypeInfo<T> jsonTypeInfo, int? statusCode = null, string? contentType = null) =>
     Results.Json(value, jsonTypeInfo, contentType: contentType, statusCode: statusCode);
@@ -445,12 +707,37 @@ public static class GifForgeBackendApp
 
 public sealed record BackendOptions(string? PublicBaseUrl);
 
+internal sealed record RetryContext(
+  bool IsRetry,
+  bool IsValid,
+  int AttemptCount,
+  HashSet<string> AttemptedProviders,
+  HashSet<string> AttemptedModelIds,
+  string? ErrorMessage
+)
+{
+  public static RetryContext NotRetry { get; } =
+    new(false, true, 0, new(StringComparer.OrdinalIgnoreCase), new(StringComparer.OrdinalIgnoreCase), null);
+
+  public static RetryContext Valid(
+    int attemptCount,
+    HashSet<string> attemptedProviders,
+    HashSet<string> attemptedModelIds
+  ) =>
+    new(true, true, attemptCount, attemptedProviders, attemptedModelIds, null);
+
+  public static RetryContext Invalid(string message) =>
+    new(true, false, 0, new(StringComparer.OrdinalIgnoreCase), new(StringComparer.OrdinalIgnoreCase), message);
+}
+
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(HealthResponse))]
 [JsonSerializable(typeof(ErrorResponse))]
 [JsonSerializable(typeof(GenerationRequest))]
+[JsonSerializable(typeof(SourceMediaRequest))]
 [JsonSerializable(typeof(JobSubmissionResponse))]
 [JsonSerializable(typeof(JobStatusResponse))]
+[JsonSerializable(typeof(ProviderCallbackRequest))]
 [JsonSerializable(typeof(FrameSequenceAsset))]
 [JsonSerializable(typeof(FrameSpec))]
 [JsonSerializable(typeof(GenerationQueueMessage))]
@@ -473,5 +760,15 @@ public sealed record JobStatusResponse(
   string Status,
   string? DownloadUrl,
   string? Message,
-  DateTimeOffset ExpiresAt
+  DateTimeOffset ExpiresAt,
+  bool RetryAvailable = false,
+  string? RetryReason = null,
+  string? RetryOfJobId = null
+);
+
+public sealed record ProviderCallbackRequest(
+  string Status,
+  string? ProviderJobId,
+  string? AssetUrl,
+  string? ContentType
 );

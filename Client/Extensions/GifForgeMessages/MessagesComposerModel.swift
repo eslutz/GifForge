@@ -41,6 +41,7 @@ final class MessagesComposerModel {
   var previewGIFURL: URL?
   var phase: ComposerPhase = .idle
   var errorMessage: String?
+  var retryPromptMessage: String?
   var recentItems: [GenerationHistoryItem] = []
   var presentationStyle: MSMessagesAppPresentationStyle = .compact
   var canApplyCaptionEdit: Bool {
@@ -57,6 +58,7 @@ final class MessagesComposerModel {
   )
   @ObservationIgnored private var lastMotionAsset: GeneratedMotionAsset?
   @ObservationIgnored private var lastPrompt: String?
+  @ObservationIgnored private var pendingRetryMaterial: GenerationRetryMaterial?
 
   var canGenerate: Bool {
     !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && phase != .planning && phase != .submitting && phase != .generating && phase != .rendering
@@ -64,6 +66,10 @@ final class MessagesComposerModel {
 
   var hasImage: Bool {
     sourceImageData != nil
+  }
+
+  var canRetryGeneration: Bool {
+    retryPromptMessage != nil && phase == .idle
   }
 
   func loadRecent() async {
@@ -95,6 +101,8 @@ final class MessagesComposerModel {
     Task {
       do {
         errorMessage = nil
+        retryPromptMessage = nil
+        pendingRetryMaterial = nil
         previewGIFURL = nil
         lastMotionAsset = nil
         lastPrompt = nil
@@ -109,18 +117,74 @@ final class MessagesComposerModel {
 
         phase = .submitting
         let client = backendClient()
+        let retryMaterial = GenerationRetryMaterial(request: structuredRequest)
         let job = try await client.createJob(structuredRequest)
         try await activeGenerationStore.save(ActiveGenerationSnapshot(
           job: job,
           prompt: structuredRequest.cleanedPrompt,
-          captionText: structuredRequest.caption.text
+          captionText: structuredRequest.caption.text,
+          retryMaterial: retryMaterial
         ))
 
-        try await finish(job: job, prompt: structuredRequest.cleanedPrompt, captionText: structuredRequest.caption.text, client: client)
+        try await finish(
+          job: job,
+          prompt: structuredRequest.cleanedPrompt,
+          captionText: structuredRequest.caption.text,
+          retryMaterial: retryMaterial,
+          client: client
+        )
       } catch {
         phase = .idle
         errorMessage = error.gifforgeUserFacingMessage
       }
+    }
+  }
+
+  func retryGeneration() {
+    guard let retryMaterial = pendingRetryMaterial else {
+      retryPromptMessage = nil
+      return
+    }
+
+    Task {
+      do {
+        errorMessage = nil
+        retryPromptMessage = nil
+        pendingRetryMaterial = nil
+        phase = .submitting
+
+        let client = backendClient()
+        let job = try await client.createJob(retryMaterial.request)
+        try await activeGenerationStore.save(ActiveGenerationSnapshot(
+          job: job,
+          prompt: retryMaterial.request.cleanedPrompt,
+          captionText: retryMaterial.request.caption.text,
+          retryMaterial: retryMaterial
+        ))
+
+        try await finish(
+          job: job,
+          prompt: retryMaterial.request.cleanedPrompt,
+          captionText: retryMaterial.request.caption.text,
+          retryMaterial: retryMaterial,
+          client: client
+        )
+      } catch {
+        phase = .idle
+        errorMessage = error.gifforgeUserFacingMessage
+      }
+    }
+  }
+
+  func dismissRetryPrompt() {
+    retryPromptMessage = nil
+  }
+
+  func cancelPendingRetry() {
+    pendingRetryMaterial = nil
+    retryPromptMessage = nil
+    Task {
+      try? await activeGenerationStore.clear()
     }
   }
 
@@ -155,6 +219,7 @@ final class MessagesComposerModel {
         job: snapshot.job,
         prompt: snapshot.prompt,
         captionText: snapshot.captionText,
+        retryMaterial: snapshot.retryMaterial,
         client: backendClient()
       )
     } catch {
@@ -166,10 +231,24 @@ final class MessagesComposerModel {
     job: GenerationJob,
     prompt: String,
     captionText: String?,
+    retryMaterial: GenerationRetryMaterial?,
     client: GifForgeBackendClient
   ) async throws {
     phase = .generating
-    let completed = try await JobPollingService(client: client).waitForCompletion(startingWith: job)
+    let completed: GenerationJob
+    do {
+      completed = try await JobPollingService(client: client).waitForCompletion(startingWith: job)
+    } catch let GifForgeError.retryAvailable(failedJob, message) {
+      try await prepareClientRetry(
+        failedJob: failedJob,
+        message: message,
+        prompt: prompt,
+        captionText: captionText,
+        retryMaterial: retryMaterial
+      )
+      return
+    }
+
     guard let downloadURL = completed.downloadURL else {
       throw GifForgeError.jobFailed(message: "Backend completed without a result URL.")
     }
@@ -180,6 +259,32 @@ final class MessagesComposerModel {
 
     try await renderPreview(from: asset, prompt: prompt, captionText: captionText)
     try await activeGenerationStore.clear()
+  }
+
+  private func prepareClientRetry(
+    failedJob: GenerationJob,
+    message: String,
+    prompt: String,
+    captionText: String?,
+    retryMaterial: GenerationRetryMaterial?
+  ) async throws {
+    guard let retryMaterial else {
+      throw GifForgeError.jobFailed(message: message)
+    }
+
+    var retryRequest = retryMaterial.request
+    retryRequest.retryOfJobId = failedJob.retryOfJobId ?? failedJob.id
+    let updatedMaterial = GenerationRetryMaterial(request: retryRequest)
+    pendingRetryMaterial = updatedMaterial
+    retryPromptMessage = message
+    phase = .idle
+
+    try await activeGenerationStore.save(ActiveGenerationSnapshot(
+      job: failedJob,
+      prompt: prompt,
+      captionText: captionText,
+      retryMaterial: updatedMaterial
+    ))
   }
 
   private func renderPreview(

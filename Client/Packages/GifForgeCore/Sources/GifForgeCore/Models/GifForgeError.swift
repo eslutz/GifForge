@@ -8,6 +8,7 @@ public enum GifForgeError: Error, Equatable, LocalizedError, Sendable {
   case appAttestUnavailable
   case localModelUnavailable
   case jobFailed(message: String)
+  case retryAvailable(GenerationJob, String)
   case jobTimedOut
   case mediaRenderingFailed(message: String)
   case storageFailed(message: String)
@@ -27,6 +28,8 @@ public enum GifForgeError: Error, Equatable, LocalizedError, Sendable {
     case .localModelUnavailable:
       userFacingMessage
     case let .jobFailed(message):
+      message
+    case let .retryAvailable(_, message):
       message
     case .jobTimedOut:
       "The generation took too long. You can reopen GifForge and resume the job."
@@ -53,6 +56,8 @@ public enum GifForgeError: Error, Equatable, LocalizedError, Sendable {
       "Local Apple models are unavailable, so GifForge will use its built-in prompt planner."
     case let .jobFailed(message):
       message.isEmpty ? "The GIF generation failed. Try again with a different prompt." : message
+    case let .retryAvailable(_, message):
+      message.isEmpty ? "Generation failed. You can try again with another provider." : message
     case .jobTimedOut:
       "The generation took too long. You can reopen GifForge and resume the job."
     case let .mediaRenderingFailed(message):

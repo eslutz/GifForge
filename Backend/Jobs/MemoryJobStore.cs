@@ -19,13 +19,28 @@ public sealed class MemoryJobStore : IJobStore
   public Task<GenerationJob> CreateAsync(
     GenerationRequest request,
     ProviderJob providerJob,
-    CancellationToken cancellationToken
+    CancellationToken cancellationToken,
+    string? id = null
   )
   {
-    var job = GenerationJob.Create(request, providerJob, jobLifetime);
+    var job = GenerationJob.Create(request, providerJob, jobLifetime, id);
 
     jobs[job.Id] = job;
     return Task.FromResult(job);
+  }
+
+  public Task<IReadOnlyList<GenerationJob>> GetExpiredAsync(
+    DateTimeOffset expiresBefore,
+    int maxCount,
+    CancellationToken cancellationToken
+  )
+  {
+    IReadOnlyList<GenerationJob> expired = jobs.Values
+      .Where(job => job.ExpiresAt <= expiresBefore)
+      .OrderBy(job => job.ExpiresAt)
+      .Take(maxCount)
+      .ToArray();
+    return Task.FromResult(expired);
   }
 
   public Task<GenerationJob?> GetAsync(string id, CancellationToken cancellationToken)

@@ -5,8 +5,14 @@ namespace GifForge.Backend.Jobs;
 
 public interface IJobStore
 {
-  Task<GenerationJob> CreateAsync(GenerationRequest request, ProviderJob providerJob, CancellationToken cancellationToken);
+  Task<GenerationJob> CreateAsync(
+    GenerationRequest request,
+    ProviderJob providerJob,
+    CancellationToken cancellationToken,
+    string? id = null
+  );
   Task<GenerationJob?> GetAsync(string id, CancellationToken cancellationToken);
+  Task<IReadOnlyList<GenerationJob>> GetExpiredAsync(DateTimeOffset expiresBefore, int maxCount, CancellationToken cancellationToken);
   Task SaveAsync(GenerationJob job, CancellationToken cancellationToken);
   Task<int> DeleteExpiredAsync(DateTimeOffset expiresBefore, int maxCount, CancellationToken cancellationToken);
   GenerationJobStatus StatusFor(GenerationJob job);

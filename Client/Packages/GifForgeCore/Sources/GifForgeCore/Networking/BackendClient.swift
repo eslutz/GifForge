@@ -65,7 +65,10 @@ public struct GifForgeBackendClient: @unchecked Sendable {
       statusURL: statusURL,
       downloadURL: response.downloadUrl,
       message: response.message,
-      expiresAt: response.expiresAt
+      expiresAt: response.expiresAt,
+      retryAvailable: response.retryAvailable ?? false,
+      retryReason: response.retryReason,
+      retryOfJobId: response.retryOfJobId
     )
   }
 

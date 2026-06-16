@@ -45,7 +45,7 @@ Runtime settings:
 - `GIFFORGE_RETENTION_CLEANUP_INTERVAL_MINUTES`: cleanup interval. Default deployment value: `360`.
 - `GIFFORGE_RETENTION_CLEANUP_BATCH_SIZE`: maximum expired job rows removed per cleanup pass. Default deployment value: `100`.
 
-Azure deployments also configure Storage lifecycle deletion for temporary provider result and source-image blobs. The default Bicep value is `temporaryBlobRetentionDays=2`.
+Azure deployments also configure Storage lifecycle deletion for temporary provider result blobs. The default Bicep value is `temporaryBlobRetentionDays=2`. Source media used for retry remains on the client device and is not retained in backend blob storage.
 
 ## Azure Container Apps Direction
 
