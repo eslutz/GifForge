@@ -38,13 +38,12 @@ Status: implemented in this scaffold.
 - Operational generation logs are metadata-only and avoid prompt text, caption text, source-image bytes, provider result bytes, and provider error messages.
 - Keep `infra/main.subscription.bicep` as the bootstrap entry point for creating `nonprod` and `prod` resource groups, and keep `infra/main.bicep` as the source of truth for Container Apps, storage, Key Vault, managed identity, and role assignments. Use resource-group-scope deployments for normal environment updates so GitHub Actions identities can be scoped per environment.
 - Use `scripts/setup-azure-oidc.sh` as the reviewed setup path for per-environment GitHub OIDC federated credentials, GitHub environment secrets, and resource-group-scoped Azure RBAC grants. The helper is dry-run by default, supports `nonprod` and `prod`, and only mutates Azure/GitHub when run with `--apply`.
-- Keep `Deploy Nonprod` and `Deploy Prod` as manual GitHub Actions workflows. Nonprod uses the fake provider with real App Attest configuration; prod requires App Attest and external-provider configuration, rejects `latest`, disables the demo bypass, and deploys only immutable image tags.
+- Keep `Deploy Nonprod` and `Deploy Prod` as manual GitHub Actions workflows. Deployed environments use the direct video router with real App Attest configuration; prod requires provider API keys in Key Vault, rejects `latest`, disables the demo bypass, and deploys only immutable image tags.
 
 ## Phase 4: Real Provider Adapter
 
-- Keep the fake provider as the default nonprod/demo adapter until the first paid media provider is selected.
-- Use `GIFFORGE_PROVIDER_ADAPTER=external-http` for the first provider-compatible gateway or vendor-specific wrapper after provider selection.
-- Convert `StructuredGenerationRequest` into provider-specific parameters.
+- Keep provider/model identity in backend C# model catalogs and use Azure App Configuration only for provider enablement and cost overrides.
+- Convert `StructuredGenerationRequest` into provider-specific fal.ai/Luma parameters.
 - Keep provider credentials server-side only.
 - Request MP4 or frame sequence output, not final captioned GIF output.
 - Add backend contract tests so provider swapping does not change the iOS app.

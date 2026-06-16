@@ -25,28 +25,6 @@ param appAttestRootCertificatePem string = ''
 @description('Enable demo App Attest session bypass for direct lower-environment experiments. GitHub deploy workflows pass false, and the value is ignored for prod.')
 param appAttestDemoBypassEnabled bool = false
 
-@description('Generation provider adapter. Use fake for demo/nonprod, external-http for a provider-compatible gateway, or video/fal-luma for direct fal.ai/Luma routing.')
-@allowed([
-  'fake'
-  'external-http'
-  'video'
-  'fal-luma'
-])
-param providerAdapter string = 'fake'
-
-@description('Display name for the external HTTP provider adapter.')
-param externalProviderName string = 'external-http'
-
-@description('External HTTP provider job submission URL.')
-param externalProviderSubmitUrl string = ''
-
-@description('External HTTP provider result URL template. Supports {providerJobId} and {jobId}.')
-param externalProviderResultUrlTemplate string = ''
-
-@secure()
-@description('Optional Authorization header value for the external HTTP provider, such as "Bearer <token>". Stored as a Container Apps secret.')
-param externalProviderAuthorization string = ''
-
 @description('Minimum Container Apps replicas. Use 0 for scale-to-zero in lower environments.')
 @minValue(0)
 @maxValue(10)
@@ -121,7 +99,6 @@ var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 var storageTableDataContributorRoleId = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 var appConfigurationDataReaderRoleId = '516239f1-63e1-4d78-a4de-a74fb236a071'
-var externalProviderAuthorizationSecretName = 'external-provider-authorization'
 
 resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: '${prefix}-logs'
@@ -324,12 +301,6 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
-      secrets: empty(externalProviderAuthorization) ? [] : [
-        {
-          name: externalProviderAuthorizationSecretName
-          value: externalProviderAuthorization
-        }
-      ]
       ingress: {
         external: true
         targetPort: 8080
@@ -348,7 +319,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
         {
           name: 'api'
           image: containerImage
-          env: concat([
+          env: [
             {
               name: 'ASPNETCORE_HTTP_PORTS'
               value: '8080'
@@ -398,22 +369,6 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: appConfiguration.properties.endpoint
             }
             {
-              name: 'GIFFORGE_PROVIDER_ADAPTER'
-              value: providerAdapter
-            }
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_NAME'
-              value: externalProviderName
-            }
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL'
-              value: externalProviderSubmitUrl
-            }
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE'
-              value: externalProviderResultUrlTemplate
-            }
-            {
               name: 'GIFFORGE_APP_ATTEST_REQUIRED'
               value: 'true'
             }
@@ -453,12 +408,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               name: 'AZURE_CLIENT_ID'
               value: appIdentity.properties.clientId
             }
-          ], empty(externalProviderAuthorization) ? [] : [
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION'
-              secretRef: externalProviderAuthorizationSecretName
-            }
-          ])
+          ]
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
@@ -519,19 +469,13 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
-      secrets: empty(externalProviderAuthorization) ? [] : [
-        {
-          name: externalProviderAuthorizationSecretName
-          value: externalProviderAuthorization
-        }
-      ]
     }
     template: {
       containers: [
         {
           name: 'worker'
           image: containerImage
-          env: concat([
+          env: [
             {
               name: 'ASPNETCORE_HTTP_PORTS'
               value: '8080'
@@ -585,22 +529,6 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: appConfiguration.properties.endpoint
             }
             {
-              name: 'GIFFORGE_PROVIDER_ADAPTER'
-              value: providerAdapter
-            }
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_NAME'
-              value: externalProviderName
-            }
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL'
-              value: externalProviderSubmitUrl
-            }
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE'
-              value: externalProviderResultUrlTemplate
-            }
-            {
               name: 'GIFFORGE_APP_ATTEST_REQUIRED'
               value: 'true'
             }
@@ -640,12 +568,7 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               name: 'AZURE_CLIENT_ID'
               value: appIdentity.properties.clientId
             }
-          ], empty(externalProviderAuthorization) ? [] : [
-            {
-              name: 'GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION'
-              secretRef: externalProviderAuthorizationSecretName
-            }
-          ])
+          ]
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'

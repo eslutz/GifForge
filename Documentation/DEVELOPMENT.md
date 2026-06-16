@@ -97,21 +97,14 @@ The backend listens at `http://127.0.0.1:8787`.
 
 The production backend target is ASP.NET Core Minimal API with Native AOT on Azure Container Apps. Keep the public API thin and stateless, then use Azure Queue Storage for asynchronous provider orchestration, Blob Storage for temporary media/result handoff, and Table Storage for durable job state. Store provider credentials in Container Apps secrets or Key Vault and use managed identity for Azure resource access.
 
-Provider adapter selection:
+Provider routing starts directly with the fal.ai/Luma video provider router. Configure provider API keys in Azure Key Vault, provider enabled flags and model cost overrides in Azure App Configuration, and leave provider/model IDs in the backend C# model catalog.
 
-- `GIFFORGE_PROVIDER_ADAPTER=fake`: deterministic local/demo frame-sequence provider.
-- `GIFFORGE_PROVIDER_ADAPTER=external-http`: posts generation requests to a compatible provider gateway and downloads either `video/mp4` or `application/vnd.gifforge.frame-sequence+json` results.
-
-Validate a compatible provider gateway before using it in nonprod or prod:
+Before enabling paid providers in nonprod or prod, create and validate provider onboarding evidence:
 
 ```bash
-GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL=https://provider.example.test/jobs \
-GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE='https://provider.example.test/jobs/{providerJobId}/result' \
-GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION='Bearer <token>' \
-scripts/validate-external-provider-contract.rb
+scripts/validate-provider-onboarding.rb --template Documentation/ProviderEvidence/direct-video.json
+scripts/validate-provider-onboarding.rb Documentation/ProviderEvidence/direct-video.json
 ```
-
-Use `scripts/validate-external-provider-contract.rb --print-payload` to inspect the sanitized provider-facing JSON without network calls. To validate image-to-GIF, pass `--mode image_to_gif` and provide `GIFFORGE_PROVIDER_PRECHECK_IMAGE_BASE64`, `GIFFORGE_PROVIDER_PRECHECK_IMAGE_WIDTH`, and `GIFFORGE_PROVIDER_PRECHECK_IMAGE_HEIGHT` for an app-processed JPEG sample.
 
 The provider preflight polls retryable result states until the configured timeout and accepts only non-empty `video/mp4` or valid `application/vnd.gifforge.frame-sequence+json` results.
 
@@ -160,7 +153,7 @@ Deployed environments also default to `generationJobRetentionHours=24`, `tempora
 
 The `Deploy Nonprod` GitHub Actions workflow can deploy and smoke-test `rg-gifforge-nonprod` manually. It uses resource-group-scope deployment against the existing nonprod resource group. Run `scripts/setup-azure-oidc.sh --environment nonprod` first in dry-run mode to review the Azure OIDC trust, GitHub environment secrets, and resource-group-scoped RBAC changes. After approval, run it with `--apply` to configure `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, the federated credential subject `repo:eslutz/GifForge:environment:nonprod`, and the `Contributor` plus `Role Based Access Control Administrator` roles at the `rg-gifforge-nonprod` scope. Configure `GIFFORGE_APP_ATTEST_APP_IDENTIFIER` and `GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM` in the `nonprod` GitHub environment, then dispatch the workflow with an immutable backend GHCR commit SHA tag to deploy. Nonprod always deploys with the demo App Attest bypass disabled.
 
-The `Deploy Prod` workflow deploys to `rg-gifforge-prod` through the `prod` GitHub environment. Run `scripts/setup-azure-oidc.sh --environment prod` first, configure the required production App Attest and external provider secrets in that GitHub environment, and dispatch only with an immutable commit SHA image tag. If prod has legacy suffixed App Attest secrets, recreate their actual values as unsuffixed `GIFFORGE_APP_ATTEST_APP_IDENTIFIER` and `GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM` secrets in the `prod` environment because GitHub secret values cannot be read back. Production deployment forces `providerAdapter=external-http`, disables the demo App Attest bypass, and performs only a `/health` check; generation validation still requires a physical-device App Attest session and the selected provider.
+The `Deploy Prod` workflow deploys to `rg-gifforge-prod` through the `prod` GitHub environment. Run `scripts/setup-azure-oidc.sh --environment prod` first, configure the required production App Attest secrets in that GitHub environment, configure provider API keys in Key Vault, and dispatch only with an immutable commit SHA image tag. If prod has legacy suffixed App Attest secrets, recreate their actual values as unsuffixed `GIFFORGE_APP_ATTEST_APP_IDENTIFIER` and `GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM` secrets in the `prod` environment because GitHub secret values cannot be read back. Production deployment starts the direct video router, disables the demo App Attest bypass, and performs only a `/health` check; generation validation still requires a physical-device App Attest session and the selected provider.
 
 Audit OIDC readiness without mutating Azure or GitHub state:
 

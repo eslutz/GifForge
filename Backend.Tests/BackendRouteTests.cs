@@ -406,13 +406,11 @@ public sealed class BackendRouteTests
   }
 
   [Fact]
-  public async Task HealthEndpointReportsConfiguredExternalProvider()
+  public async Task HealthEndpointReportsRoutedVideoProviderByDefault()
   {
     await using var app = GifForgeBackendApp.Create(args: [
-      "--GIFFORGE_PROVIDER_ADAPTER=external-http",
-      "--GIFFORGE_EXTERNAL_PROVIDER_NAME=test-provider",
-      "--GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL=https://provider.example.test/jobs",
-      "--GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE=https://provider.example.test/jobs/{providerJobId}/result"
+      "--GIFFORGE_FAL_API_KEY=fal-test-key",
+      "--GIFFORGE_LUMA_API_KEY=luma-test-key"
     ]);
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
@@ -421,9 +419,37 @@ public sealed class BackendRouteTests
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     var body = await response.Content.ReadAsStringAsync();
-    Assert.Contains("\"provider\":\"test-provider\"", body);
-    Assert.Contains("\"mode\":\"external\"", body);
+    Assert.Contains("\"provider\":\"routed-video\"", body);
+    Assert.Contains("\"mode\":\"video\"", body);
     Assert.DoesNotContain("\"mode\":\"demo\"", body);
+  }
+
+  [Fact]
+  public async Task HealthEndpointAllowsOnlyConfiguredProvidersByDefault()
+  {
+    await using var app = GifForgeBackendApp.Create(args: [
+      "--GIFFORGE_FAL_API_KEY=fal-test-key"
+    ]);
+    var baseAddress = await BackendRouteTestHost.StartAsync(app);
+    using var client = new HttpClient { BaseAddress = baseAddress };
+
+    var response = await client.GetAsync("/health");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var body = await response.Content.ReadAsStringAsync();
+    Assert.Contains("\"provider\":\"routed-video\"", body);
+    Assert.Contains("\"mode\":\"video\"", body);
+  }
+
+  [Fact]
+  public void CreateThrowsWhenEnabledProviderIsMissingApiKey()
+  {
+    var error = Assert.Throws<InvalidOperationException>(() => GifForgeBackendApp.Create(args: [
+      "--GIFFORGE_FAL_ENABLED=true",
+      "--GIFFORGE_LUMA_ENABLED=false"
+    ]));
+
+    Assert.Contains("GIFFORGE_FAL_API_KEY", error.Message);
   }
 
   private static JsonSerializerOptions JsonOptions() =>

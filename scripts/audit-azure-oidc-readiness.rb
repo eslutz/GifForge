@@ -18,13 +18,8 @@ BASE_REQUIRED_SECRETS = %w[
   GIFFORGE_APP_ATTEST_APP_IDENTIFIER
   GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM
 ].freeze
-PROD_REQUIRED_SECRETS = %w[
-  GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL
-  GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE
-].freeze
-PROD_OPTIONAL_SECRET_WARNINGS = %w[
-  GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION
-].freeze
+PROD_REQUIRED_SECRETS = [].freeze
+PROD_OPTIONAL_SECRET_WARNINGS = [].freeze
 REQUIRED_RESOURCE_GROUP_ROLES = [
   "Contributor",
   "Role Based Access Control Administrator"
@@ -235,7 +230,7 @@ if secret_output
   PROD_OPTIONAL_SECRET_WARNINGS.each do |name|
     next unless options[:environment] == "prod"
 
-    add_check(evidence, "github.optionalSecret.#{name}", secret_names.include?(name) ? "pass" : "warn", "Required only when the provider gateway uses Authorization.")
+    add_check(evidence, "github.optionalSecret.#{name}", secret_names.include?(name) ? "pass" : "warn")
   end
 else
   add_check(evidence, "github.secrets", "fail", secret_error)

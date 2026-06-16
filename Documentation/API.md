@@ -12,7 +12,7 @@ Returns backend health and active provider mode for Container Apps probes.
 }
 ```
 
-`mode` is `demo` for the built-in fake provider, `external` when `GIFFORGE_PROVIDER_ADAPTER=external-http` is active, and `video` when the direct fal.ai/Luma video router is active.
+Deployed environments use the direct video router and report `provider=routed-video`, `mode=video`. Tests may inject the fake provider, which reports `mode=demo`.
 
 ## POST `/v1/app-attest/challenges`
 
@@ -136,7 +136,7 @@ Failed jobs can return `"retryAvailable": true`, `"retryReason": "provider_faile
 
 ## GET `/v1/generations/:jobId/result`
 
-Returns a temporary generated motion asset. The demo provider returns a frame sequence JSON payload:
+Returns a temporary generated motion asset. Real provider-backed jobs return MP4 assets from GifForge-controlled storage. Tests may inject the demo provider, which returns a frame sequence JSON payload:
 
 ```json
 {
@@ -156,30 +156,34 @@ Returns a temporary generated motion asset. The demo provider returns a frame se
 }
 ```
 
-Real provider adapters can return either a frame sequence JSON payload or a direct `video/mp4` payload from the result URL. The iOS app converts either result type into frames, renders captions locally, and writes the final GIF before Messages insertion.
+The iOS app converts downloaded MP4 videos into frames, renders captions locally, and writes the final GIF before Messages insertion.
 
 ## Direct Video Provider Router
 
-Set `GIFFORGE_PROVIDER_ADAPTER=video` or `GIFFORGE_PROVIDER_ADAPTER=fal-luma` to enable the built-in provider abstraction. The router classifies each request:
+The backend always starts the direct provider router. The router classifies each request:
 
 - prompt only -> text-to-video
 - still image -> image-to-video
 - GIF, MP4, MOV, or Live Photo paired MOV -> video-to-video
 
-Enabled provider/model candidates are ordered by configured estimated cost. fal.ai Wan 2.2 defaults are cheaper and selected first. Luma Ray 3.2 defaults are configured as retry candidates. The backend submits to the cheapest compatible candidate for the request. If the provider fails, the job response can include retry metadata; the iOS client keeps the original request media locally, asks the user, and only resubmits with `retryOfJobId` after confirmation. The retry submission skips providers/models already attempted for the previous job.
+Enabled provider/model candidates are ordered by effective estimated cost. Provider/model identity lives in the backend C# model catalog; App Configuration can enable providers and override model costs, but it must not define provider model IDs. When an enabled flag is omitted, a provider is enabled only if its API key is configured; explicitly enabling a provider without its API key fails startup. fal.ai Wan 2.2 defaults are cheaper and selected first. Luma Ray 3.2 defaults are configured as retry candidates. The backend submits to the cheapest compatible candidate for the request. If the provider fails, the job response can include retry metadata; the iOS client keeps the original request media locally, asks the user, and only resubmits with `retryOfJobId` after confirmation. The retry submission skips providers/models already attempted for the previous job.
 
 Provider configuration should come from Azure App Configuration, with API keys stored in Azure Key Vault and referenced by App Configuration or loaded directly from Key Vault. Supported settings include:
 
+- `GIFFORGE_FAL_ENABLED`
 - `GIFFORGE_FAL_API_KEY`
 - `GIFFORGE_FAL_SUBMIT_URL_TEMPLATE`
 - `GIFFORGE_FAL_RESULT_URL_TEMPLATE`
-- `GIFFORGE_FAL_TEXT_MODEL`, `GIFFORGE_FAL_IMAGE_MODEL`, `GIFFORGE_FAL_VIDEO_MODEL`
-- `GIFFORGE_FAL_TEXT_MODEL_COST_USD`, `GIFFORGE_FAL_IMAGE_MODEL_COST_USD`, `GIFFORGE_FAL_VIDEO_MODEL_COST_USD`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_TEXT_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_IMAGE_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_VIDEO_TO_VIDEO`
+- `GIFFORGE_LUMA_ENABLED`
 - `GIFFORGE_LUMA_API_KEY`
 - `GIFFORGE_LUMA_SUBMIT_URL_TEMPLATE`
 - `GIFFORGE_LUMA_RESULT_URL_TEMPLATE`
-- `GIFFORGE_LUMA_TEXT_MODEL`, `GIFFORGE_LUMA_IMAGE_MODEL`, `GIFFORGE_LUMA_VIDEO_MODEL`
-- `GIFFORGE_LUMA_TEXT_MODEL_COST_USD`, `GIFFORGE_LUMA_IMAGE_MODEL_COST_USD`, `GIFFORGE_LUMA_VIDEO_MODEL_COST_USD`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_TEXT_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_IMAGE_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_VIDEO_TO_VIDEO`
 
 The backend downloads provider result assets and stores generated MP4s in GifForge-controlled storage. The app receives only `/v1/generations/:jobId/result` URLs, never provider URLs.
 
@@ -208,30 +212,4 @@ Successful callback:
 
 The backend validates the provider job id, downloads the asset, stores it in GifForge-controlled result storage, marks the job succeeded, and keeps returning the stable `/v1/generations/:jobId/result` URL to the iOS client. Failed callbacks mark the job failed with generic app-safe copy and retry metadata when another configured provider/model remains available. Unknown in-progress statuses are accepted without changing the job.
 
-## External HTTP Provider Contract
-
-Set `GIFFORGE_PROVIDER_ADAPTER=external-http` to use the provider-neutral HTTP adapter. The backend maps the app request into a sanitized provider payload before posting to `GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL`; that payload includes motion prompt fields, options, optional source-image/source-image-context data, `captionMode`, and `renderCaptionLocally=true`, but omits raw `originalPrompt` and visible caption text.
-
-Submission response:
-
-```json
-{
-  "providerJobId": "provider-specific-job-id"
-}
-```
-
-Submission failure handling:
-
-- Provider `400`, `401`, `403`, and `422` responses are treated as permanent provider rejections. The app-facing generation route returns HTTP `422` with generic safe copy and does not persist or dispatch a generation job.
-- Provider `408`, `429`, `5xx`, network, and timeout-style failures are treated as retryable availability failures. The app-facing generation route returns HTTP `503` with generic safe copy and does not expose provider error bodies.
-
-The backend later downloads the motion asset from `GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`, replacing `{providerJobId}` and `{jobId}` placeholders. The result response must use either:
-
-- `application/vnd.gifforge.frame-sequence+json`
-- `video/mp4`
-
-Result responses of `202` or `204` are treated as retryable not-ready states, so the queue worker can retry instead of storing an empty asset. Result responses with unsupported content types or empty motion assets are treated as permanent provider failures.
-
-Before deploying a real provider gateway, run `scripts/validate-external-provider-contract.rb` with `GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL`, `GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`, and optional `GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION`. The script submits the same sanitized provider payload shape, validates that the submit response returns `providerJobId`, polls the result URL until the configured timeout, and verifies that the result is either non-empty `video/mp4` or a valid `frame-sequence-v1` payload. Use `--print-payload` to inspect the exact JSON without making network calls.
-
-Use `Documentation/PROVIDER_ONBOARDING.md` and `scripts/validate-provider-onboarding.rb` to record the selected provider decision, text/image preflight evidence, privacy/security review, cost/rate-limit review, and production secret plan before switching production to `providerAdapter=external-http`.
+Use `Documentation/PROVIDER_ONBOARDING.md` and `scripts/validate-provider-onboarding.rb` to record the provider decision, text/image/video preflight evidence, privacy/security review, cost/rate-limit review, and production secret plan before enabling paid providers in production.

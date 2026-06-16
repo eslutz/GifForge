@@ -128,7 +128,7 @@ Dispatch inputs:
 
 If the image tag is from a branch that has not merged to `main`, publish it first with the manual `Backend` workflow from that branch.
 
-The workflow deploys the API and worker with `minReplicas=0` and `workerMinReplicas=0`. The API wakes on HTTP traffic, and the worker wakes from the `generation-jobs` queue scaler so the smoke test can still create and process a queued fake-provider generation job.
+The workflow deploys the API and worker with `minReplicas=0` and `workerMinReplicas=0`. The API wakes on HTTP traffic, and the worker wakes from the `generation-jobs` queue scaler when authenticated generation jobs are waiting.
 
 After a successful deployment, capture read-only evidence for the release record:
 
@@ -142,7 +142,7 @@ The collector writes JSON under `Documentation/DeploymentEvidence/` by default. 
 
 ## GitHub Prod Deployment
 
-The `Deploy Prod` workflow is manually dispatched from GitHub Actions. It uses the `prod` GitHub environment, deploys `infra/main.bicep` into `rg-gifforge-prod`, and health-checks `/health`. It intentionally does not run a fake generation smoke test, because production generation requires a real App Attest session and a selected external provider.
+The `Deploy Prod` workflow is manually dispatched from GitHub Actions. It uses the `prod` GitHub environment, deploys `infra/main.bicep` into `rg-gifforge-prod`, and health-checks `/health`. It intentionally does not run a generation smoke test, because production generation requires a real App Attest session and configured provider API keys.
 
 Before dispatching production, configure OIDC with:
 
@@ -160,17 +160,12 @@ Required `prod` GitHub environment secrets:
 - `AZURE_SUBSCRIPTION_ID`
 - `GIFFORGE_APP_ATTEST_APP_IDENTIFIER`
 - `GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM`
-- `GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL`
-- `GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`
 
 If prod has legacy suffixed App Attest secret names, recreate the same actual values under the unsuffixed `GIFFORGE_APP_ATTEST_APP_IDENTIFIER` and `GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM` names in the `prod` environment before dispatching. GitHub secret values cannot be read back, so use the original secure source for those values.
 
-Optional `prod` GitHub environment secrets and variables:
+Provider API keys are not GitHub deployment secrets. Store `GIFFORGE_FAL_API_KEY` and `GIFFORGE_LUMA_API_KEY` in Key Vault, and store non-secret provider enablement/cost values in Azure App Configuration.
 
-- `GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION`: server-side Authorization header for the external provider gateway.
-- `GIFFORGE_EXTERNAL_PROVIDER_NAME`: optional GitHub environment variable for health/status display.
-
-Production dispatch rejects `latest` and requires an immutable 40-character commit SHA image tag. It can deploy with `providerAdapter=external-http` for a gateway provider or `providerAdapter=video`/`fal-luma` for direct fal.ai/Luma routing. Production always uses `appAttestDemoBypassEnabled=false` and the selected `minReplicas`, `workerMinReplicas`, and `maxReplicas` values.
+Production dispatch rejects `latest` and requires an immutable 40-character commit SHA image tag. Production always starts the direct video router, uses `appAttestDemoBypassEnabled=false`, and applies the selected `minReplicas`, `workerMinReplicas`, and `maxReplicas` values.
 
 Before creating production resources, run a subscription-scope what-if with placeholder provider/App Attest values and the intended image tag:
 
@@ -188,11 +183,6 @@ az deployment sub what-if \
     appAttestAppIdentifier=TEAMID.dev.ericslutz.gifforge \
     appAttestRootCertificatePem=placeholder \
     appAttestDemoBypassEnabled=false \
-    providerAdapter=video \
-    externalProviderName=external-http \
-    externalProviderSubmitUrl=https://provider.example.invalid/jobs \
-    externalProviderResultUrlTemplate='https://provider.example.invalid/results/{providerJobId}' \
-    externalProviderAuthorization='Bearer placeholder' \
     minReplicas=0 \
     workerMinReplicas=0 \
     maxReplicas=10
@@ -240,11 +230,6 @@ The API and worker Container Apps receive these environment variables:
 - `GIFFORGE_KEY_VAULT_URI`
 - `AZURE_KEY_VAULT_ENDPOINT`
 - `AZURE_APP_CONFIG_ENDPOINT`
-- `GIFFORGE_PROVIDER_ADAPTER`
-- `GIFFORGE_EXTERNAL_PROVIDER_NAME`
-- `GIFFORGE_EXTERNAL_PROVIDER_SUBMIT_URL`
-- `GIFFORGE_EXTERNAL_PROVIDER_RESULT_URL_TEMPLATE`
-- `GIFFORGE_EXTERNAL_PROVIDER_AUTHORIZATION`
 - `GIFFORGE_GENERATION_JOB_RETENTION_HOURS`
 - `GIFFORGE_GENERATION_MAX_ATTEMPTS`
 - `GIFFORGE_RETENTION_CLEANUP_ENABLED`
@@ -256,20 +241,22 @@ The worker also sets `GIFFORGE_WORKER_ENABLED=true` and processes jobs from the 
 
 The templates set `GIFFORGE_APP_ATTEST_DEMO_BYPASS=false` for deployed environments. The bypass exists only for local development and must not be enabled in nonprod or production. Set `appAttestAppIdentifier` and `appAttestRootCertificatePem` before testing real App Attest enforcement.
 
-Set `providerAdapter=video` or `providerAdapter=fal-luma` to enable direct AI video generation routing. The backend reads provider/model routing settings from Azure App Configuration when `AZURE_APP_CONFIG_ENDPOINT` is present and reads secrets from Key Vault when `AZURE_KEY_VAULT_ENDPOINT` or `GIFFORGE_KEY_VAULT_URI` is present. Use Key Vault for `GIFFORGE_FAL_API_KEY` and `GIFFORGE_LUMA_API_KEY`; do not store provider API keys in parameter files.
+The backend always starts the direct AI video router. It reads provider enablement and model cost overrides from Azure App Configuration when `AZURE_APP_CONFIG_ENDPOINT` is present and reads secrets from Key Vault when `AZURE_KEY_VAULT_ENDPOINT` or `GIFFORGE_KEY_VAULT_URI` is present. Use Key Vault for `GIFFORGE_FAL_API_KEY` and `GIFFORGE_LUMA_API_KEY`; do not store provider API keys in parameter files. If `GIFFORGE_FAL_ENABLED` or `GIFFORGE_LUMA_ENABLED` is omitted, that provider is enabled only when its API key exists. Explicitly setting an enabled flag to `true` without the matching API key fails startup.
 
 Useful App Configuration keys:
 
 - `GIFFORGE_FAL_SUBMIT_URL_TEMPLATE`
 - `GIFFORGE_FAL_RESULT_URL_TEMPLATE`
-- `GIFFORGE_FAL_TEXT_MODEL`, `GIFFORGE_FAL_IMAGE_MODEL`, `GIFFORGE_FAL_VIDEO_MODEL`
-- `GIFFORGE_FAL_TEXT_MODEL_COST_USD`, `GIFFORGE_FAL_IMAGE_MODEL_COST_USD`, `GIFFORGE_FAL_VIDEO_MODEL_COST_USD`
+- `GIFFORGE_FAL_ENABLED`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_TEXT_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_IMAGE_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_FAL_WAN22_VIDEO_TO_VIDEO`
 - `GIFFORGE_LUMA_SUBMIT_URL_TEMPLATE`
 - `GIFFORGE_LUMA_RESULT_URL_TEMPLATE`
-- `GIFFORGE_LUMA_TEXT_MODEL`, `GIFFORGE_LUMA_IMAGE_MODEL`, `GIFFORGE_LUMA_VIDEO_MODEL`
-- `GIFFORGE_LUMA_TEXT_MODEL_COST_USD`, `GIFFORGE_LUMA_IMAGE_MODEL_COST_USD`, `GIFFORGE_LUMA_VIDEO_MODEL_COST_USD`
+- `GIFFORGE_LUMA_ENABLED`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_TEXT_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_IMAGE_TO_VIDEO`
+- `GIFFORGE_MODEL_COST_USD_LUMA_RAY32_VIDEO_TO_VIDEO`
 - `OTEL_EXPORTER_OTLP_ENDPOINT`
 
-Set `providerAdapter=external-http` only after a provider gateway or vendor-specific wrapper implements the documented external HTTP provider contract. Keep `providerAdapter=fake` for local/demo deployments.
-
-Provider credentials should be added as Container Apps secrets through the secure `externalProviderAuthorization` deployment parameter for the legacy external HTTP adapter or added to Key Vault for provider-specific adapter work. Do not store provider secrets in Bicep parameter files.
+Provider/model IDs are code-defined in the backend model catalog and should not be stored in App Configuration. Provider credentials belong in Key Vault. Do not store provider secrets in Bicep parameter files.

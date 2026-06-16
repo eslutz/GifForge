@@ -105,29 +105,17 @@ public static class GifForgeBackendApp
   }
 
   private static IGenerationProvider CreateGenerationProvider(IConfiguration configuration)
-  {
-    var adapter = configuration["GIFFORGE_PROVIDER_ADAPTER"]?.Trim().ToLowerInvariant();
-    return adapter switch
-    {
-      null or "" or "fake" or "fake-frame-sequence" => new FakeFrameSequenceProvider(),
-      "external-http" => new ExternalHttpGenerationProvider(
-        ExternalHttpProviderOptions.FromConfiguration(configuration),
-        new HttpClient()
-      ),
-      "video" or "fal-luma" => CreateRoutedVideoProvider(configuration),
-      _ => throw new InvalidOperationException($"Unsupported generation provider adapter '{adapter}'.")
-    };
-  }
+    => CreateRoutedVideoProvider(configuration);
 
   private static IGenerationProvider CreateRoutedVideoProvider(IConfiguration configuration)
   {
     var providers = new List<IVideoGenerationProvider>();
-    if (VideoProviderConfiguration.IsEnabled(configuration, "FAL", true))
+    if (VideoProviderConfiguration.IsEnabled(configuration, "FAL", "GIFFORGE_FAL_API_KEY"))
     {
       providers.Add(new FalVideoProvider(VideoProviderConfiguration.Fal(configuration), new HttpClient()));
     }
 
-    if (VideoProviderConfiguration.IsEnabled(configuration, "LUMA", true))
+    if (VideoProviderConfiguration.IsEnabled(configuration, "LUMA", "GIFFORGE_LUMA_API_KEY"))
     {
       providers.Add(new LumaVideoProvider(VideoProviderConfiguration.Luma(configuration), new HttpClient()));
     }

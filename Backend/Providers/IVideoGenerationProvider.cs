@@ -30,11 +30,26 @@ public interface IVideoGenerationProvider
 }
 
 public sealed record VideoGenerationModel(
+  string Key,
   string ModelId,
   VideoGenerationCapability Capability,
+  decimal DefaultEstimatedCostUsd,
   decimal EstimatedCostUsd,
   bool Enabled
-);
+)
+{
+  public VideoGenerationModel(
+    string modelId,
+    VideoGenerationCapability capability,
+    decimal estimatedCostUsd,
+    bool enabled
+  )
+    : this(modelId, modelId, capability, estimatedCostUsd, estimatedCostUsd, enabled)
+  {
+  }
+
+  public string CostConfigurationKey => $"GIFFORGE_MODEL_COST_USD_{Key}";
+}
 
 public enum VideoGenerationCapability
 {

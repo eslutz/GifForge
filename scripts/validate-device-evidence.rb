@@ -24,7 +24,7 @@ REQUIRED_TOP_LEVEL_STRINGS = %w[
 ].freeze
 
 SECTION_REQUIRED_STRINGS = {
-  "backend" => %w[url imageTag appAttestMode providerAdapter],
+  "backend" => %w[url imageTag appAttestMode provider providerMode],
   "messagesCompact" => %w[prompt jobId screenshot],
   "messagesExpanded" => %w[prompt captionMode jobId screenshot],
   "resumeAndJobState" => %w[originalJobId reopenedJobId screenshot],
@@ -148,7 +148,8 @@ def evidence_template
       url: "",
       imageTag: "",
       appAttestMode: "",
-      providerAdapter: ""
+      provider: "",
+      providerMode: ""
     },
     containingApp: checklist(REQUIRED_CHECKS.fetch("containingApp")).merge(
       screenshot: "",
@@ -277,8 +278,8 @@ if backend["appAttestMode"] && !%w[development production demo-bypass].include?(
   errors << "$.backend.appAttestMode must be development, production, or demo-bypass."
 end
 
-if backend["providerAdapter"] && backend["providerAdapter"].strip.empty?
-  errors << "$.backend.providerAdapter must name the fake or real provider adapter."
+if backend["providerMode"] && backend["providerMode"].strip.empty?
+  errors << "$.backend.providerMode must match the backend health mode."
 end
 
 if errors.any?
