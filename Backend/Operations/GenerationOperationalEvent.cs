@@ -60,7 +60,7 @@ public sealed class LoggingGenerationEventSink : IGenerationEventSink
   public void Record(GenerationOperationalEvent generationEvent)
   {
     logger.LogInformation(
-      "Generation event {GenerationEventName} for job {GenerationJobId}: environment={GifForgeEnvironment} component={GifForgeComponent} service={GifForgeService} version={GifForgeVersion} provider={Provider} providerJobId={ProviderJobId} mode={GenerationMode} status={GenerationStatus} hasSourceImage={HasSourceImage} hasSourceMedia={HasSourceMedia} captionMode={CaptionMode} resultContentType={ResultContentType} failureKind={FailureKind}",
+      "Generation event {GenerationEventName} for job {GenerationJobId}: GifForgeEnvironment={GifForgeEnvironment} GifForgeComponent={GifForgeComponent} GifForgeService={GifForgeService} GifForgeVersion={GifForgeVersion} Provider={Provider} ProviderJobId={ProviderJobId} GenerationMode={GenerationMode} GenerationStatus={GenerationStatus} HasSourceImage={HasSourceImage} HasSourceMedia={HasSourceMedia} CaptionMode={CaptionMode} ResultContentType={ResultContentType} FailureKind={FailureKind}",
       generationEvent.Name,
       generationEvent.JobId,
       logContext.EnvironmentName,

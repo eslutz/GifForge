@@ -61,6 +61,9 @@ public sealed class BackendStructuredLoggingTests
     AssertStructuredValue(entry.State, "ProviderJobId", "provider-job-1");
     AssertStructuredValue(entry.State, "GenerationMode", "text_to_gif");
     AssertStructuredValue(entry.State, "GenerationStatus", "queued");
+    Assert.Contains("GifForgeEnvironment=prod", entry.FormattedMessage);
+    Assert.Contains("GifForgeComponent=backend-api", entry.FormattedMessage);
+    Assert.Contains("ProviderJobId=provider-job-1", entry.FormattedMessage);
   }
 
   private static void AssertStructuredValue(
@@ -91,13 +94,14 @@ public sealed class BackendStructuredLoggingTests
     {
       var structuredState = state as IReadOnlyList<KeyValuePair<string, object?>>
         ?? throw new InvalidOperationException("Expected structured logger state.");
-      Entries.Add(new CapturedLogEntry(logLevel, structuredState));
+      Entries.Add(new CapturedLogEntry(logLevel, structuredState, formatter(state, exception)));
     }
   }
 
   private sealed record CapturedLogEntry(
     LogLevel LogLevel,
-    IReadOnlyList<KeyValuePair<string, object?>> State
+    IReadOnlyList<KeyValuePair<string, object?>> State,
+    string FormattedMessage
   );
 
   private sealed class NullScope : IDisposable
