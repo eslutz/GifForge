@@ -85,6 +85,21 @@ param retentionCleanupIntervalMinutes int = 360
 @maxValue(1000)
 param retentionCleanupBatchSize int = 100
 
+@description('NCRONTAB schedule for the model cost updater Azure Function.')
+param modelCostUpdaterSchedule string = '0 0 */6 * * *'
+
+@description('Minimum absolute USD delta required before the model cost updater rewrites an App Configuration value.')
+param modelCostUpdaterMinimumDeltaUsd string = '0.000001'
+
+@description('When true, the model cost updater validates provider prices and logs proposed App Configuration changes without writing them.')
+param modelCostUpdaterDryRun bool = true
+
+@description('Azure region for the model cost updater Function App. Use the existing plan region when modelCostUpdaterExistingServerFarmId is set.')
+param modelCostUpdaterLocation string = location
+
+@description('Optional existing App Service plan resource id for the model cost updater Function App. Leave empty to create a dedicated consumption plan.')
+param modelCostUpdaterExistingServerFarmId string = ''
+
 @description('Globally unique storage account name. Lowercase letters and numbers only.')
 @minLength(3)
 @maxLength(24)
@@ -101,6 +116,8 @@ var prefix = 'gifforge-${environmentName}-${nameSeed}'
 var containerAppPrefix = 'gifforge-${environmentName}-${take(nameSeed, 7)}'
 var keyVaultName = take('gkv-${environmentName}-${nameSeed}', 24)
 var appConfigurationName = take('gac-${environmentName}-${nameSeed}', 50)
+var modelCostUpdaterPlanName = '${prefix}-cost-updater-plan'
+var modelCostUpdaterFunctionAppName = take('gfu-${environmentName}-${nameSeed}', 60)
 
 var generationQueueName = 'generation-jobs'
 var providerCallbackQueueName = 'provider-callbacks'
@@ -114,6 +131,7 @@ var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 var storageTableDataContributorRoleId = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 var appConfigurationDataReaderRoleId = '516239f1-63e1-4d78-a4de-a74fb236a071'
+var appConfigurationDataOwnerRoleId = '5ae67dd6-50cb-40e7-96ff-dc2bfa4b606b'
 
 resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: '${prefix}-logs'
@@ -130,6 +148,12 @@ resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
 resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: '${prefix}-id'
   location: location
+  tags: tags
+}
+
+resource modelCostUpdaterIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${prefix}-cost-updater-id'
+  location: modelCostUpdaterLocation
   tags: tags
 }
 
@@ -277,6 +301,100 @@ resource appConfiguration 'Microsoft.AppConfiguration/configurationStores@2023-0
     disableLocalAuth: true
     publicNetworkAccess: 'Enabled'
     enablePurgeProtection: environmentName == 'prod'
+  }
+}
+
+resource modelCostUpdaterPlan 'Microsoft.Web/serverfarms@2023-12-01' = if (empty(modelCostUpdaterExistingServerFarmId)) {
+  name: modelCostUpdaterPlanName
+  location: modelCostUpdaterLocation
+  tags: tags
+  kind: 'functionapp'
+  sku: {
+    name: 'Y1'
+    tier: 'Dynamic'
+  }
+}
+
+resource modelCostUpdaterFunctionApp 'Microsoft.Web/sites@2023-12-01' = {
+  name: modelCostUpdaterFunctionAppName
+  location: modelCostUpdaterLocation
+  tags: tags
+  kind: 'functionapp'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${modelCostUpdaterIdentity.id}': {}
+    }
+  }
+  properties: {
+    serverFarmId: empty(modelCostUpdaterExistingServerFarmId) ? modelCostUpdaterPlan.id : modelCostUpdaterExistingServerFarmId
+    httpsOnly: true
+    siteConfig: {
+      minTlsVersion: '1.2'
+      ftpsState: 'Disabled'
+      appSettings: [
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'dotnet-isolated'
+        }
+        {
+          name: 'WEBSITE_RUN_FROM_PACKAGE'
+          value: '1'
+        }
+        {
+          name: 'AzureWebJobsStorage__accountName'
+          value: storage.name
+        }
+        {
+          name: 'AzureWebJobsStorage__blobServiceUri'
+          value: storage.properties.primaryEndpoints.blob
+        }
+        {
+          name: 'AzureWebJobsStorage__queueServiceUri'
+          value: storage.properties.primaryEndpoints.queue
+        }
+        {
+          name: 'AzureWebJobsStorage__tableServiceUri'
+          value: storage.properties.primaryEndpoints.table
+        }
+        {
+          name: 'AzureWebJobsStorage__credential'
+          value: 'managedidentity'
+        }
+        {
+          name: 'AzureWebJobsStorage__clientId'
+          value: modelCostUpdaterIdentity.properties.clientId
+        }
+        {
+          name: 'AZURE_CLIENT_ID'
+          value: modelCostUpdaterIdentity.properties.clientId
+        }
+        {
+          name: 'AZURE_APP_CONFIG_ENDPOINT'
+          value: appConfiguration.properties.endpoint
+        }
+        {
+          name: 'AZURE_KEY_VAULT_ENDPOINT'
+          value: keyVault.properties.vaultUri
+        }
+        {
+          name: 'GIFFORGE_COST_UPDATE_SCHEDULE'
+          value: modelCostUpdaterSchedule
+        }
+        {
+          name: 'GIFFORGE_COST_UPDATE_MIN_DELTA_USD'
+          value: modelCostUpdaterMinimumDeltaUsd
+        }
+        {
+          name: 'GIFFORGE_COST_UPDATE_DRY_RUN'
+          value: string(modelCostUpdaterDryRun)
+        }
+      ]
+    }
   }
 }
 
@@ -746,10 +864,62 @@ resource appConfigurationRoleAssignment 'Microsoft.Authorization/roleAssignments
   }
 }
 
+resource modelCostUpdaterAppConfigurationRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(appConfiguration.id, modelCostUpdaterIdentity.id, appConfigurationDataOwnerRoleId)
+  scope: appConfiguration
+  properties: {
+    principalId: modelCostUpdaterIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', appConfigurationDataOwnerRoleId)
+  }
+}
+
+resource modelCostUpdaterKeyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, modelCostUpdaterIdentity.id, keyVaultSecretsUserRoleId)
+  scope: keyVault
+  properties: {
+    principalId: modelCostUpdaterIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+  }
+}
+
+resource modelCostUpdaterBlobRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, modelCostUpdaterIdentity.id, storageBlobDataContributorRoleId)
+  scope: storage
+  properties: {
+    principalId: modelCostUpdaterIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+  }
+}
+
+resource modelCostUpdaterQueueRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, modelCostUpdaterIdentity.id, storageQueueDataContributorRoleId)
+  scope: storage
+  properties: {
+    principalId: modelCostUpdaterIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageQueueDataContributorRoleId)
+  }
+}
+
+resource modelCostUpdaterTableRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, modelCostUpdaterIdentity.id, storageTableDataContributorRoleId)
+  scope: storage
+  properties: {
+    principalId: modelCostUpdaterIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageTableDataContributorRoleId)
+  }
+}
+
 output containerAppName string = containerApp.name
 output containerAppFqdn string = containerApp.properties.configuration.ingress.fqdn
 output workerContainerAppName string = workerContainerApp.name
+output modelCostUpdaterFunctionAppName string = modelCostUpdaterFunctionApp.name
 output managedIdentityClientId string = appIdentity.properties.clientId
+output modelCostUpdaterManagedIdentityClientId string = modelCostUpdaterIdentity.properties.clientId
 output storageAccountName string = storage.name
 output keyVaultUri string = keyVault.properties.vaultUri
 output appConfigurationEndpoint string = appConfiguration.properties.endpoint

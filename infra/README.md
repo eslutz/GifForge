@@ -188,7 +188,7 @@ az deployment sub what-if \
     maxReplicas=10
 ```
 
-The production what-if should show creation of `rg-gifforge-prod`, the API and worker Container Apps, managed environment, Key Vault, App Configuration, managed identity, Log Analytics workspace, Storage account, queues, tables, blob containers, lifecycle policy, and role assignments. Do not run the real production deployment until the `prod` GitHub environment has OIDC secrets, production App Attest values, provider configuration, provider API keys in Key Vault, and an immutable GHCR image tag.
+The production what-if should show creation of `rg-gifforge-prod`, the API and worker Container Apps, model cost updater Function App, managed environment, Key Vault, App Configuration, managed identities, Log Analytics workspace, Storage account, queues, tables, blob containers, lifecycle policy, and role assignments. Do not run the real production deployment until the `prod` GitHub environment has OIDC secrets, production App Attest values, provider configuration, provider API keys in Key Vault, and an immutable GHCR image tag.
 
 After production deployment, run:
 
@@ -242,6 +242,18 @@ The worker also sets `GIFFORGE_WORKER_ENABLED=true` and processes jobs from the 
 The templates set `GIFFORGE_APP_ATTEST_DEMO_BYPASS=false` for deployed environments. The bypass exists only for local development and must not be enabled in nonprod or production. Set `appAttestAppIdentifier` and `appAttestRootCertificatePem` before testing real App Attest enforcement.
 
 The backend always starts the direct AI video router. It reads provider enablement and model cost overrides from Azure App Configuration when `AZURE_APP_CONFIG_ENDPOINT` is present and reads secrets from Key Vault when `AZURE_KEY_VAULT_ENDPOINT` or `GIFFORGE_KEY_VAULT_URI` is present. Use Key Vault for `GIFFORGE_FAL_API_KEY` and `GIFFORGE_LUMA_API_KEY`; do not store provider API keys in parameter files. If `GIFFORGE_FAL_ENABLED` or `GIFFORGE_LUMA_ENABLED` is omitted, that provider is enabled only when its API key exists. Explicitly setting an enabled flag to `true` without the matching API key fails startup.
+
+## Model Cost Updater
+
+`CostUpdater/GifForge.CostUpdater.csproj` builds a timer-triggered Azure Functions app that updates provider model cost overrides in App Configuration. It uses the same App Configuration store and Key Vault as the backend but a separate managed identity. The backend identity has App Configuration Data Reader. The updater identity has App Configuration Data Owner so it can write cost keys, Key Vault Secrets User so provider pricing APIs can authenticate with existing provider credentials when required, plus storage data roles required by the Functions timer host because the storage account uses identity-based access instead of shared keys.
+
+The updater owns only known `GIFFORGE_MODEL_COST_USD_*` keys. It reads provider credentials from Key Vault only when a pricing API requires authentication. It does not write provider enablement flags, provider/model ids, submit/result URL templates, provider credentials, Key Vault secrets, or dynamic keys discovered from a provider response. The default schedule is `0 0 */6 * * *`, controlled by the `modelCostUpdaterSchedule` Bicep parameter. Small price movements below `modelCostUpdaterMinimumDeltaUsd` are ignored to avoid noisy writes. `modelCostUpdaterDryRun` defaults to `true`; when enabled, the updater validates provider pricing and logs proposed App Configuration writes without mutating App Configuration.
+
+Provider pricing adapters are code-reviewed registry changes:
+
+- Add a provider by creating one `ProviderPricingSource`, adding explicit `ProviderModelMapping` rows in `ProviderPricingRegistry`, and adding fixture-backed tests for the response or page shape.
+- Remove a provider by removing its mappings from `ProviderPricingRegistry`; existing App Configuration values are left in place unless a separate cleanup script is intentionally reviewed.
+- Prefer official machine-readable pricing APIs. The Luma adapter intentionally uses strict scraping and fails closed when the public page shape is ambiguous.
 
 Useful App Configuration keys:
 

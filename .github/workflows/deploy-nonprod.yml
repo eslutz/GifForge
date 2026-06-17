@@ -74,6 +74,11 @@ jobs:
           az bicep build --file infra/main.bicep
           az bicep build --file infra/main.subscription.bicep
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
       - name: Deploy nonprod infrastructure
         id: deploy
         run: |
@@ -110,13 +115,30 @@ jobs:
             exit 1
           fi
 
+          cost_updater_function_app="$(jq -r '.modelCostUpdaterFunctionAppName.value' /tmp/gifforge-deployment-outputs.json)"
+          if [ -z "$cost_updater_function_app" ] || [ "$cost_updater_function_app" = "null" ]; then
+            echo "Deployment did not return modelCostUpdaterFunctionAppName." >&2
+            cat /tmp/gifforge-deployment-outputs.json >&2
+            exit 1
+          fi
+
           echo "backend_url=https://${fqdn}" >> "$GITHUB_OUTPUT"
+          echo "cost_updater_function_app=${cost_updater_function_app}" >> "$GITHUB_OUTPUT"
           echo "Deployed GifForge API to https://${fqdn}"
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
           GIFFORGE_APP_ATTEST_APP_IDENTIFIER: ${{ secrets.GIFFORGE_APP_ATTEST_APP_IDENTIFIER }}
           GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM }}
           GIFFORGE_APP_STORE_JWS_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFFORGE_APP_STORE_JWS_ROOT_CERTIFICATE_PEM }}
+
+      - name: Publish cost updater
+        run: dotnet publish CostUpdater/GifForge.CostUpdater.csproj --configuration Release --output /tmp/gifforge-cost-updater-publish
+
+      - name: Deploy cost updater function app
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ steps.deploy.outputs.cost_updater_function_app }}
+          package: /tmp/gifforge-cost-updater-publish
 
       - name: Smoke test backend
         run: scripts/smoke-backend.sh
