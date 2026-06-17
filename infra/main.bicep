@@ -122,6 +122,7 @@ var prefix = 'gifforge-${environmentName}-${nameSeed}'
 var containerAppPrefix = 'gifforge-${environmentName}-${take(nameSeed, 7)}'
 var keyVaultName = take('gkv-${environmentName}-${nameSeed}', 24)
 var appConfigurationName = take('gac-${environmentName}-${nameSeed}', 50)
+var appConfigurationSkuName = environmentName == 'prod' ? 'standard' : 'free'
 var modelCostUpdaterPlanName = '${prefix}-cost-updater-plan'
 var modelCostUpdaterFunctionAppName = take('gfu-${environmentName}-${nameSeed}', 60)
 
@@ -310,7 +311,7 @@ resource appConfiguration 'Microsoft.AppConfiguration/configurationStores@2023-0
   location: location
   tags: tags
   sku: {
-    name: 'free'
+    name: appConfigurationSkuName
   }
   properties: {
     disableLocalAuth: true
