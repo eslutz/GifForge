@@ -1,12 +1,13 @@
 # Architecture Overview
 
-GifForge is split into five bounded areas:
+GifForge is split into six bounded areas:
 
 1. Messages extension: prompt entry, image selection, caption editing, progress, preview, and attachment insertion.
 2. Containing app: onboarding, privacy explanation, local history, clear-history control, and development settings.
 3. Shared Swift package: request models, prompt planning facade, backend client, image preprocessing, frame rendering, GIF encoding, and local history.
 4. Backend service: ASP.NET Core Minimal API with Native AOT, App Attest enforcement, request validation, safety checks, provider credential isolation, provider abstraction, durable job state, and temporary result URLs.
-5. Documentation and demo flow: fake provider, local backend, repeatable tests, and roadmap.
+5. Model cost updater: a scheduled Azure Functions app that updates known App Configuration model cost override keys when provider pricing changes.
+6. Documentation and demo flow: fake provider, local backend, repeatable tests, and roadmap.
 
 ## AI Boundary
 
@@ -46,6 +47,8 @@ The runtime backend uses the direct video provider router with `IVideoGeneration
 
 Provider enablement and model costs are configuration-driven. Deployed environments should source non-secret values from Azure App Configuration and provider API keys from Azure Key Vault. The backend uses managed identity through `AZURE_APP_CONFIG_ENDPOINT`, `AZURE_KEY_VAULT_ENDPOINT`/`GIFFORGE_KEY_VAULT_URI`, and `AZURE_CLIENT_ID`. OpenTelemetry traces and metrics are enabled for ASP.NET Core and provider HTTP calls; set `OTEL_EXPORTER_OTLP_ENDPOINT` to export telemetry.
 
+The model cost updater is a separate timer-triggered Azure Functions app. It runs registered provider pricing adapters, normalizes prices into the backend's estimated USD-per-generation semantics, and writes only known `GIFFORGE_MODEL_COST_USD_*` keys in Azure App Configuration when dry-run mode is disabled. Dry-run mode defaults on and logs proposed writes without mutating App Configuration. The updater must not discover provider/model identity from provider APIs, create new routing keys dynamically, write provider enablement flags, or manage provider credentials. Adding a provider requires adding one pricing adapter, adding explicit registry mappings for its backend model cost keys, and adding fixture-backed tests. Removing a provider from the updater means removing its registry mappings; existing App Configuration values are intentionally left untouched until a separate cleanup is reviewed.
+
 For media-backed jobs, the backend does not retain retry material. It validates the uploaded source media for the current provider submission and then persists only sanitized job state with raw `sourceMedia` and `sourceImage` bytes removed. If result retrieval returns a permanent provider failure, the job is marked failed with retry metadata (`retryAvailable`, `retryReason`, and `retryOfJobId`) when another compatible configured provider/model remains. The iOS client keeps the original request media locally in its active-generation snapshot, prompts the user, and resubmits with `retryOfJobId` only after confirmation. The compact attempt state (`AttemptCount`, `AttemptedProviders`, `AttemptedModelIds`, and current `ProviderModelId`) prevents retry loops and is capped by `GIFFORGE_GENERATION_MAX_ATTEMPTS`.
 
 ## Auth, IAP, and Credits
@@ -70,6 +73,7 @@ Production Azure services should be split by responsibility:
 - Azure Table Storage stores durable generation job state and App Attest challenge/session state.
 - Azure SQL stores account, auth, purchase, credit, ledger, and generation ownership state.
 - Azure App Configuration stores provider/model routing settings and feature flags.
+- Azure Functions hosts the scheduled model cost updater that maintains known model cost overrides in App Configuration.
 - Azure Key Vault holds fal.ai, Luma, and other external provider credentials.
 - Managed identity limits secret exposure and grants scoped Azure resource access.
 

@@ -83,6 +83,21 @@ param retentionCleanupIntervalMinutes int = 360
 @maxValue(1000)
 param retentionCleanupBatchSize int = 100
 
+@description('NCRONTAB schedule for the model cost updater Azure Function.')
+param modelCostUpdaterSchedule string = '0 0 */6 * * *'
+
+@description('Minimum absolute USD delta required before the model cost updater rewrites an App Configuration value.')
+param modelCostUpdaterMinimumDeltaUsd string = '0.000001'
+
+@description('When true, the model cost updater validates provider prices and logs proposed App Configuration changes without writing them.')
+param modelCostUpdaterDryRun bool = true
+
+@description('Azure region for the model cost updater Function App. Use the existing plan region when modelCostUpdaterExistingServerFarmId is set.')
+param modelCostUpdaterLocation string = location
+
+@description('Optional existing App Service plan resource id for the model cost updater Function App. Leave empty to create a dedicated consumption plan.')
+param modelCostUpdaterExistingServerFarmId string = ''
+
 @description('Tags applied to all resources.')
 param tags object = {
   app: 'gifforge'
@@ -119,6 +134,11 @@ module backend './main.bicep' = {
     temporaryBlobRetentionDays: temporaryBlobRetentionDays
     retentionCleanupIntervalMinutes: retentionCleanupIntervalMinutes
     retentionCleanupBatchSize: retentionCleanupBatchSize
+    modelCostUpdaterSchedule: modelCostUpdaterSchedule
+    modelCostUpdaterMinimumDeltaUsd: modelCostUpdaterMinimumDeltaUsd
+    modelCostUpdaterDryRun: modelCostUpdaterDryRun
+    modelCostUpdaterLocation: modelCostUpdaterLocation
+    modelCostUpdaterExistingServerFarmId: modelCostUpdaterExistingServerFarmId
     tags: tags
   }
 }
@@ -126,6 +146,7 @@ module backend './main.bicep' = {
 output resourceGroupName string = resourceGroup.name
 output containerAppName string = backend.outputs.containerAppName
 output containerAppFqdn string = backend.outputs.containerAppFqdn
+output modelCostUpdaterFunctionAppName string = backend.outputs.modelCostUpdaterFunctionAppName
 output storageAccountName string = backend.outputs.storageAccountName
 output keyVaultUri string = backend.outputs.keyVaultUri
 output sqlServer string = backend.outputs.sqlServer
