@@ -28,7 +28,7 @@ jobs:
     name: Client
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.3
 
       - name: Install XcodeGen
         run: brew install xcodegen
