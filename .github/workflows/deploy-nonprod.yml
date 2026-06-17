@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: nonprod
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v6
 
       - name: Validate nonprod deployment inputs
         run: |
@@ -63,7 +63,7 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Azure login
-        uses: azure/login@v3.0.0
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
