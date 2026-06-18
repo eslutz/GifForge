@@ -6,6 +6,8 @@ namespace GifForge.Backend.Security;
 
 public sealed class SqlGifForgeAccountStore : IGifForgeAccountStore
 {
+  private const int MaxOpenAttempts = 2;
+  private static readonly TimeSpan OpenRetryDelay = TimeSpan.FromMilliseconds(250);
   private static readonly TokenRequestContext AzureSqlTokenRequestContext = new(
     new[] { "https://database.windows.net/.default" }
   );
@@ -641,12 +643,30 @@ public sealed class SqlGifForgeAccountStore : IGifForgeAccountStore
 
   private async Task<SqlConnection> OpenAsync(CancellationToken cancellationToken)
   {
-    var connection = new SqlConnection(connectionString);
-    var token = await credential.GetTokenAsync(AzureSqlTokenRequestContext, cancellationToken).ConfigureAwait(false);
-    connection.AccessToken = token.Token;
-    await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-    return connection;
+    for (var attempt = 1; ; attempt++)
+    {
+      var connection = new SqlConnection(connectionString);
+      try
+      {
+        var token = await credential.GetTokenAsync(AzureSqlTokenRequestContext, cancellationToken).ConfigureAwait(false);
+        connection.AccessToken = token.Token;
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return connection;
+      }
+      catch (Exception error) when (ShouldRetryOpen(error, attempt))
+      {
+        await connection.DisposeAsync().ConfigureAwait(false);
+        await Task.Delay(OpenRetryDelay, cancellationToken).ConfigureAwait(false);
+      }
+    }
   }
+
+  internal static bool ShouldRetryOpen(Exception error, int attempt) =>
+    attempt < MaxOpenAttempts && IsTransientOpenFailure(error);
+
+  private static bool IsTransientOpenFailure(Exception error) =>
+    error is TimeoutException ||
+    error is SqlException { Number: -2 };
 
   private static GifForgeUser ReadUser(SqlDataReader reader) =>
     new(

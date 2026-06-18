@@ -20,4 +20,14 @@ public sealed class SqlGifForgeAccountStoreTests
     Assert.True(builder.Encrypt);
     Assert.False(builder.TrustServerCertificate);
   }
+
+  [Theory]
+  [InlineData(1, true)]
+  [InlineData(2, false)]
+  public void ShouldRetryOpenRetriesOnlyTheFirstTransientTimeout(int attempt, bool expected)
+  {
+    var shouldRetry = SqlGifForgeAccountStore.ShouldRetryOpen(new TimeoutException(), attempt);
+
+    Assert.Equal(expected, shouldRetry);
+  }
 }
