@@ -1,13 +1,25 @@
+using Azure.Core;
+using Azure.Identity;
 using Microsoft.Data.SqlClient;
 
 namespace GifForge.Backend.Security;
 
 public sealed class SqlGifForgeAccountStore : IGifForgeAccountStore
 {
+  private static readonly TokenRequestContext AzureSqlTokenRequestContext = new(
+    new[] { "https://database.windows.net/.default" }
+  );
+
   private const string Schema = "gifforge";
   private readonly string connectionString;
+  private readonly TokenCredential credential;
 
-  public SqlGifForgeAccountStore(string server, string database)
+  public SqlGifForgeAccountStore(
+    string server,
+    string database,
+    string? managedIdentityClientId = null,
+    TokenCredential? credential = null
+  )
   {
     var builder = new SqlConnectionStringBuilder
     {
@@ -15,10 +27,13 @@ public sealed class SqlGifForgeAccountStore : IGifForgeAccountStore
       InitialCatalog = database,
       Encrypt = true,
       TrustServerCertificate = false,
-      ConnectTimeout = 30,
-      Authentication = SqlAuthenticationMethod.ActiveDirectoryDefault
+      ConnectTimeout = 30
     };
     connectionString = builder.ConnectionString;
+    this.credential = credential ?? new DefaultAzureCredential(new DefaultAzureCredentialOptions
+    {
+      ManagedIdentityClientId = string.IsNullOrWhiteSpace(managedIdentityClientId) ? null : managedIdentityClientId
+    });
   }
 
   public async Task<GifForgeUser> UpsertAppleUserAsync(AppleIdentity identity, CancellationToken cancellationToken)
@@ -627,6 +642,8 @@ public sealed class SqlGifForgeAccountStore : IGifForgeAccountStore
   private async Task<SqlConnection> OpenAsync(CancellationToken cancellationToken)
   {
     var connection = new SqlConnection(connectionString);
+    var token = await credential.GetTokenAsync(AzureSqlTokenRequestContext, cancellationToken).ConfigureAwait(false);
+    connection.AccessToken = token.Token;
     await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
     return connection;
   }

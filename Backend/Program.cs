@@ -351,8 +351,9 @@ public static class GifForgeBackendApp
   {
     var sqlServer = configuration["GIFFORGE_SQL_SERVER"];
     var sqlDatabase = configuration["GIFFORGE_SQL_DATABASE"];
+    var managedIdentityClientId = configuration["AZURE_CLIENT_ID"];
     return !string.IsNullOrWhiteSpace(sqlServer) && !string.IsNullOrWhiteSpace(sqlDatabase)
-      ? new SqlGifForgeAccountStore(sqlServer, sqlDatabase)
+      ? new SqlGifForgeAccountStore(sqlServer, sqlDatabase, managedIdentityClientId)
       : new MemoryGifForgeAccountStore();
   }
 
