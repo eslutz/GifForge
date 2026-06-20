@@ -60,6 +60,29 @@ def write_png_from_source(source, output, width, height)
   end
 end
 
+def write_compact_messages_icon(source, output, size)
+  source_width, source_height = image_size(source)
+  crop_size = (source_width * 0.61).round
+  crop_size = [crop_size, source_width, source_height].min
+
+  FileUtils.mkdir_p(File.dirname(output))
+
+  Tempfile.create(["gifforge-compact-messages-icon", ".png"]) do |cropped|
+    cropped.close
+    run_sips!(
+      "-c", crop_size.to_s, crop_size.to_s,
+      source,
+      "-o", cropped.path
+    )
+    run_sips!(
+      "-s", "format", "png",
+      "-z", size.to_s, size.to_s,
+      cropped.path,
+      "-o", output
+    )
+  end
+end
+
 unless File.file?(SOURCE_ICON)
   raise "Missing source icon at #{SOURCE_ICON}"
 end
@@ -68,10 +91,10 @@ FileUtils.mkdir_p(APP_ICON)
 FileUtils.mkdir_p(MESSAGES_ICON)
 
 write_png_from_source(SOURCE_ICON, File.join(APP_ICON, "gifforge-app-icon-1024.png"), 1024, 1024)
+write_compact_messages_icon(SOURCE_ICON, File.join(MESSAGES_ICON, "gifforge-messages-58.png"), 58)
+write_compact_messages_icon(SOURCE_ICON, File.join(MESSAGES_ICON, "gifforge-messages-87.png"), 87)
 
 {
-  "gifforge-messages-58.png" => [58, 58],
-  "gifforge-messages-87.png" => [87, 87],
   "gifforge-messages-120x90.png" => [120, 90],
   "gifforge-messages-180x135.png" => [180, 135],
   "gifforge-messages-134x100.png" => [134, 100],
