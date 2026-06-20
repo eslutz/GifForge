@@ -159,7 +159,6 @@ private struct OverviewView: View {
       .padding(.horizontal, 20)
       .padding(.vertical, 24)
     }
-    .navigationTitle("GifForge")
   }
 }
 
