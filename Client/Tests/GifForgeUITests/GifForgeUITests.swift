@@ -11,13 +11,19 @@ final class GifForgeUITests: XCTestCase {
     app.launch()
 
     XCTAssertTrue(app.tabBars.buttons["GifForge"].waitForExistence(timeout: 5))
-    XCTAssertTrue(app.staticTexts["Generate GIFs from text prompts inside Messages."].exists)
+    XCTAssertTrue(app.staticTexts["Make GIFs for Messages"].exists)
 
     app.tabBars.buttons["History"].tap()
     XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 2))
 
     app.tabBars.buttons["Settings"].tap()
     XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 2))
+    XCTAssertTrue(app.buttons["Developer"].exists)
+    XCTAssertFalse(app.textFields["Base URL"].exists)
+    XCTAssertFalse(app.switches["Require App Attest"].exists)
+
+    app.buttons["Developer"].tap()
+    XCTAssertTrue(app.navigationBars["Developer"].waitForExistence(timeout: 2))
     XCTAssertTrue(app.textFields["Base URL"].exists)
     XCTAssertTrue(app.switches["Require App Attest"].exists)
   }

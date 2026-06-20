@@ -111,21 +111,53 @@ struct AppShellView: View {
 
 private struct OverviewView: View {
   var body: some View {
-    List {
-      Section {
-        Label("Generate GIFs from text prompts inside Messages.", systemImage: "message")
-        Label("Animate a selected image without broad photo library access.", systemImage: "photo")
-        Label("Review captions locally before inserting the GIF.", systemImage: "text.bubble")
-      }
+    ScrollView {
+      VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 10) {
+          Image(systemName: "sparkles")
+            .font(.system(size: 34, weight: .semibold))
+            .foregroundStyle(.tint)
+            .accessibilityHidden(true)
+          Text("Make GIFs for Messages")
+            .font(.largeTitle.bold())
+          Text("Turn a prompt or selected image into a shareable GIF, review it, then place it into your conversation when it is ready.")
+            .font(.body)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
 
-      Section("Privacy") {
-        Text("Prompts and selected images are sent through your GifForge backend for media generation. Prompt cleanup and caption suggestions run locally when Apple Foundation Models are available.")
-        Text("Generated GIFs and resumable job metadata are stored locally only as needed and can be cleared from this app.")
-      }
+        VStack(spacing: 12) {
+          FeatureCard(
+            title: "Prompt to motion",
+            subtitle: "Describe the moment you want and GifForge prepares an animated result.",
+            systemImage: "text.quote"
+          )
+          FeatureCard(
+            title: "Photo friendly",
+            subtitle: "Animate one selected image without asking for broad photo library access.",
+            systemImage: "photo.on.rectangle"
+          )
+          FeatureCard(
+            title: "Send intentionally",
+            subtitle: "Messages keeps the final send action in your control.",
+            systemImage: "paperplane"
+          )
+        }
 
-      Section("Messages") {
-        Text("Open GifForge from the Messages app drawer, generate a GIF, preview it, then insert it into the compose field. Messages always requires you to send manually.")
+        AppCard {
+          VStack(alignment: .leading, spacing: 8) {
+            Label("Privacy", systemImage: "hand.raised")
+              .font(.headline)
+            Text("Selected media and prompts are used for generation. Generated GIFs and resumable job data stay on this device until you clear them.")
+              .font(.subheadline)
+              .foregroundStyle(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+        }
       }
+      .padding(.horizontal, 20)
+      .padding(.vertical, 24)
     }
     .navigationTitle("GifForge")
   }
@@ -140,10 +172,14 @@ private struct HistoryView: View {
   var body: some View {
     List {
       if history.isEmpty {
-        ContentUnavailableView("No GIFs yet", systemImage: "sparkles")
+        ContentUnavailableView(
+          "No GIFs Yet",
+          systemImage: "sparkles",
+          description: Text("GIFs generated from Messages will appear here.")
+        )
       } else {
         ForEach(history) { item in
-          VStack(alignment: .leading, spacing: 6) {
+          VStack(alignment: .leading, spacing: 10) {
             Text(item.prompt)
               .font(.headline)
               .lineLimit(2)
@@ -155,12 +191,13 @@ private struct HistoryView: View {
             ShareLink(item: item.gifURL) {
               Label("Share GIF", systemImage: "square.and.arrow.up")
             }
-            .font(.caption)
+            .font(.subheadline.weight(.semibold))
           }
-          .padding(.vertical, 4)
+          .padding(.vertical, 6)
         }
       }
     }
+    .listStyle(.insetGrouped)
     .navigationTitle("History")
     .toolbar {
       Button(role: .destructive) {
@@ -176,6 +213,148 @@ private struct HistoryView: View {
     } message: {
       Text("Delete generated GIF history and resumable job metadata from this device.")
     }
+  }
+}
+
+private struct AppCard<Content: View>: View {
+  @ViewBuilder var content: Content
+
+  var body: some View {
+    content
+      .padding(18)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(.background, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+      .overlay {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+          .stroke(.quaternary, lineWidth: 1)
+      }
+  }
+}
+
+private struct FeatureCard: View {
+  var title: String
+  var subtitle: String
+  var systemImage: String
+
+  var body: some View {
+    AppCard {
+      HStack(alignment: .top, spacing: 14) {
+        Image(systemName: systemImage)
+          .font(.title3.weight(.semibold))
+          .foregroundStyle(.tint)
+          .frame(width: 28)
+          .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 4) {
+          Text(title)
+            .font(.headline)
+          Text(subtitle)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
+    }
+  }
+}
+
+private struct PrivacyDetailsView: View {
+  var body: some View {
+    Form {
+      Section("Generation") {
+        Text("Prompts and selected images are sent through the configured GifForge service to create media.")
+        Text("Caption cleanup and prompt planning run locally when Apple Foundation Models are available.")
+      }
+
+      Section("On This Device") {
+        Text("Generated GIFs and resumable job metadata are stored locally only as needed.")
+        Text("Use History to delete generated GIF history and resumable job data from this device.")
+      }
+
+      Section("Messages") {
+        Text("GifForge inserts a preview into Messages. You choose when to send it.")
+      }
+    }
+    .formStyle(.grouped)
+    .navigationTitle("Data Handling")
+    .navigationBarTitleDisplayMode(.inline)
+  }
+}
+
+private struct DeveloperSettingsView: View {
+  @Binding var backendBaseURL: String
+  @Binding var backendRequiresAppAttest: Bool
+
+  var userID: String?
+  var appAccountToken: UUID?
+  var accountKind: String?
+  var recoveryProvider: String?
+  var creditBalance: BackendCreditBalance?
+  var settingsMessage: String?
+  var isPreparingAppAttest: Bool
+  var appAttestSessionIsReady: Bool
+  var refreshAppAttestSession: () -> Void
+
+  var body: some View {
+    Form {
+      Section("Build") {
+        LabeledContent("Version", value: "\(Self.appVersion) (\(Self.buildNumber))")
+        LabeledContent("Bundle", value: Self.bundleIdentifier)
+      }
+
+      Section("Account State") {
+        LabeledContent("User", value: userID ?? "Not created")
+        LabeledContent("Kind", value: accountKind ?? "Unknown")
+        LabeledContent("Recovery", value: recoveryProvider ?? "None")
+        LabeledContent("App Account Token", value: appAccountToken?.uuidString ?? "Unavailable")
+        if let creditBalance {
+          LabeledContent("Available Credits", value: "\(creditBalance.availableCredits)")
+          LabeledContent("Reserved Credits", value: "\(creditBalance.reservedCredits)")
+        }
+      }
+
+      Section("Backend") {
+        TextField("Base URL", text: $backendBaseURL)
+          .textInputAutocapitalization(.never)
+          .textContentType(.URL)
+          .keyboardType(.URL)
+          .autocorrectionDisabled()
+        Toggle("Require App Attest", isOn: $backendRequiresAppAttest)
+        LabeledContent(
+          "App Attest Session",
+          value: appAttestSessionIsReady ? "Ready" : "Not prepared"
+        )
+        if backendRequiresAppAttest {
+          Button {
+            refreshAppAttestSession()
+          } label: {
+            Label("Refresh App Attest Session", systemImage: "checkmark.shield")
+          }
+          .disabled(isPreparingAppAttest)
+        }
+      }
+
+      Section("Diagnostics") {
+        LabeledContent("Latest Message", value: settingsMessage ?? "None")
+        Text("Run the local backend with dotnet run from the Backend project. Use your Mac LAN IP for device testing.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .formStyle(.grouped)
+    .navigationTitle("Developer")
+    .navigationBarTitleDisplayMode(.inline)
+  }
+
+  private static var appVersion: String {
+    Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
+  }
+
+  private static var buildNumber: String {
+    Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"
+  }
+
+  private static var bundleIdentifier: String {
+    Bundle.main.bundleIdentifier ?? "Unknown"
   }
 }
 
@@ -205,13 +384,10 @@ private struct SettingsView: View {
   var body: some View {
     Form {
       Section("Account") {
-        if let userID {
-          LabeledContent("User", value: userID)
-            .font(.caption)
+        if userID != nil {
           LabeledContent("Account", value: accountKind == "appleLinked" ? "Recovery enabled" : "Local")
           if let creditBalance {
             LabeledContent("Available Credits", value: "\(creditBalance.availableCredits)")
-            LabeledContent("Reserved", value: "\(creditBalance.reservedCredits)")
           }
           Button {
             refreshAccount()
@@ -235,8 +411,13 @@ private struct SettingsView: View {
           } label: {
             Label("Start New Local Account", systemImage: "rectangle.portrait.and.arrow.right")
           }
+          .accessibilityHint("Clears this device's local GifForge account and creates a new one.")
         } else {
-          ProgressView()
+          HStack {
+            ProgressView()
+            Text("Preparing account")
+              .foregroundStyle(.secondary)
+          }
         }
 
         if let settingsMessage {
@@ -249,7 +430,7 @@ private struct SettingsView: View {
       if userID != nil {
         Section("Account Recovery") {
           LabeledContent("Apple", value: recoveryProvider == "apple" ? "Enabled" : "Not enabled")
-          Text("Sign in with Apple is optional. Enable it to recover your credits after reinstalling GifForge or moving to another device.")
+          Text("Sign in with Apple is optional. Enable it to recover credits after reinstalling GifForge or moving to another device.")
             .font(.caption)
             .foregroundStyle(.secondary)
           if recoveryProvider != "apple" {
@@ -294,25 +475,35 @@ private struct SettingsView: View {
       }
       #endif
 
-      Section("Backend") {
-        TextField("Base URL", text: $backendBaseURL)
-          .textInputAutocapitalization(.never)
-          .keyboardType(.URL)
-        Toggle("Require App Attest", isOn: $backendRequiresAppAttest)
-        if backendRequiresAppAttest {
-          Button {
-            prepareAppAttestSession()
-          } label: {
-            Label("Refresh App Attest Session", systemImage: "checkmark.shield")
-          }
-          .disabled(isPreparingAppAttest)
+      Section("Privacy") {
+        NavigationLink {
+          PrivacyDetailsView()
+        } label: {
+          Label("Data Handling", systemImage: "hand.raised")
         }
       }
 
-      Section("Development") {
-        Text("Run the local backend with dotnet run from the Backend project. Use your Mac LAN IP for device testing.")
+      Section("Developer") {
+        NavigationLink {
+          DeveloperSettingsView(
+            backendBaseURL: $backendBaseURL,
+            backendRequiresAppAttest: $backendRequiresAppAttest,
+            userID: userID,
+            appAccountToken: appAccountToken,
+            accountKind: accountKind,
+            recoveryProvider: recoveryProvider,
+            creditBalance: creditBalance,
+            settingsMessage: settingsMessage,
+            isPreparingAppAttest: isPreparingAppAttest,
+            appAttestSessionIsReady: sharedAppAttestSessionStore.loadValidToken() != nil,
+            refreshAppAttestSession: prepareAppAttestSession
+          )
+        } label: {
+          Label("Developer", systemImage: "hammer")
+        }
       }
     }
+    .formStyle(.grouped)
     .navigationTitle("Settings")
     .task {
       await restoreOrCreateAccount()
