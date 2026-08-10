@@ -8,6 +8,7 @@ public sealed record BackendStorageOptions(
   string AppAttestStateTableName,
   string GenerationQueueName,
   string ResultsContainerName,
+  string ControlContainerName,
   string? ManagedIdentityClientId
 )
 {
@@ -20,6 +21,7 @@ public sealed record BackendStorageOptions(
       configuration["GIFFORGE_APP_ATTEST_STATE_TABLE_NAME"] ?? "AppAttestState",
       configuration["GIFFORGE_GENERATION_QUEUE_NAME"] ?? "generation-jobs",
       configuration["GIFFORGE_RESULTS_CONTAINER_NAME"] ?? "provider-results",
+      configuration["GIFFORGE_CONTROL_CONTAINER_NAME"] ?? "backend-control",
       EmptyAsNull(configuration["AZURE_CLIENT_ID"])
     );
 

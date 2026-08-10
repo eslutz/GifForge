@@ -20,7 +20,6 @@ env:
   RESOURCE_GROUP_NAME: rg-gifforge-nonprod
   SHARED_OBSERVABILITY_RESOURCE_GROUP_NAME: rg-gifforge-shared
   SHARED_LOG_ANALYTICS_WORKSPACE_NAME: gifforge-shared-logs
-  MODEL_COST_UPDATER_LOCATION: eastus2
   SQL_SERVER: ericslutz-dev-db.database.windows.net
   SQL_DATABASE: ericslutz.dev.db
 
@@ -101,13 +100,6 @@ jobs:
           app_attest_app_identifier="${GIFFORGE_APP_ATTEST_APP_IDENTIFIER:-}"
           app_attest_root_certificate_pem="${GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM:-}"
           app_store_jws_root_certificate_pem="${GIFFORGE_APP_STORE_JWS_ROOT_CERTIFICATE_PEM:-}"
-          cost_updater_existing_server_farm_id="$(
-            az functionapp list \
-              --resource-group "${RESOURCE_GROUP_NAME}" \
-              --query "[?starts_with(name, 'gfu-nonprod-')].serverFarmId | [0]" \
-              --output tsv
-          )"
-
           az deployment group create \
             --name "gifforge-nonprod-${GITHUB_RUN_ID}" \
             --resource-group "${RESOURCE_GROUP_NAME}" \
@@ -120,8 +112,6 @@ jobs:
               sqlDatabase="${SQL_DATABASE}" \
               logAnalyticsWorkspaceName="${SHARED_LOG_ANALYTICS_WORKSPACE_NAME}" \
               logAnalyticsWorkspaceResourceGroupName="${SHARED_OBSERVABILITY_RESOURCE_GROUP_NAME}" \
-              modelCostUpdaterLocation="${MODEL_COST_UPDATER_LOCATION}" \
-              modelCostUpdaterExistingServerFarmId="${cost_updater_existing_server_farm_id}" \
               appStoreJwsRootCertificatePem="$app_store_jws_root_certificate_pem" \
               appAttestAppIdentifier="$app_attest_app_identifier" \
               appAttestRootCertificatePem="$app_attest_root_certificate_pem" \
@@ -138,30 +128,13 @@ jobs:
             exit 1
           fi
 
-          cost_updater_function_app="$(jq -r '.modelCostUpdaterFunctionAppName.value' /tmp/gifforge-deployment-outputs.json)"
-          if [ -z "$cost_updater_function_app" ] || [ "$cost_updater_function_app" = "null" ]; then
-            echo "Deployment did not return modelCostUpdaterFunctionAppName." >&2
-            cat /tmp/gifforge-deployment-outputs.json >&2
-            exit 1
-          fi
-
           echo "backend_url=https://${fqdn}" >> "$GITHUB_OUTPUT"
-          echo "cost_updater_function_app=${cost_updater_function_app}" >> "$GITHUB_OUTPUT"
           echo "Deployed GifForge API to https://${fqdn}"
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
           GIFFORGE_APP_ATTEST_APP_IDENTIFIER: ${{ vars.GIFFORGE_APP_ATTEST_APP_IDENTIFIER }}
           GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM }}
           GIFFORGE_APP_STORE_JWS_ROOT_CERTIFICATE_PEM: ${{ secrets.GIFFORGE_APP_STORE_JWS_ROOT_CERTIFICATE_PEM }}
-
-      - name: Publish cost updater
-        run: dotnet publish CostUpdater/GifForge.CostUpdater.csproj --configuration Release --output /tmp/gifforge-cost-updater-publish
-
-      - name: Deploy cost updater function app
-        uses: Azure/functions-action@v1
-        with:
-          app-name: ${{ steps.deploy.outputs.cost_updater_function_app }}
-          package: /tmp/gifforge-cost-updater-publish
 
       - name: Smoke test backend
         run: scripts/smoke-backend.sh

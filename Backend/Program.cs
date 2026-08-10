@@ -13,6 +13,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using GifForge.Backend.Configuration;
+using GifForge.Backend.Costs;
 using GifForge.Backend.Jobs;
 using GifForge.Backend.Media;
 using GifForge.Backend.Models;
@@ -49,7 +50,8 @@ public static class GifForgeBackendApp
     string? publicBaseUrl = null,
     IAppAttestStateStore? appAttestStateStore = null,
     IGenerationEventSink? generationEventSink = null,
-    AccountSecurityService? accountSecurity = null
+    AccountSecurityService? accountSecurity = null,
+    IModelCostRefreshAuthorizer? modelCostRefreshAuthorizer = null
   )
   {
     var builder = WebApplication.CreateSlimBuilder(args ?? []);
@@ -62,7 +64,20 @@ public static class GifForgeBackendApp
     builder.Services.AddSingleton(retentionOptions);
     builder.Services.AddSingleton(GenerationRetryOptions.FromConfiguration(builder.Configuration));
     builder.Services.AddSingleton<MediaNormalizationService>();
-    builder.Services.AddSingleton(provider ?? CreateGenerationProvider(builder.Configuration));
+    if (provider is not null)
+    {
+      builder.Services.AddSingleton<IGenerationProvider>(provider);
+    }
+    else
+    {
+      _ = ConfiguredGenerationProvider.CreateRoutedVideoProvider(builder.Configuration);
+      builder.Services.AddSingleton<IGenerationProvider>(serviceProvider =>
+        new ConfiguredGenerationProvider(
+          builder.Configuration,
+          ConfiguredGenerationProvider.CreateRoutedVideoProvider,
+          () => serviceProvider.GetRequiredService<ModelCostRefreshCoordinator>()
+        ));
+    }
     builder.Services.AddSingleton(jobStore ?? CreateJobStore(builder.Configuration, retentionOptions));
     builder.Services.AddSingleton(jobDispatcher ?? CreateJobDispatcher(builder.Configuration));
     if (generationEventSink is null)
@@ -101,6 +116,8 @@ public static class GifForgeBackendApp
     builder.Services.AddSingleton(new BackendOptions(
       publicBaseUrl ?? builder.Configuration["GIFFORGE_PUBLIC_BASE_URL"]
     ));
+    ConfigureModelCostServices(builder);
+    builder.Services.AddSingleton<IModelCostRefreshAuthorizer>(modelCostRefreshAuthorizer ?? new EntraModelCostRefreshAuthorizer(builder.Configuration));
 
     var app = builder.Build();
     if (!string.IsNullOrWhiteSpace(app.Configuration["AZURE_APP_CONFIG_ENDPOINT"]))
@@ -143,6 +160,33 @@ public static class GifForgeBackendApp
 
   private static IGenerationProvider CreateGenerationProvider(IConfiguration configuration)
     => new ConfiguredGenerationProvider(configuration);
+
+  private static void ConfigureModelCostServices(WebApplicationBuilder builder)
+  {
+    if (string.IsNullOrWhiteSpace(builder.Configuration["AZURE_APP_CONFIG_ENDPOINT"]))
+    {
+      builder.Services.AddSingleton<IConfigurationRefresherProvider, NoopConfigurationRefresherProvider>();
+    }
+    builder.Services.AddHttpClient(FalPricingSource.HttpClientName, client => client.BaseAddress = new Uri("https://api.fal.ai/"));
+    builder.Services.AddHttpClient(LumaPricingSource.HttpClientName, client => client.BaseAddress = new Uri("https://lumalabs.ai/"));
+    builder.Services.AddSingleton<ProviderPricingSource, FalPricingSource>();
+    builder.Services.AddSingleton<ProviderPricingSource, LumaPricingSource>();
+    builder.Services.AddSingleton(ProviderPricingRegistry.CreateDefault);
+    builder.Services.AddSingleton<IAppConfigurationCostStore, AzureAppConfigurationCostStore>();
+    builder.Services.AddSingleton<AppConfigurationCostWriter>();
+    builder.Services.AddSingleton<IRefreshLeaseFactory>(serviceProvider => CreateRefreshLeaseFactory(builder.Configuration));
+    builder.Services.AddSingleton(ModelCostCacheOptions.FromConfiguration(builder.Configuration));
+    builder.Services.AddSingleton<ModelCostRefreshCoordinator>();
+  }
+
+  private static IRefreshLeaseFactory CreateRefreshLeaseFactory(IConfiguration configuration)
+  {
+    var storage = BackendStorageOptions.FromConfiguration(configuration);
+    if (!storage.IsConfigured) throw new InvalidOperationException("Model cost refresh requires configured Azure storage.");
+    var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions { ManagedIdentityClientId = storage.ManagedIdentityClientId });
+    var endpoint = new Uri($"https://{storage.StorageAccountName}.blob.core.windows.net");
+    return new AzureBlobRefreshLeaseFactory(new BlobServiceClient(endpoint, credential).GetBlobContainerClient(storage.ControlContainerName));
+  }
 
   private static void ConfigureAzureConfiguration(WebApplicationBuilder builder)
   {
@@ -415,6 +459,47 @@ public static class GifForgeBackendApp
   {
     app.MapGet("/health", (IGenerationProvider provider) =>
       Json(new HealthResponse(true, provider.Name, provider.Mode), GifForgeJsonSerializerContext.Default.HealthResponse));
+
+    app.MapPost("/v1/operations/model-costs/refresh", async (
+      ModelCostRefreshRequest? request,
+      IModelCostRefreshAuthorizer authorizer,
+      IServiceProvider services,
+      HttpContext context
+    ) =>
+    {
+      var authorization = await authorizer.AuthorizeAsync(context, context.RequestAborted);
+      if (authorization == ModelCostRefreshAuthorizationResult.Unauthorized)
+      {
+        return Error(StatusCodes.Status401Unauthorized, "A valid operator identity is required.");
+      }
+      if (authorization == ModelCostRefreshAuthorizationResult.Forbidden)
+      {
+        return Error(StatusCodes.Status403Forbidden, "The operator identity is not authorized to refresh model costs.");
+      }
+
+      try
+      {
+        var coordinator = services.GetRequiredService<ModelCostRefreshCoordinator>();
+        var results = string.IsNullOrWhiteSpace(request?.Provider)
+          ? await coordinator.RefreshAllAsync(context.RequestAborted)
+          : [await coordinator.RefreshProviderAsync(request.Provider, context.RequestAborted)];
+        return Json(
+          new ModelCostRefreshResponse(results.Select(result => new ModelCostRefreshProviderResponse(
+            result.ProviderName,
+            result.Succeeded,
+            result.UsedStaleCache,
+            result.ValuesWritten,
+            result.LastSuccessfulRefreshAtUtc,
+            result.Succeeded ? null : result.ErrorMessage
+          )).ToArray()),
+          GifForgeJsonSerializerContext.Default.ModelCostRefreshResponse
+        );
+      }
+      catch (ArgumentException)
+      {
+        return Error(StatusCodes.Status400BadRequest, "The requested model cost provider is not supported.");
+      }
+    });
 
     app.MapPost("/v1/app-attest/challenges", async (
       IAppAttestService appAttest,
@@ -733,6 +818,23 @@ public static class GifForgeBackendApp
       if (!retryContext.IsValid)
       {
         return Error(StatusCodes.Status409Conflict, retryContext.ErrorMessage ?? "Retry is not available.");
+      }
+
+      if (provider is IModelCostRefreshAwareGenerationProvider costAwareProvider)
+      {
+        try
+        {
+          await costAwareProvider.EnsureModelCostsFreshAsync(
+            request,
+            retryContext.AttemptedProviders,
+            retryContext.AttemptedModelIds,
+            context.RequestAborted
+          );
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+          return Error(StatusCodes.Status422UnprocessableEntity, "Model costs are unavailable; the generation was not submitted.");
+        }
       }
 
       GenerationCreditEstimate creditEstimate;
@@ -1189,10 +1291,23 @@ internal sealed record RetryContext(
 [JsonSerializable(typeof(AppStoreServerNotificationResponse))]
 [JsonSerializable(typeof(SignInWithAppleNotificationRequest))]
 [JsonSerializable(typeof(SignInWithAppleNotificationResponse))]
+[JsonSerializable(typeof(ModelCostRefreshRequest))]
+[JsonSerializable(typeof(ModelCostRefreshResponse))]
+[JsonSerializable(typeof(ModelCostRefreshProviderResponse))]
 internal partial class GifForgeJsonSerializerContext : JsonSerializerContext;
 
 public sealed record HealthResponse(bool Ok, string Provider, string Mode);
 public sealed record ErrorResponse(string Error, string Message);
+public sealed record ModelCostRefreshRequest(string? Provider);
+public sealed record ModelCostRefreshResponse(IReadOnlyList<ModelCostRefreshProviderResponse> Providers);
+public sealed record ModelCostRefreshProviderResponse(
+  string Provider,
+  bool Succeeded,
+  bool UsedStaleCache,
+  int ValuesWritten,
+  DateTimeOffset? LastSuccessfulRefreshAtUtc,
+  string? Error
+);
 
 public sealed record JobSubmissionResponse(
   string JobId,

@@ -1,28 +1,43 @@
 using GifForge.Backend.Configuration;
 using GifForge.Backend.Jobs;
 using GifForge.Backend.Models;
+using GifForge.Backend.Costs;
 using Microsoft.Extensions.Configuration;
 
 namespace GifForge.Backend.Providers;
 
-public sealed class ConfiguredGenerationProvider : IRetryAwareGenerationProvider, IGenerationCreditEstimator
+public sealed class ConfiguredGenerationProvider : IRetryAwareGenerationProvider, IGenerationCreditEstimator, IModelCostRefreshAwareGenerationProvider
 {
   private readonly IConfiguration configuration;
   private readonly Func<IConfiguration, IGenerationProvider> providerFactory;
+  private readonly Func<ModelCostRefreshCoordinator>? costRefreshCoordinatorFactory;
 
   public ConfiguredGenerationProvider(IConfiguration configuration)
-    : this(configuration, CreateRoutedVideoProvider)
+    : this(configuration, CreateRoutedVideoProvider, null)
   {
-    _ = CurrentProvider();
   }
 
   internal ConfiguredGenerationProvider(
     IConfiguration configuration,
-    Func<IConfiguration, IGenerationProvider> providerFactory
+    Func<IConfiguration, IGenerationProvider> providerFactory,
+    Func<ModelCostRefreshCoordinator>? costRefreshCoordinatorFactory = null
   )
   {
     this.configuration = configuration;
     this.providerFactory = providerFactory;
+    this.costRefreshCoordinatorFactory = costRefreshCoordinatorFactory;
+    _ = CurrentProvider();
+  }
+
+  public async Task EnsureModelCostsFreshAsync(
+    GenerationRequest request,
+    IReadOnlySet<string> attemptedProviders,
+    IReadOnlySet<string> attemptedModelIds,
+    CancellationToken cancellationToken
+  )
+  {
+    if (costRefreshCoordinatorFactory is null || CurrentProvider() is not RoutedVideoGenerationProvider routed) return;
+    await costRefreshCoordinatorFactory().EnsureFreshAsync(routed.ProviderNamesFor(request, attemptedProviders, attemptedModelIds), cancellationToken).ConfigureAwait(false);
   }
 
   public string Name => CurrentProvider().Name;
@@ -80,17 +95,17 @@ public sealed class ConfiguredGenerationProvider : IRetryAwareGenerationProvider
   private IGenerationProvider CurrentProvider() =>
     providerFactory(configuration);
 
-  private static IGenerationProvider CreateRoutedVideoProvider(IConfiguration configuration)
+  internal static IGenerationProvider CreateRoutedVideoProvider(IConfiguration configuration)
   {
     var providers = new List<IVideoGenerationProvider>();
     if (VideoProviderConfiguration.IsEnabled(configuration, "FAL", "GIFFORGE_FAL_API_KEY"))
     {
-      providers.Add(new FalVideoProvider(VideoProviderConfiguration.Fal(configuration), new HttpClient()));
+      providers.Add(new FalVideoProvider(VideoProviderConfiguration.Fal(configuration, allowMissingCosts: true), new HttpClient()));
     }
 
     if (VideoProviderConfiguration.IsEnabled(configuration, "LUMA", "GIFFORGE_LUMA_API_KEY"))
     {
-      providers.Add(new LumaVideoProvider(VideoProviderConfiguration.Luma(configuration), new HttpClient()));
+      providers.Add(new LumaVideoProvider(VideoProviderConfiguration.Luma(configuration, allowMissingCosts: true), new HttpClient()));
     }
 
     return new RoutedVideoGenerationProvider(providers);

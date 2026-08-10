@@ -1,4 +1,4 @@
-namespace GifForge.CostUpdater;
+namespace GifForge.Backend.Costs;
 
 public interface ProviderPricingSource
 {

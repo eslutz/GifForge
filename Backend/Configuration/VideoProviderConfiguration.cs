@@ -49,22 +49,22 @@ public static class VideoProviderConfiguration
     )
   ];
 
-  public static HttpVideoGenerationProviderOptions Fal(IConfiguration configuration) =>
+  public static HttpVideoGenerationProviderOptions Fal(IConfiguration configuration, bool allowMissingCosts = false) =>
     new(
       "fal.ai",
       configuration["GIFFORGE_FAL_SUBMIT_URL_TEMPLATE"] ?? "https://queue.fal.run/{modelId}",
       configuration["GIFFORGE_FAL_RESULT_URL_TEMPLATE"] ?? "https://queue.fal.run/{modelId}/requests/{providerJobId}",
       AuthorizationHeader("Key", RequiredSecret(configuration, "GIFFORGE_FAL_API_KEY", "fal.ai")),
-      Models(configuration, FalModels)
+      Models(configuration, FalModels, allowMissingCosts)
     );
 
-  public static HttpVideoGenerationProviderOptions Luma(IConfiguration configuration) =>
+  public static HttpVideoGenerationProviderOptions Luma(IConfiguration configuration, bool allowMissingCosts = false) =>
     new(
       "luma",
       configuration["GIFFORGE_LUMA_SUBMIT_URL_TEMPLATE"] ?? "https://api.lumalabs.ai/dream-machine/v1/generations",
       configuration["GIFFORGE_LUMA_RESULT_URL_TEMPLATE"] ?? "https://api.lumalabs.ai/dream-machine/v1/generations/{providerJobId}",
       AuthorizationHeader("Bearer", RequiredSecret(configuration, "GIFFORGE_LUMA_API_KEY", "luma")),
-      Models(configuration, LumaModels)
+      Models(configuration, LumaModels, allowMissingCosts)
     );
 
   public static bool IsEnabled(IConfiguration configuration, string providerName, string apiKeyName) =>
@@ -74,14 +74,15 @@ public static class VideoProviderConfiguration
 
   private static IReadOnlyList<VideoGenerationModel> Models(
     IConfiguration configuration,
-    IReadOnlyList<ProviderModelDefinition> definitions
+    IReadOnlyList<ProviderModelDefinition> definitions,
+    bool allowMissingCosts
   ) =>
     definitions
       .Select(model => new VideoGenerationModel(
         model.Key,
         model.ModelId,
         model.Capability,
-        RequiredCost(configuration, CostConfigurationKey(model.Key)),
+        RequiredCost(configuration, CostConfigurationKey(model.Key), allowMissingCosts),
         model.Enabled
       ))
       .ToArray();
@@ -89,12 +90,17 @@ public static class VideoProviderConfiguration
   private static string CostConfigurationKey(string modelKey) =>
     $"GIFFORGE_MODEL_COST_USD_{modelKey}";
 
-  private static decimal RequiredCost(IConfiguration configuration, string costKey)
+  private static decimal RequiredCost(IConfiguration configuration, string costKey, bool allowMissingCosts)
   {
     var value = configuration[costKey];
     if (decimal.TryParse(value, out var cost) && cost >= 0)
     {
       return cost;
+    }
+
+    if (allowMissingCosts)
+    {
+      return decimal.MaxValue;
     }
 
     throw new InvalidOperationException(

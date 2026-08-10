@@ -37,6 +37,16 @@ public sealed class RoutedVideoGenerationProvider : IRetryAwareGenerationProvide
 
   public string Mode => "video";
 
+  public IReadOnlySet<string> ProviderNames => providers.Select(provider => provider.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+  public IReadOnlySet<string> ProviderNamesFor(
+    GenerationRequest request,
+    IReadOnlySet<string> attemptedProviders,
+    IReadOnlySet<string> attemptedModelIds
+  ) => CandidateModels(VideoGenerationInputClassifier.RequiredCapability(request), attemptedProviders, attemptedModelIds)
+    .Select(candidate => candidate.Provider.Name)
+    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
   public GenerationCreditEstimate EstimateGenerationCredits(
     GenerationRequest request,
     IReadOnlySet<string> attemptedProviders,

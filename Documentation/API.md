@@ -323,6 +323,12 @@ The backend always starts the direct provider router. The router classifies each
 
 Enabled provider/model candidates are ordered by effective estimated cost. Provider/model identity lives in the backend C# model catalog; App Configuration can enable providers and override model costs, but it must not define provider model IDs. When an enabled flag is omitted, a provider is enabled only if its API key is configured; explicitly enabling a provider without its API key fails startup. fal.ai Wan 2.2 defaults are cheaper and selected first. Luma Ray 3.2 defaults are configured as retry candidates. The backend submits to the cheapest compatible candidate for the request. If the provider fails, the job response can include retry metadata; the iOS client keeps the original request media locally, asks the user, and only resubmits with `retryOfJobId` after confirmation. The retry submission skips providers/models already attempted for the previous job.
 
+Before cost-based model selection, the backend checks each relevant provider's cached cost and UTC refresh timestamp. Freshness defaults to 24 hours and is configurable with `GIFFORGE_MODEL_COST_CACHE_TTL`. A stale provider is refreshed on demand; changed known cost keys are written to App Configuration and the provider timestamp is updated only after the complete provider refresh succeeds. If pricing refresh fails, an existing cached value may be used with a warning; a missing cached value prevents the generation before any paid provider request.
+
+### POST `/v1/operations/model-costs/refresh`
+
+Operations-only endpoint. Requires an Entra ID bearer access token with the `gifforge.model-cost.refresh` application role. Send `{ "provider": "fal.ai" }` to refresh one provider, or omit the body/provider to refresh all providers. Responses contain provider status and sanitized operational metadata only; prices, provider credentials, authorization headers, and secret configuration values are never returned or logged.
+
 Provider configuration should come from Azure App Configuration, with API keys stored in Azure Key Vault and referenced by App Configuration or loaded directly from Key Vault. Supported settings include:
 
 - `GIFFORGE_FAL_ENABLED`

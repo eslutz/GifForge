@@ -32,6 +32,15 @@
     "appStoreJwsRootCertificatePem": {
       "value": ""
     },
+    "modelCostRefreshTenantId": {
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    "modelCostRefreshAudience": {
+      "value": "api://gifforge-model-cost-refresh"
+    },
+    "modelCostRefreshRole": {
+      "value": "gifforge.model-cost.refresh"
+    },
     "appAttestAppIdentifier": {
       "value": "QS3GC3CT43.dev.ericslutz.gifforge,QS3GC3CT43.dev.ericslutz.gifforge.messagesextension"
     },

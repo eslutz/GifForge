@@ -4,6 +4,8 @@ set -euo pipefail
 base_url="${GIFFORGE_BACKEND_URL:-http://127.0.0.1:8787}"
 base_url="${base_url%/}"
 timeout_seconds="${GIFFORGE_SMOKE_TIMEOUT_SECONDS:-60}"
+connect_timeout_seconds="${GIFFORGE_SMOKE_CONNECT_TIMEOUT_SECONDS:-5}"
+request_timeout_seconds="${GIFFORGE_SMOKE_REQUEST_TIMEOUT_SECONDS:-30}"
 use_demo_app_attest="${GIFFORGE_SMOKE_USE_DEMO_APP_ATTEST:-false}"
 expect_app_attest_required="${GIFFORGE_SMOKE_EXPECT_APP_ATTEST_REQUIRED:-false}"
 session_token=""
@@ -17,7 +19,26 @@ curl_request() {
   local method="$1"
   local path="$2"
   local body="${3:-}"
-  local -a args=(-sS -w $'\n%{http_code}' -X "$method" "${base_url}${path}")
+  local -a args=(
+    -sS
+    --connect-timeout "$connect_timeout_seconds"
+    --max-time "$request_timeout_seconds"
+    -w $'\n%{http_code}'
+    -X "$method"
+    "${base_url}${path}"
+  )
+
+  # Only retry the idempotent health check. Retrying generation/auth POSTs could
+  # duplicate a state-changing request after a lost response.
+  if [[ "$method" == "GET" && "$path" == "/health" ]]; then
+    args+=(
+      --retry 5
+      --retry-connrefused
+      --retry-all-errors
+      --retry-delay 2
+      --retry-max-time "$timeout_seconds"
+    )
+  fi
 
   if [[ -n "$session_token" ]]; then
     args+=(-H "Authorization: Bearer ${session_token}")

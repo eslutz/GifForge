@@ -18,7 +18,11 @@ struct MessagesAppView: View {
         expandedBody
       }
     }
-    .padding(12)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    .padding(.horizontal, 16)
+    .padding(.top, 18)
+    .padding(.bottom, 12)
+    .background(Color(.systemBackground))
     .task {
       await model.loadRecent()
     }
@@ -53,112 +57,149 @@ struct MessagesAppView: View {
   }
 
   private var compactBody: some View {
-    VStack(spacing: 10) {
-      HStack {
-        TextField("Describe a GIF", text: $model.prompt)
-          .textFieldStyle(.roundedBorder)
-        photoButton
-        generateButton
-      }
-
-      Picker("Caption", selection: $model.captionMode) {
-        ForEach(CaptionMode.allCases) { mode in
-          Text(mode.displayName).tag(mode)
-        }
-      }
-      .pickerStyle(.segmented)
-
+    VStack(alignment: .leading, spacing: 12) {
       statusRow
 
       if let previewGIFURL = model.previewGIFURL {
-        GIFPreviewView(url: previewGIFURL)
-          .frame(height: 126)
-          .clipShape(RoundedRectangle(cornerRadius: 8))
+        previewSurface(height: 150)
 
         Button {
           insertGIF(previewGIFURL)
         } label: {
-          Label("Insert", systemImage: "paperclip")
+          Label("Insert GIF", systemImage: "arrow.up.message.fill")
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
+        .controlSize(.large)
       } else {
-        recentStrip
-      }
-    }
-  }
+        promptField
 
-  private var expandedBody: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HStack(alignment: .top, spacing: 12) {
-        VStack(alignment: .leading, spacing: 10) {
-          TextEditor(text: $model.prompt)
-            .frame(minHeight: 88)
-            .padding(8)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
-
-          HStack {
-            photoButton
-            Picker("Caption", selection: $model.captionMode) {
-              ForEach(CaptionMode.allCases) { mode in
-                Text(mode.displayName).tag(mode)
-              }
-            }
-            .pickerStyle(.segmented)
-          }
-
-          captionControls
+        HStack(spacing: 10) {
+          photoButton(title: model.hasImage ? "Photo Added" : "Add Photo")
           generateButton
         }
 
-        VStack(spacing: 10) {
-          imagePreview
-          statusRow
+        captionPicker
+        captionControls
+
+        if model.hasImage {
+          selectedImagePreview
+        } else {
+          recentSection
         }
-        .frame(width: 160)
-      }
-
-      if let previewGIFURL = model.previewGIFURL {
-        GIFPreviewView(url: previewGIFURL)
-          .frame(maxHeight: 220)
-          .clipShape(RoundedRectangle(cornerRadius: 8))
-
-        HStack {
-          Button {
-            model.applyCaptionEdit()
-          } label: {
-            Label("Apply Caption", systemImage: "text.bubble")
-          }
-          .buttonStyle(.bordered)
-          .disabled(!model.canApplyCaptionEdit)
-
-          Button {
-            model.generate()
-          } label: {
-            Label("Regenerate", systemImage: "arrow.clockwise")
-          }
-          .buttonStyle(.bordered)
-
-          Button {
-            insertGIF(previewGIFURL)
-          } label: {
-            Label("Insert into Messages", systemImage: "paperclip")
-              .frame(maxWidth: .infinity)
-          }
-          .buttonStyle(.borderedProminent)
-        }
-      } else {
-        recentStrip
       }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
   }
 
-  private var photoButton: some View {
+  private var expandedBody: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 16) {
+        HStack {
+          Text("Create GIF")
+            .font(.title3.weight(.semibold))
+          Spacer()
+          statusRow
+        }
+
+        previewSurface(height: 230)
+
+        VStack(alignment: .leading, spacing: 12) {
+          promptEditor
+          captionPicker
+          captionControls
+
+          HStack(spacing: 10) {
+            photoButton(title: model.hasImage ? "Change Photo" : "Add Photo")
+            generateButton
+          }
+        }
+
+        if let previewGIFURL = model.previewGIFURL {
+          HStack(spacing: 10) {
+            Button {
+              model.applyCaptionEdit()
+            } label: {
+              Label("Apply Caption", systemImage: "text.bubble")
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+            .disabled(!model.canApplyCaptionEdit)
+
+            Button {
+              insertGIF(previewGIFURL)
+            } label: {
+              Label("Insert", systemImage: "arrow.up.message.fill")
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+          }
+        } else {
+          recentSection
+        }
+      }
+    }
+    .scrollDismissesKeyboard(.interactively)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+  }
+
+  private var promptField: some View {
+    TextField("Describe a GIF", text: $model.prompt)
+      .font(.body)
+      .submitLabel(.done)
+      .padding(.horizontal, 14)
+      .frame(height: 50)
+      .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+      .overlay(
+        RoundedRectangle(cornerRadius: 14)
+          .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
+      )
+  }
+
+  private var promptEditor: some View {
+    ZStack(alignment: .topLeading) {
+      RoundedRectangle(cornerRadius: 16)
+        .fill(Color(.secondarySystemBackground))
+      RoundedRectangle(cornerRadius: 16)
+        .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
+
+      if model.prompt.isEmpty {
+        Text("Describe the GIF you want")
+          .foregroundStyle(.secondary)
+          .padding(.horizontal, 16)
+          .padding(.vertical, 14)
+      }
+
+      TextEditor(text: $model.prompt)
+        .font(.body)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
+    }
+    .frame(minHeight: 104)
+  }
+
+  private var captionPicker: some View {
+    Picker("Caption", selection: $model.captionMode) {
+      ForEach(CaptionMode.allCases) { mode in
+        Text(mode.displayName).tag(mode)
+      }
+    }
+    .pickerStyle(.segmented)
+  }
+
+  private func photoButton(title: String) -> some View {
     let hasImage = model.hasImage
     return PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-      Label(hasImage ? "Image" : "Add", systemImage: hasImage ? "photo.fill" : "photo")
+      Label(title, systemImage: hasImage ? "photo.fill" : "photo")
+        .lineLimit(1)
+        .frame(maxWidth: .infinity)
     }
     .buttonStyle(.bordered)
+    .controlSize(.large)
   }
 
   private var generateButton: some View {
@@ -166,8 +207,11 @@ struct MessagesAppView: View {
       model.generate()
     } label: {
       Label("Generate", systemImage: "sparkles")
+        .lineLimit(1)
+        .frame(maxWidth: .infinity)
     }
     .buttonStyle(.borderedProminent)
+    .controlSize(.large)
     .disabled(!model.canGenerate)
   }
 
@@ -177,29 +221,50 @@ struct MessagesAppView: View {
     case .none:
       EmptyView()
     case .userText:
-      TextField("Caption", text: $model.explicitCaption)
-        .textFieldStyle(.roundedBorder)
+      TextField("Caption text", text: $model.explicitCaption)
+        .font(.body)
+        .textFieldStyle(.plain)
+        .padding(.horizontal, 14)
+        .frame(height: 46)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+          RoundedRectangle(cornerRadius: 14)
+            .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
+        )
     case .suggestWithAI:
-      VStack(alignment: .leading, spacing: 8) {
-        HStack {
+      VStack(alignment: .leading, spacing: 10) {
+        HStack(spacing: 10) {
           TextField("Selected caption", text: $model.selectedCaption)
-            .textFieldStyle(.roundedBorder)
+            .font(.body)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 14)
+            .frame(height: 46)
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+            .overlay(
+              RoundedRectangle(cornerRadius: 14)
+                .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
+            )
+
           Button {
             model.requestCaptionSuggestions()
           } label: {
             Label("Suggest", systemImage: "wand.and.stars")
+              .labelStyle(.iconOnly)
+              .frame(width: 46, height: 46)
           }
           .buttonStyle(.bordered)
+          .accessibilityLabel("Suggest caption")
         }
 
         if !model.captionSuggestions.isEmpty {
           ScrollView(.horizontal, showsIndicators: false) {
-            HStack {
+            HStack(spacing: 8) {
               ForEach(model.captionSuggestions) { suggestion in
                 Button(suggestion.text) {
                   model.selectedCaption = suggestion.text
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.small)
               }
             }
           }
@@ -208,52 +273,128 @@ struct MessagesAppView: View {
     }
   }
 
-  private var imagePreview: some View {
-    Group {
-      if let data = model.sourceImageData, let image = UIImage(data: data) {
+  @ViewBuilder
+  private func previewSurface(height: CGFloat) -> some View {
+    ZStack {
+      RoundedRectangle(cornerRadius: 18)
+        .fill(Color(.secondarySystemBackground))
+
+      if let previewGIFURL = model.previewGIFURL {
+        GIFPreviewView(url: previewGIFURL)
+          .clipShape(RoundedRectangle(cornerRadius: 18))
+      } else if let data = model.sourceImageData, let image = UIImage(data: data) {
         Image(uiImage: image)
           .resizable()
           .scaledToFill()
+          .clipShape(RoundedRectangle(cornerRadius: 18))
       } else {
-        ContentUnavailableView("No image", systemImage: "photo")
+        VStack(spacing: 10) {
+          Image(systemName: "sparkles.rectangle.stack")
+            .font(.system(size: 34, weight: .medium))
+            .foregroundStyle(.tint)
+
+          Text("Ready to make a GIF")
+            .font(.headline)
+          Text("Start with a prompt, then add a photo if you want.")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+        }
+        .padding(.horizontal, 24)
       }
     }
-    .frame(width: 160, height: 120)
-    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .frame(maxWidth: .infinity)
+    .frame(height: height)
+    .overlay(alignment: .topTrailing) {
+      if model.hasImage && model.previewGIFURL == nil {
+        Label("Photo", systemImage: "checkmark.circle.fill")
+          .font(.caption.weight(.semibold))
+          .padding(.horizontal, 10)
+          .padding(.vertical, 6)
+          .background(.regularMaterial, in: Capsule())
+          .padding(10)
+      }
+    }
+    .clipShape(RoundedRectangle(cornerRadius: 18))
+  }
+
+  @ViewBuilder
+  private var selectedImagePreview: some View {
+    if let data = model.sourceImageData, let image = UIImage(data: data) {
+      HStack(spacing: 12) {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFill()
+          .frame(width: 58, height: 58)
+          .clipShape(RoundedRectangle(cornerRadius: 12))
+
+        VStack(alignment: .leading, spacing: 3) {
+          Text("Photo added")
+            .font(.subheadline.weight(.semibold))
+          Text("Generate will animate this image.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        Spacer()
+      }
+      .padding(10)
+      .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
+    }
   }
 
   private var statusRow: some View {
-    HStack {
+    HStack(spacing: 6) {
       if model.phase == .planning || model.phase == .submitting || model.phase == .generating || model.phase == .rendering {
         ProgressView()
           .controlSize(.small)
+      } else {
+        Circle()
+          .fill(model.phase == .preview ? Color.green : Color.secondary.opacity(0.45))
+          .frame(width: 7, height: 7)
       }
       Text(model.phase.title)
-        .font(.caption)
+        .font(.caption.weight(.medium))
         .foregroundStyle(.secondary)
-      Spacer()
     }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 6)
+    .background(Color(.secondarySystemBackground), in: Capsule())
   }
 
-  private var recentStrip: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 8) {
-        ForEach(model.recentItems) { item in
-          Button {
-            model.previewGIFURL = item.gifURL
-            model.phase = .preview
-          } label: {
-            VStack(alignment: .leading) {
-              Image(systemName: "film")
-                .font(.title2)
-              Text(item.prompt)
-                .font(.caption2)
-                .lineLimit(2)
-                .frame(width: 82, alignment: .leading)
+  @ViewBuilder
+  private var recentSection: some View {
+    if !model.recentItems.isEmpty {
+      VStack(alignment: .leading, spacing: 8) {
+        Text("Recent")
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.secondary)
+
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 8) {
+            ForEach(model.recentItems) { item in
+              Button {
+                model.previewGIFURL = item.gifURL
+                model.phase = .preview
+              } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                  Image(systemName: "film.stack")
+                    .font(.title3)
+                    .foregroundStyle(.tint)
+                  Text(item.prompt)
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                    .frame(width: 96, alignment: .leading)
+                }
+                .padding(10)
+                .frame(width: 120, height: 86, alignment: .leading)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+              }
+              .buttonStyle(.plain)
             }
-            .frame(width: 96, height: 76)
           }
-          .buttonStyle(.bordered)
         }
       }
     }

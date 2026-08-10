@@ -1,4 +1,4 @@
-namespace GifForge.CostUpdater;
+namespace GifForge.Backend.Costs;
 
 public sealed record ModelCostUpdate(string AppConfigurationKey, decimal CostUsd);
 
@@ -9,9 +9,11 @@ public sealed record ProviderModelMapping(
   string Description
 );
 
-public sealed record CostUpdateSummary(
-  int ProvidersChecked,
-  int ProvidersSucceeded,
-  int ProvidersFailed,
-  int ValuesWritten
+public sealed record ProviderRefreshResult(
+  string ProviderName,
+  bool Succeeded,
+  bool UsedStaleCache,
+  int ValuesWritten,
+  DateTimeOffset? LastSuccessfulRefreshAtUtc,
+  string? ErrorMessage
 );
