@@ -4,9 +4,9 @@ namespace GifForge.Backend.Tests;
 
 internal static class TestGenerationRequests
 {
-  public static GenerationRequest Valid(string prompt = "cat in sunglasses") =>
+  public static GenerationRequest Valid(string prompt = "cat in sunglasses", string? id = null) =>
     new(
-      "96DD3998-C2E1-4C39-B7B1-3559D0D271C8",
+      id ?? Guid.NewGuid().ToString("D").ToUpperInvariant(),
       "text_to_gif",
       prompt,
       prompt,

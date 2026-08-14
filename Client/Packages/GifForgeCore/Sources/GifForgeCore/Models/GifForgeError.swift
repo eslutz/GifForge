@@ -13,6 +13,14 @@ public enum GifForgeError: Error, Equatable, LocalizedError, Sendable {
   case jobTimedOut
   case mediaRenderingFailed(message: String)
   case storageFailed(message: String)
+  case gifTooLarge(byteCount: Int, limit: Int)
+  case sourceMediaTooLarge(byteCount: Int, limit: Int)
+  case accountSessionMissing
+  /// The on-device model refused the prompt on safety grounds. Deliberately
+  /// distinct from every other planning failure: those fall back to the
+  /// deterministic template planner, but a guardrail refusal must not be
+  /// silently routed around — the user needs to actually change the prompt.
+  case promptRejected(explanation: String?)
 
   public var errorDescription: String? {
     switch self {
@@ -40,6 +48,14 @@ public enum GifForgeError: Error, Equatable, LocalizedError, Sendable {
       message
     case let .storageFailed(message):
       message
+    case .gifTooLarge:
+      userFacingMessage
+    case .sourceMediaTooLarge:
+      userFacingMessage
+    case .accountSessionMissing:
+      userFacingMessage
+    case .promptRejected:
+      userFacingMessage
     }
   }
 
@@ -69,6 +85,16 @@ public enum GifForgeError: Error, Equatable, LocalizedError, Sendable {
       message
     case let .storageFailed(message):
       message
+    case .gifTooLarge:
+      "The GIF is too large for Messages. Try a shorter or simpler prompt."
+    case let .sourceMediaTooLarge(_, limit):
+      "That video or GIF is too large to send (limit about \(limit / 1_000_000)MB). Try a shorter clip."
+    case .accountSessionMissing:
+      "Open the GifForge app once to finish setup, then come back to Messages."
+    case let .promptRejected(explanation):
+      explanation?.isEmpty == false
+        ? "That prompt can't be generated: \(explanation!). Try rewording it."
+        : "That prompt can't be generated. Try rewording it."
     }
   }
 }
@@ -101,8 +127,11 @@ private struct BackendErrorMessage {
       return "That request cannot be generated. Try changing the prompt or selected image."
     }
 
-    if !rawMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      return rawMessage
+    // Only surface server-authored one-liners; never dump long or markup-looking
+    // bodies (HTML error pages, stack traces) into a user-facing alert.
+    let trimmed = rawMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !trimmed.isEmpty, trimmed.count <= 160, !trimmed.contains("<") {
+      return trimmed
     }
 
     return "GifForge could not complete that request. Try again."

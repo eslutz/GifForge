@@ -7,8 +7,8 @@ struct JobPollingServiceTests {
   @Test("Retryable failed jobs throw retry-available error")
   func retryableFailureThrowsRetryAvailable() async throws {
     final class MockProtocol: URLProtocol {
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         let response = HTTPURLResponse(
@@ -17,7 +17,7 @@ struct JobPollingServiceTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "jobId": "job-1",
           "status": "failed",
@@ -28,7 +28,7 @@ struct JobPollingServiceTests {
           "retryReason": "provider_failed",
           "retryOfJobId": "job-1"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)

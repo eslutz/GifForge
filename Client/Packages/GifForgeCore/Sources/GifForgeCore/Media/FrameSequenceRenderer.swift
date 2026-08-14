@@ -10,6 +10,7 @@ public struct FrameSequenceRenderer: Sendable {
 
   public func renderFrames(from asset: FrameSequenceAsset, caption: String?) throws -> [GIFFrame] {
     try asset.frames.map { frameSpec in
+      try Task.checkCancellation()
       let baseImage = try makeImage(frameSpec: frameSpec, width: asset.width, height: asset.height)
       let captioned = try captionRenderer.renderCaption(caption, over: baseImage)
       return GIFFrame(image: captioned, duration: frameSpec.duration)

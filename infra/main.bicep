@@ -543,7 +543,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
             {
               type: 'Readiness'
               httpGet: {
-                path: '/health'
+                path: '/health/ready'
                 port: 8080
               }
               initialDelaySeconds: 5
@@ -755,7 +755,7 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
             {
               type: 'Readiness'
               httpGet: {
-                path: '/health'
+                path: '/health/ready'
                 port: 8080
               }
               initialDelaySeconds: 5

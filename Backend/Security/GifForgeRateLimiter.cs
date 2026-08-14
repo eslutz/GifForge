@@ -35,6 +35,7 @@ public sealed class GifForgeRateLimiter
   )
   {
     var now = DateTimeOffset.UtcNow;
+    EvictExpiredBuckets(now);
     var retryAfter = TimeSpan.Zero;
 
     foreach (var key in Keys(context, area, userId))
@@ -87,8 +88,7 @@ public sealed class GifForgeRateLimiter
 
   private static IEnumerable<string> Keys(HttpContext context, string area, string? userId)
   {
-    var remoteAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-    yield return $"{area}:ip:{remoteAddress}";
+    yield return $"{area}:ip:{ClientAddress(context)}";
 
     if (!string.IsNullOrWhiteSpace(userId))
     {
@@ -101,6 +101,45 @@ public sealed class GifForgeRateLimiter
       yield return $"{area}:app-attest:{SecurityTokenHelpers.Sha256Base64Url(appAttestSession)}";
     }
   }
+
+  /// <summary>
+  /// Behind Container Apps ingress the connection address is always the proxy, so
+  /// every client shared one bucket. The ingress appends the real client address as
+  /// the final X-Forwarded-For entry; earlier entries are client-supplied and
+  /// untrusted, so only the last one is used.
+  /// </summary>
+  private static string ClientAddress(HttpContext context)
+  {
+    var forwardedFor = context.Request.Headers["X-Forwarded-For"].ToString();
+    if (!string.IsNullOrWhiteSpace(forwardedFor))
+    {
+      var last = forwardedFor.Split(',')[^1].Trim();
+      if (!string.IsNullOrWhiteSpace(last))
+      {
+        return last;
+      }
+    }
+
+    return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+  }
+
+  private void EvictExpiredBuckets(DateTimeOffset now)
+  {
+    if (buckets.Count <= MaxTrackedBuckets)
+    {
+      return;
+    }
+
+    foreach (var entry in buckets)
+    {
+      if (entry.Value.ResetAt <= now)
+      {
+        buckets.TryRemove(entry.Key, out _);
+      }
+    }
+  }
+
+  private const int MaxTrackedBuckets = 10_000;
 
   private sealed record Bucket(DateTimeOffset ResetAt, int Count);
 }

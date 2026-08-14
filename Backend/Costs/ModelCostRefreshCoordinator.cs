@@ -42,22 +42,56 @@ public sealed class ModelCostRefreshCoordinator(
   {
     foreach (var providerName in providerNames.Distinct(StringComparer.OrdinalIgnoreCase))
     {
+      // This runs on the generation hot path. A short in-process memo avoids
+      // re-reading App Configuration for every request (the nonprod Free SKU has a
+      // 1,000 requests/day quota).
+      if (recentlyVerified.TryGetValue(providerName, out var verifiedAt) &&
+          DateTimeOffset.UtcNow - verifiedAt < VerifiedMemoWindow)
+      {
+        continue;
+      }
+
       var mappings = registry.MappingsFor(providerName);
       if (mappings.Count == 0) throw new InvalidOperationException($"No model cost mappings exist for provider '{providerName}'.");
 
       var timestamp = await ReadTimestampAsync(providerName, cancellationToken);
       var cache = await ReadCostsAsync(mappings, cancellationToken);
-      if (timestamp is not null && DateTimeOffset.UtcNow - timestamp.Value < options.Ttl && cache.Values.All(value => value is not null)) continue;
+      if (timestamp is not null && DateTimeOffset.UtcNow - timestamp.Value < options.Ttl && cache.Values.All(value => value is not null))
+      {
+        recentlyVerified[providerName] = DateTimeOffset.UtcNow;
+        continue;
+      }
 
       var provider = registry.Providers([providerName]).Single();
-      var result = await RefreshProviderUnderLeaseAsync(provider.Source, mappings, force: false, cancellationToken: cancellationToken);
+
+      // Bound the whole refresh (including lease acquisition, which can wait up to
+      // two minutes when another instance holds the lock) so a request thread is
+      // never parked on a lease; stale cached costs are an acceptable fallback.
+      ProviderRefreshResult result;
+      using var refreshTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+      refreshTimeout.CancelAfter(HotPathRefreshBudget);
+      try
+      {
+        result = await RefreshProviderUnderLeaseAsync(provider.Source, mappings, force: false, cancellationToken: refreshTimeout.Token);
+      }
+      catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+      {
+        result = new ProviderRefreshResult(providerName, false, cache.Values.All(value => value is not null), 0, timestamp, "Refresh timed out; another instance may be refreshing.");
+      }
+
       await RefreshConfigurationAsync(cancellationToken);
       if (!result.Succeeded && cache.Values.Any(value => value is null))
       {
         throw new InvalidOperationException($"Model cost refresh failed for provider {providerName} and no complete cached cost is available.");
       }
+
+      recentlyVerified[providerName] = DateTimeOffset.UtcNow;
     }
   }
+
+  private static readonly TimeSpan VerifiedMemoWindow = TimeSpan.FromSeconds(60);
+  private static readonly TimeSpan HotPathRefreshBudget = TimeSpan.FromSeconds(10);
+  private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTimeOffset> recentlyVerified = new(StringComparer.OrdinalIgnoreCase);
 
   private async Task<ProviderRefreshResult> RefreshProviderUnderLeaseAsync(
     ProviderPricingSource source,
@@ -67,7 +101,7 @@ public sealed class ModelCostRefreshCoordinator(
   )
   {
     await using var lease = await leaseFactory.AcquireAsync(source.ProviderName, cancellationToken);
-    using var renewal = new LeaseRenewalScope(lease, logger);
+    await using var renewal = new LeaseRenewalScope(lease, logger);
     var timestamp = await ReadTimestampAsync(source.ProviderName, cancellationToken);
     var cache = await ReadCostsAsync(mappings, cancellationToken);
     if (!force && timestamp is not null && DateTimeOffset.UtcNow - timestamp.Value < options.Ttl && cache.Values.All(value => value is not null))
@@ -125,7 +159,7 @@ public sealed class ModelCostRefreshCoordinator(
   public static string TimestampKey(string providerName) =>
     $"GIFFORGE_MODEL_COST_REFRESHED_AT_UTC_{new string(providerName.Where(char.IsLetterOrDigit).Select(char.ToUpperInvariant).ToArray())}";
 
-  private sealed class LeaseRenewalScope : IDisposable
+  private sealed class LeaseRenewalScope : IAsyncDisposable
   {
     private readonly IRefreshLease lease;
     private readonly ILogger logger;
@@ -153,10 +187,12 @@ public sealed class ModelCostRefreshCoordinator(
       catch (Exception) { logger.LogWarning("Model cost refresh lease renewal failed."); }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-      cancellation.Cancel();
-      try { renewal.GetAwaiter().GetResult(); }
+      // Awaiting the renewal task (instead of blocking on it) keeps the request
+      // thread free; the old sync-over-async Dispose was a starvation vector.
+      await cancellation.CancelAsync();
+      try { await renewal; }
       catch (OperationCanceledException) { }
       cancellation.Dispose();
     }

@@ -15,7 +15,13 @@ public struct BackendAuthTokenSnapshot: Codable, Equatable, Sendable {
   }
 }
 
-public struct KeychainBackendAuthTokenStore: BackendAccessTokenProviding, @unchecked Sendable {
+/// Full-session persistence used by authorizers that refresh tokens themselves.
+public protocol BackendAuthSessionStoring: Sendable {
+  func load() throws -> BackendAuthTokenSnapshot?
+  func save(session: BackendAuthSession) throws
+}
+
+public struct KeychainBackendAuthTokenStore: BackendAccessTokenProviding, BackendAuthSessionStoring, @unchecked Sendable {
   private let service: String
   private let account: String
   private let accessGroup: String?

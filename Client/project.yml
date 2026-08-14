@@ -12,6 +12,8 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: QS3GC3CT43
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: Apple Development
     GENERATE_INFOPLIST_FILE: NO
     CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED: YES
   configs:
@@ -31,6 +33,7 @@ targets:
     resources:
       - App/GifForge/Assets.xcassets
       - App/GifForge/PrivacyInfo.xcprivacy
+      - App/GifForge/Localizable.xcstrings
     dependencies:
       - package: GifForgeCore
       - target: GifForgeMessagesExtension
@@ -43,8 +46,14 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: dev.ericslutz.gifforge
+            CFBundleURLSchemes:
+              - gifforge
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: GifForge connects to your development backend on your local network only when you point it at one in Developer settings.
         UILaunchScreen:
           UIColorName: AccentColor
         UISupportedInterfaceOrientations:
@@ -76,12 +85,12 @@ targets:
     resources:
       - Extensions/GifForgeMessages/Assets.xcassets
       - Extensions/GifForgeMessages/PrivacyInfo.xcprivacy
+      - Extensions/GifForgeMessages/Localizable.xcstrings
     dependencies:
       - package: GifForgeCore
       - sdk: Messages.framework
       - sdk: PhotosUI.framework
       - sdk: UIKit.framework
-      - sdk: WebKit.framework
     info:
       path: Extensions/GifForgeMessages/Info.plist
       properties:
@@ -91,8 +100,10 @@ targets:
         NSExtension:
           NSExtensionPointIdentifier: com.apple.message-payload-provider
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).MessagesViewController
+        ITSAppUsesNonExemptEncryption: false
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: GifForge connects to your development backend on your local network only when you point it at one in Developer settings.
     entitlements:
       path: Extensions/GifForgeMessages/GifForgeMessages.entitlements
       properties:

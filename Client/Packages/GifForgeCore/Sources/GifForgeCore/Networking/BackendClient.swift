@@ -1,6 +1,15 @@
 import Foundation
 
 public struct GifForgeBackendClient: @unchecked Sendable {
+  /// Shared session with explicit timeouts so a stalled backend fails fast inside the
+  /// Messages extension instead of hanging on the platform defaults.
+  public static let defaultSession: URLSession = {
+    let configuration = URLSessionConfiguration.default
+    configuration.timeoutIntervalForRequest = 30
+    configuration.timeoutIntervalForResource = 120
+    return URLSession(configuration: configuration)
+  }()
+
   public var baseURL: URL
   public var session: URLSession
   public var encoder: JSONEncoder
@@ -9,7 +18,7 @@ public struct GifForgeBackendClient: @unchecked Sendable {
 
   public init(
     baseURL: URL,
-    session: URLSession = .shared,
+    session: URLSession = GifForgeBackendClient.defaultSession,
     encoder: JSONEncoder = JSONEncoder(),
     decoder: JSONDecoder = JSONDecoder(),
     authorizer: any BackendRequestAuthorizing = NoopBackendRequestAuthorizer()
@@ -186,6 +195,22 @@ public struct GifForgeBackendClient: @unchecked Sendable {
     for request: URLRequest,
     applyAuthorizer: Bool = true
   ) async throws -> (Data, HTTPURLResponse) {
+    let result = try await performOnce(request: request, applyAuthorizer: applyAuthorizer)
+    guard result.1.statusCode == 401,
+          applyAuthorizer,
+          let recovering = authorizer as? any BackendAuthorizationRecovering,
+          await recovering.recoverAuthorization(afterStatusCode: 401)
+    else {
+      return try validated(result)
+    }
+
+    return try validated(await performOnce(request: request, applyAuthorizer: true))
+  }
+
+  private func performOnce(
+    request: URLRequest,
+    applyAuthorizer: Bool
+  ) async throws -> (Data, HTTPURLResponse) {
     let authorizedRequest = applyAuthorizer
       ? try await authorizer.authorizedRequest(for: request)
       : request
@@ -194,11 +219,33 @@ public struct GifForgeBackendClient: @unchecked Sendable {
       throw GifForgeError.backendRejected(statusCode: -1, message: "Backend did not return an HTTP response.")
     }
 
+    return (data, http)
+  }
+
+  private func validated(_ result: (Data, HTTPURLResponse)) throws -> (Data, HTTPURLResponse) {
+    let (data, http) = result
     guard (200..<300).contains(http.statusCode) else {
-      let message = String(data: data, encoding: .utf8) ?? "Backend request failed."
-      throw GifForgeError.backendRejected(statusCode: http.statusCode, message: message)
+      throw GifForgeError.backendRejected(statusCode: http.statusCode, message: Self.serverMessage(from: data))
     }
 
     return (data, http)
+  }
+
+  /// Extracts a short server-authored message from a structured error body; anything
+  /// else (HTML pages, stack traces, oversized payloads) is dropped rather than shown.
+  static func serverMessage(from data: Data) -> String {
+    struct ErrorBody: Decodable {
+      var message: String?
+      var error: String?
+    }
+
+    if let body = try? JSONDecoder().decode(ErrorBody.self, from: data) {
+      let candidate = body.message ?? body.error ?? ""
+      if !candidate.isEmpty, candidate.count <= 300 {
+        return candidate
+      }
+    }
+
+    return ""
   }
 }

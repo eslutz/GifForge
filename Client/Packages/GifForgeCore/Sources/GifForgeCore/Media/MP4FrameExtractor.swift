@@ -17,7 +17,11 @@ public struct MP4FrameExtractor: Sendable {
     self.captionRenderer = captionRenderer
   }
 
-  public func extractFrames(from url: URL, caption: String?) async throws -> [GIFFrame] {
+  public func extractFrames(
+    from url: URL,
+    caption: String?,
+    onFrame: (@Sendable (_ completed: Int, _ total: Int) -> Void)? = nil
+  ) async throws -> [GIFFrame] {
     let asset = AVURLAsset(url: url)
     let duration = try await asset.load(.duration)
     guard duration.seconds.isFinite, duration.seconds > 0 else {
@@ -37,11 +41,13 @@ public struct MP4FrameExtractor: Sendable {
     var frames: [GIFFrame] = []
 
     for index in 0..<actualFrameCount {
+      try Task.checkCancellation()
       let seconds = min(Double(index) * step, max(duration.seconds - 0.001, 0))
       let time = CMTime(seconds: seconds, preferredTimescale: 600)
       let image = try await generator.image(at: time).image
       let captioned = try captionRenderer.renderCaption(caption, over: image)
       frames.append(GIFFrame(image: captioned, duration: frameDuration))
+      onFrame?(index + 1, actualFrameCount)
     }
 
     return frames

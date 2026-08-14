@@ -95,17 +95,33 @@ public sealed class ConfiguredGenerationProvider : IRetryAwareGenerationProvider
   private IGenerationProvider CurrentProvider() =>
     providerFactory(configuration);
 
+  // The router is rebuilt per access so App Configuration refreshes (enablement,
+  // costs) take effect, but the HttpClients must be shared: a client per call
+  // exhausts sockets and forces a TLS handshake per provider request — including
+  // every /health probe, which reads Name and Mode.
+  private static readonly HttpClient SharedFalHttpClient = CreateSharedHttpClient();
+  private static readonly HttpClient SharedLumaHttpClient = CreateSharedHttpClient();
+
+  private static HttpClient CreateSharedHttpClient() =>
+    new(new SocketsHttpHandler
+    {
+      PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+    })
+    {
+      Timeout = TimeSpan.FromSeconds(100)
+    };
+
   internal static IGenerationProvider CreateRoutedVideoProvider(IConfiguration configuration)
   {
     var providers = new List<IVideoGenerationProvider>();
     if (VideoProviderConfiguration.IsEnabled(configuration, "FAL", "GIFFORGE_FAL_API_KEY"))
     {
-      providers.Add(new FalVideoProvider(VideoProviderConfiguration.Fal(configuration, allowMissingCosts: true), new HttpClient()));
+      providers.Add(new FalVideoProvider(VideoProviderConfiguration.Fal(configuration, allowMissingCosts: true), SharedFalHttpClient));
     }
 
     if (VideoProviderConfiguration.IsEnabled(configuration, "LUMA", "GIFFORGE_LUMA_API_KEY"))
     {
-      providers.Add(new LumaVideoProvider(VideoProviderConfiguration.Luma(configuration, allowMissingCosts: true), new HttpClient()));
+      providers.Add(new LumaVideoProvider(VideoProviderConfiguration.Luma(configuration, allowMissingCosts: true), SharedLumaHttpClient));
     }
 
     return new RoutedVideoGenerationProvider(providers);

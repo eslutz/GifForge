@@ -9,23 +9,33 @@
 /* Begin PBXBuildFile section */
 		014D4BCE6C7F46FF2E17D3D7 /* GifForgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784E5D7791CE915ED22F33A9 /* GifForgeApp.swift */; };
 		0F1B93E7C525F7561DE33BCE /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FFF9E22DE71DC3C508CA154 /* StoreKit.framework */; };
+		12D56D7EE20B561597A7F017 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 6B4E232112D166392340B920 /* Localizable.xcstrings */; };
+		1A66266646B23625ED3FBE36 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B318D721268E071794CC9C21 /* OnboardingView.swift */; };
 		1B0EC92F387D50C9FF3655B5 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA8F5C0A84C0DE87E3ED5099 /* AppShellView.swift */; };
 		1FD189FBEBFBBF8F8E51A0E0 /* GifForgeMessagesExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8B7E952FD3CF2B48BA3CB3A3 /* GifForgeMessagesExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		250A241CEB1FC0EFCC99938F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 84C9A059CB67AB9BF77AE53F /* PrivacyInfo.xcprivacy */; };
 		4A89274F5C48F0AD6FB45829 /* MessagesAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11AE74DAC7B5EC2FBA68D28 /* MessagesAppView.swift */; };
+		5B5F727F4FCD8DD383E201C7 /* AppleIntelligenceStatusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C8A39A4A9A500563279448 /* AppleIntelligenceStatusCard.swift */; };
+		7AB2203C775C79B366FA4463 /* DeveloperSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B8E7531A1804D4135AE6CBE /* DeveloperSettingsView.swift */; };
 		7AF42F78CD88735E3DF6AF6D /* GifForgeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B8EE73DE72948F49A5D4BE /* GifForgeUITests.swift */; };
 		84C0C7578C69863A95AE0D8C /* Messages.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4325B7FDEDECACC925421159 /* Messages.framework */; };
-		86181F133FFC7C1932E19AAC /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CDD94E35258119C52792FDA1 /* WebKit.framework */; };
 		86668966E86B712C3E3F1846 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 5550DA691EA8550FE6650A1B /* PrivacyInfo.xcprivacy */; };
+		87F3525967CFC6AA4EEEE654 /* PrivacyDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C3A7406D7DF86C6ED520C21 /* PrivacyDetailsView.swift */; };
+		9152121262AD47EEF4AFC5E8 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB110703EF442CEBBD19B920 /* HistoryView.swift */; };
+		93776F2CAF2652930C541ED9 /* OverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A387B41CB9CC27EBE9F55B0 /* OverviewView.swift */; };
 		966716DDEB91B58FAFEE61D0 /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A30830D60E1A5C8AEDBDCEC /* MessagesViewController.swift */; };
 		9D8F03F57FA04BAEA68D3452 /* PhotosUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A30BCF1113266EEC8844262A /* PhotosUI.framework */; };
 		9E525A854259F5F082AE9D3C /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C7B2E1BF8B905313548017E /* UIKit.framework */; };
+		A9FB4A105B77BE6131C9DB5B /* Shared.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD5C1BE15D4BA506EA1347F /* Shared.swift */; };
 		AE31A8AF2784075CA85BEFDF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D0FC28C07F9498E4D2199F5A /* Assets.xcassets */; };
 		B06AB39382556CA08CDBF169 /* MessagesComposerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EC4DB99B80A5AEB87BA112 /* MessagesComposerModel.swift */; };
+		B1BB1E3AC431F95ED80A9935 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41CC7FF954A32FE03A5AE75C /* SettingsView.swift */; };
 		D1E7E6547B4855A3BA6026AB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 063078E7D7E20C79C9125DB5 /* Assets.xcassets */; };
 		D61F62D085481E8DED44995D /* GifForgeCore in Frameworks */ = {isa = PBXBuildFile; productRef = FBC4403899DFF5A4EA22439E /* GifForgeCore */; };
 		EEA931525DDEF246CC94A3A0 /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6F7075211571925DF2926A68 /* AuthenticationServices.framework */; };
+		F242DB4198D999EF9031F501 /* Cards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35566042B8CA55809062F489 /* Cards.swift */; };
 		F706DF66D6026E52045AACEB /* GifForgeCore in Frameworks */ = {isa = PBXBuildFile; productRef = 72E3E054C51D5DB747046557 /* GifForgeCore */; };
+		FC186E46E8E8DDDA3C506F2C /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 55434FB46D4FAD2B09D9639D /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,26 +74,36 @@
 		09B8EE73DE72948F49A5D4BE /* GifForgeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GifForgeUITests.swift; sourceTree = "<group>"; };
 		0C7B2E1BF8B905313548017E /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		1AEFCB2A346594292EB2D348 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2B8E7531A1804D4135AE6CBE /* DeveloperSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperSettingsView.swift; sourceTree = "<group>"; };
+		35566042B8CA55809062F489 /* Cards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cards.swift; sourceTree = "<group>"; };
 		3A7196928A7FDB0233DE0F48 /* GifForgeCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GifForgeCore; path = Packages/GifForgeCore; sourceTree = SOURCE_ROOT; };
+		41CC7FF954A32FE03A5AE75C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		4325B7FDEDECACC925421159 /* Messages.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Messages.framework; path = System/Library/Frameworks/Messages.framework; sourceTree = SDKROOT; };
 		4B738D115D0A719C54E303F9 /* GifForgeMessages.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GifForgeMessages.entitlements; sourceTree = "<group>"; };
+		55434FB46D4FAD2B09D9639D /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		5550DA691EA8550FE6650A1B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		56EC4DB99B80A5AEB87BA112 /* MessagesComposerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesComposerModel.swift; sourceTree = "<group>"; };
 		5A30830D60E1A5C8AEDBDCEC /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
 		6A22EA0A62E17348B1175A8C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		6B4E232112D166392340B920 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		6F7075211571925DF2926A68 /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 		73747B72D74EA4BBE67CB2FA /* GifForge.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GifForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		784E5D7791CE915ED22F33A9 /* GifForgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GifForgeApp.swift; sourceTree = "<group>"; };
 		84C9A059CB67AB9BF77AE53F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		8A387B41CB9CC27EBE9F55B0 /* OverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewView.swift; sourceTree = "<group>"; };
 		8B7E952FD3CF2B48BA3CB3A3 /* GifForgeMessagesExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GifForgeMessagesExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FFF9E22DE71DC3C508CA154 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		9C3A7406D7DF86C6ED520C21 /* PrivacyDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyDetailsView.swift; sourceTree = "<group>"; };
 		9E95ECE5A61657C06AFE1DF8 /* GifForgeUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GifForgeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A30BCF1113266EEC8844262A /* PhotosUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PhotosUI.framework; path = System/Library/Frameworks/PhotosUI.framework; sourceTree = SDKROOT; };
 		A6A4641FC46B4465238DA4D2 /* GifForge.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GifForge.entitlements; sourceTree = "<group>"; };
+		B318D721268E071794CC9C21 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		C11AE74DAC7B5EC2FBA68D28 /* MessagesAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesAppView.swift; sourceTree = "<group>"; };
-		CDD94E35258119C52792FDA1 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		CB110703EF442CEBBD19B920 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		D0FC28C07F9498E4D2199F5A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DA8F5C0A84C0DE87E3ED5099 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
+		F3C8A39A4A9A500563279448 /* AppleIntelligenceStatusCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntelligenceStatusCard.swift; sourceTree = "<group>"; };
+		FFD5C1BE15D4BA506EA1347F /* Shared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,7 +125,6 @@
 				84C0C7578C69863A95AE0D8C /* Messages.framework in Frameworks */,
 				9D8F03F57FA04BAEA68D3452 /* PhotosUI.framework in Frameworks */,
 				9E525A854259F5F082AE9D3C /* UIKit.framework in Frameworks */,
-				86181F133FFC7C1932E19AAC /* WebKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -128,7 +147,10 @@
 				A6A4641FC46B4465238DA4D2 /* GifForge.entitlements */,
 				784E5D7791CE915ED22F33A9 /* GifForgeApp.swift */,
 				1AEFCB2A346594292EB2D348 /* Info.plist */,
+				55434FB46D4FAD2B09D9639D /* Localizable.xcstrings */,
 				84C9A059CB67AB9BF77AE53F /* PrivacyInfo.xcprivacy */,
+				FFD5C1BE15D4BA506EA1347F /* Shared.swift */,
+				CB07C61DCA1D7BB1492E9E50 /* Views */,
 			);
 			path = GifForge;
 			sourceTree = "<group>";
@@ -175,6 +197,21 @@
 			path = Extensions;
 			sourceTree = "<group>";
 		};
+		CB07C61DCA1D7BB1492E9E50 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F3C8A39A4A9A500563279448 /* AppleIntelligenceStatusCard.swift */,
+				35566042B8CA55809062F489 /* Cards.swift */,
+				2B8E7531A1804D4135AE6CBE /* DeveloperSettingsView.swift */,
+				CB110703EF442CEBBD19B920 /* HistoryView.swift */,
+				B318D721268E071794CC9C21 /* OnboardingView.swift */,
+				8A387B41CB9CC27EBE9F55B0 /* OverviewView.swift */,
+				9C3A7406D7DF86C6ED520C21 /* PrivacyDetailsView.swift */,
+				41CC7FF954A32FE03A5AE75C /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		D03BD89A49E14CCDA7E76646 = {
 			isa = PBXGroup;
 			children = (
@@ -193,6 +230,7 @@
 				063078E7D7E20C79C9125DB5 /* Assets.xcassets */,
 				4B738D115D0A719C54E303F9 /* GifForgeMessages.entitlements */,
 				6A22EA0A62E17348B1175A8C /* Info.plist */,
+				6B4E232112D166392340B920 /* Localizable.xcstrings */,
 				C11AE74DAC7B5EC2FBA68D28 /* MessagesAppView.swift */,
 				56EC4DB99B80A5AEB87BA112 /* MessagesComposerModel.swift */,
 				5A30830D60E1A5C8AEDBDCEC /* MessagesViewController.swift */,
@@ -209,7 +247,6 @@
 				A30BCF1113266EEC8844262A /* PhotosUI.framework */,
 				8FFF9E22DE71DC3C508CA154 /* StoreKit.framework */,
 				0C7B2E1BF8B905313548017E /* UIKit.framework */,
-				CDD94E35258119C52792FDA1 /* WebKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -288,12 +325,15 @@
 				TargetAttributes = {
 					2459369B1F04AF67CD8B5E55 = {
 						DevelopmentTeam = QS3GC3CT43;
+						ProvisioningStyle = Automatic;
 					};
 					C10565F28340A6E11C2D04E8 = {
 						DevelopmentTeam = QS3GC3CT43;
+						ProvisioningStyle = Automatic;
 					};
 					D6349ABC2EA28FD045312804 = {
 						DevelopmentTeam = QS3GC3CT43;
+						ProvisioningStyle = Automatic;
 						TestTargetID = C10565F28340A6E11C2D04E8;
 					};
 				};
@@ -328,6 +368,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AE31A8AF2784075CA85BEFDF /* Assets.xcassets in Resources */,
+				FC186E46E8E8DDDA3C506F2C /* Localizable.xcstrings in Resources */,
 				250A241CEB1FC0EFCC99938F /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -337,6 +378,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D1E7E6547B4855A3BA6026AB /* Assets.xcassets in Resources */,
+				12D56D7EE20B561597A7F017 /* Localizable.xcstrings in Resources */,
 				86668966E86B712C3E3F1846 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -349,7 +391,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				1B0EC92F387D50C9FF3655B5 /* AppShellView.swift in Sources */,
+				5B5F727F4FCD8DD383E201C7 /* AppleIntelligenceStatusCard.swift in Sources */,
+				F242DB4198D999EF9031F501 /* Cards.swift in Sources */,
+				7AB2203C775C79B366FA4463 /* DeveloperSettingsView.swift in Sources */,
 				014D4BCE6C7F46FF2E17D3D7 /* GifForgeApp.swift in Sources */,
+				9152121262AD47EEF4AFC5E8 /* HistoryView.swift in Sources */,
+				1A66266646B23625ED3FBE36 /* OnboardingView.swift in Sources */,
+				93776F2CAF2652930C541ED9 /* OverviewView.swift in Sources */,
+				87F3525967CFC6AA4EEEE654 /* PrivacyDetailsView.swift in Sources */,
+				B1BB1E3AC431F95ED80A9935 /* SettingsView.swift in Sources */,
+				A9FB4A105B77BE6131C9DB5B /* Shared.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -476,6 +527,8 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -538,6 +591,8 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;

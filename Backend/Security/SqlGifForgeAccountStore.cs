@@ -14,7 +14,7 @@ public sealed class SqlGifForgeAccountStore : IGifForgeAccountStore
 
   private const string Schema = "gifforge";
   private readonly string connectionString;
-  private readonly TokenCredential credential;
+  private readonly TokenCredential? credential;
 
   public SqlGifForgeAccountStore(
     string server,
@@ -36,6 +36,19 @@ public sealed class SqlGifForgeAccountStore : IGifForgeAccountStore
     {
       ManagedIdentityClientId = string.IsNullOrWhiteSpace(managedIdentityClientId) ? null : managedIdentityClientId
     });
+  }
+
+  /// <summary>
+  /// Test-only entry point for integration tests running against a real SQL
+  /// Server (for example a local Docker container) authenticated with a plain
+  /// connection string instead of an Entra managed identity. Never used by
+  /// the production code path — <see cref="OpenAsync"/> only requests an AAD
+  /// token when <see cref="credential"/> is non-null.
+  /// </summary>
+  internal SqlGifForgeAccountStore(string connectionStringForTesting)
+  {
+    connectionString = connectionStringForTesting;
+    credential = null;
   }
 
   public async Task<GifForgeUser> CreateAnonymousUserAsync(CancellationToken cancellationToken)
@@ -733,27 +746,39 @@ public sealed class SqlGifForgeAccountStore : IGifForgeAccountStore
       DECLARE @reservation_id uniqueidentifier;
       DECLARE @user_id uniqueidentifier;
       DECLARE @credits int;
+      DECLARE @reservation_expires_at datetimeoffset;
 
-      SELECT @reservation_id = reservation_id, @user_id = user_id, @credits = credits
+      SELECT @reservation_id = reservation_id, @user_id = user_id, @credits = credits, @reservation_expires_at = expires_at
       FROM {{Schema}}.credit_reservations WITH (UPDLOCK, HOLDLOCK)
       WHERE job_id = @job_id AND status = 'reserved';
+
+      -- An expired reservation is no longer counted against the spendable balance
+      -- (reserve and balance queries filter on expires_at), so capturing it would
+      -- double-spend the hold. Convert late captures into releases instead.
+      DECLARE @effective_status nvarchar(32) = @reservation_status;
+      DECLARE @effective_kind nvarchar(32) = @ledger_kind;
+      IF @ledger_kind = 'capture' AND @reservation_expires_at <= SYSUTCDATETIME()
+      BEGIN
+        SET @effective_status = 'released';
+        SET @effective_kind = 'release';
+      END
 
       IF @reservation_id IS NOT NULL
       BEGIN
         UPDATE {{Schema}}.credit_reservations
-        SET status = @reservation_status,
-            captured_at = CASE WHEN @reservation_status = 'captured' THEN SYSUTCDATETIME() ELSE captured_at END,
-            released_at = CASE WHEN @reservation_status = 'released' THEN SYSUTCDATETIME() ELSE released_at END
+        SET status = @effective_status,
+            captured_at = CASE WHEN @effective_status = 'captured' THEN SYSUTCDATETIME() ELSE captured_at END,
+            released_at = CASE WHEN @effective_status = 'released' THEN SYSUTCDATETIME() ELSE released_at END
         WHERE reservation_id = @reservation_id;
 
         UPDATE {{Schema}}.generation_ownership
-        SET status = @reservation_status
+        SET status = @effective_status
         WHERE job_id = @job_id;
 
         INSERT INTO {{Schema}}.usage_ledger
           (ledger_id, user_id, kind, credits, reference_id, created_at)
         VALUES
-          (NEWID(), @user_id, @ledger_kind, CASE WHEN @ledger_kind = 'capture' THEN @credits ELSE 0 END, @job_id, SYSUTCDATETIME());
+          (NEWID(), @user_id, @effective_kind, CASE WHEN @effective_kind = 'capture' THEN @credits ELSE 0 END, @job_id, SYSUTCDATETIME());
       END
 
       COMMIT TRANSACTION;
@@ -809,8 +834,12 @@ public sealed class SqlGifForgeAccountStore : IGifForgeAccountStore
       var connection = new SqlConnection(connectionString);
       try
       {
-        var token = await credential.GetTokenAsync(AzureSqlTokenRequestContext, cancellationToken).ConfigureAwait(false);
-        connection.AccessToken = token.Token;
+        if (credential is not null)
+        {
+          var token = await credential.GetTokenAsync(AzureSqlTokenRequestContext, cancellationToken).ConfigureAwait(false);
+          connection.AccessToken = token.Token;
+        }
+
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         return connection;
       }

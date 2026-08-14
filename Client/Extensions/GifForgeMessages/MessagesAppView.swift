@@ -1,14 +1,24 @@
+import ImageIO
 import PhotosUI
 import GifForgeCore
 import SwiftUI
 import UIKit
-import WebKit
+import UniformTypeIdentifiers
 
 struct MessagesAppView: View {
   @Bindable var model: MessagesComposerModel
   var insertGIF: (URL) -> Void
+  var requestExpanded: () -> Void
+  var openContainingApp: () -> Void
 
   @State private var selectedPhotoItem: PhotosPickerItem?
+  @FocusState private var promptFocused: Bool
+
+  @ScaledMetric(relativeTo: .largeTitle) private var emptyStateIconSize: CGFloat = 34
+  @ScaledMetric private var statusDotSize: CGFloat = 7
+  @ScaledMetric private var recentCardWidth: CGFloat = 120
+  @ScaledMetric private var recentCardHeight: CGFloat = 86
+  @ScaledMetric private var recentThumbnailSize: CGFloat = 40
 
   var body: some View {
     Group {
@@ -19,29 +29,26 @@ struct MessagesAppView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    .padding(.horizontal, 16)
-    .padding(.top, 18)
-    .padding(.bottom, 12)
     .background(Color(.systemBackground))
     .task {
       await model.loadRecent()
     }
-    .alert("GifForge", isPresented: Binding(
+    .alert(String(localized: "GifForge"), isPresented: Binding(
       get: { model.errorMessage != nil },
       set: { if !$0 { model.errorMessage = nil } }
     )) {
-      Button("OK", role: .cancel) {}
+      Button(String(localized: "OK"), role: .cancel) {}
     } message: {
       Text(model.errorMessage ?? "")
     }
-    .alert("Try again?", isPresented: Binding(
+    .alert(String(localized: "Try again?"), isPresented: Binding(
       get: { model.retryPromptMessage != nil },
       set: { if !$0 { model.dismissRetryPrompt() } }
     )) {
-      Button("Cancel", role: .cancel) {
+      Button(String(localized: "Cancel"), role: .cancel) {
         model.cancelPendingRetry()
       }
-      Button("Retry") {
+      Button(String(localized: "Retry")) {
         model.retryGeneration()
       }
       .disabled(!model.canRetryGeneration)
@@ -49,59 +56,89 @@ struct MessagesAppView: View {
       Text(model.retryPromptMessage ?? "")
     }
     .onChange(of: selectedPhotoItem) { _, newValue in
+      guard let newValue else {
+        model.setSourceImageData(nil)
+        return
+      }
+
       Task {
-        let data = try? await newValue?.loadTransferable(type: Data.self)
-        model.setSourceImageData(data ?? nil)
+        guard let data = try? await newValue.loadTransferable(type: Data.self) else {
+          return
+        }
+
+        applyPickedMedia(data: data, contentTypes: newValue.supportedContentTypes)
+      }
+    }
+    .onChange(of: promptFocused) { _, isFocused in
+      if isFocused, model.presentationStyle == .compact {
+        requestExpanded()
       }
     }
   }
 
+  /// Routes picked bytes to the right composer path by inspecting the content
+  /// types PhotosPicker reports for the item, before any decoding happens —
+  /// animated GIFs and MP4/MOV videos pass through as `SourceMedia` untouched;
+  /// everything else is treated as a static photo.
+  private func applyPickedMedia(data: Data, contentTypes: [UTType]) {
+    if let movieType = contentTypes.first(where: { $0.conforms(to: .movie) }) {
+      let mimeType = movieType.conforms(to: .quickTimeMovie) ? "video/quicktime" : "video/mp4"
+      model.setSourceMedia(data: data, mimeType: mimeType, fileName: nil, kind: .video)
+    } else if contentTypes.contains(where: { $0.conforms(to: .gif) }) {
+      model.setSourceMedia(data: data, mimeType: "image/gif", fileName: nil, kind: .animatedGIF)
+    } else {
+      model.setSourceImageData(data)
+    }
+  }
+
+  /// Compact fits Messages' ~220pt drawer: status, prompt, and primary actions only.
+  /// Anything more promotes to the expanded presentation.
   private var compactBody: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      statusRow
+    ScrollView {
+      VStack(alignment: .leading, spacing: 12) {
+        statusRow
+        setupHint
 
-      if let previewGIFURL = model.previewGIFURL {
-        previewSurface(height: 150)
+        if let previewGIFURL = model.previewGIFURL {
+          previewSurface(height: 120)
 
-        Button {
-          insertGIF(previewGIFURL)
-        } label: {
-          Label("Insert GIF", systemImage: "arrow.up.message.fill")
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-      } else {
-        promptField
-
-        HStack(spacing: 10) {
-          photoButton(title: model.hasImage ? "Photo Added" : "Add Photo")
-          generateButton
-        }
-
-        captionPicker
-        captionControls
-
-        if model.hasImage {
-          selectedImagePreview
+          Button {
+            insertGIF(previewGIFURL)
+          } label: {
+            Label(String(localized: "Insert GIF"), systemImage: "arrow.up.message.fill")
+              .frame(maxWidth: .infinity)
+          }
+          .buttonStyle(.borderedProminent)
+          .controlSize(.large)
         } else {
-          recentSection
+          promptField
+
+          HStack(spacing: 10) {
+            mediaButton
+            generateButton
+          }
+
+          plannerAvailabilityChip
         }
       }
+      .padding(.horizontal, 16)
+      .padding(.top, 12)
+      .padding(.bottom, 12)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    .scrollDismissesKeyboard(.interactively)
   }
 
   private var expandedBody: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 16) {
         HStack {
-          Text("Create GIF")
+          Text(String(localized: "Create GIF"))
             .font(.title3.weight(.semibold))
           Spacer()
           statusRow
         }
 
+        setupHint
         previewSurface(height: 230)
 
         VStack(alignment: .leading, spacing: 12) {
@@ -110,9 +147,11 @@ struct MessagesAppView: View {
           captionControls
 
           HStack(spacing: 10) {
-            photoButton(title: model.hasImage ? "Change Photo" : "Add Photo")
+            mediaButton
             generateButton
           }
+
+          plannerAvailabilityChip
         }
 
         if let previewGIFURL = model.previewGIFURL {
@@ -120,7 +159,7 @@ struct MessagesAppView: View {
             Button {
               model.applyCaptionEdit()
             } label: {
-              Label("Apply Caption", systemImage: "text.bubble")
+              Label(String(localized: "Apply Caption"), systemImage: "text.bubble")
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
@@ -130,7 +169,7 @@ struct MessagesAppView: View {
             Button {
               insertGIF(previewGIFURL)
             } label: {
-              Label("Insert", systemImage: "arrow.up.message.fill")
+              Label(String(localized: "Insert"), systemImage: "arrow.up.message.fill")
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -140,50 +179,100 @@ struct MessagesAppView: View {
           recentSection
         }
       }
+      .padding(.horizontal, 16)
+      .padding(.top, 18)
+      .padding(.bottom, 12)
     }
     .scrollDismissesKeyboard(.interactively)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
   }
 
+  @ViewBuilder
+  private var setupHint: some View {
+    if model.needsContainingAppSetup {
+      HStack(spacing: 10) {
+        Image(systemName: "info.circle.fill")
+          .foregroundStyle(.tint)
+          .accessibilityHidden(true)
+        Text(String(localized: "Open the GifForge app once to finish setup."))
+          .font(.footnote)
+          .foregroundStyle(.secondary)
+        Spacer(minLength: 0)
+        Button(String(localized: "Open")) {
+          openContainingApp()
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+      }
+      .padding(10)
+      .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+      .accessibilityElement(children: .combine)
+    }
+  }
+
+  /// Small, honest indicator of whether the next plan will run on Apple's
+  /// on-device model or fall back to deterministic templates, and why.
+  private var plannerAvailabilityChip: some View {
+    HStack(spacing: 4) {
+      Image(systemName: model.plannerAvailability.isOnDevice ? "cpu.fill" : "sparkle")
+        .font(.caption2)
+        .foregroundStyle(model.plannerAvailability.isOnDevice ? Color.accentColor : .secondary)
+        .accessibilityHidden(true)
+      Text(plannerAvailabilityLabel)
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+    }
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(String(localized: "Planning: \(plannerAvailabilityLabel)"))
+  }
+
+  private var plannerAvailabilityLabel: String {
+    switch model.plannerAvailability {
+    case .onDevice:
+      String(localized: "Planned on-device")
+    case let .unavailable(reason):
+      reason.displayMessage
+    }
+  }
+
   private var promptField: some View {
-    TextField("Describe a GIF", text: $model.prompt)
+    TextField(String(localized: "Describe a GIF"), text: $model.prompt)
       .font(.body)
       .submitLabel(.done)
+      .focused($promptFocused)
       .padding(.horizontal, 14)
-      .frame(height: 50)
+      .padding(.vertical, 13)
       .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
-      .overlay(
-        RoundedRectangle(cornerRadius: 14)
-          .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
-      )
   }
 
   private var promptEditor: some View {
     ZStack(alignment: .topLeading) {
       RoundedRectangle(cornerRadius: 16)
         .fill(Color(.secondarySystemBackground))
-      RoundedRectangle(cornerRadius: 16)
-        .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
 
       if model.prompt.isEmpty {
-        Text("Describe the GIF you want")
+        Text(String(localized: "Describe the GIF you want"))
           .foregroundStyle(.secondary)
           .padding(.horizontal, 16)
           .padding(.vertical, 14)
+          .accessibilityHidden(true)
       }
 
       TextEditor(text: $model.prompt)
         .font(.body)
+        .focused($promptFocused)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .scrollContentBackground(.hidden)
         .background(Color.clear)
     }
     .frame(minHeight: 104)
+    .accessibilityLabel(String(localized: "GIF description"))
   }
 
   private var captionPicker: some View {
-    Picker("Caption", selection: $model.captionMode) {
+    Picker(String(localized: "Caption"), selection: $model.captionMode) {
       ForEach(CaptionMode.allCases) { mode in
         Text(mode.displayName).tag(mode)
       }
@@ -191,23 +280,49 @@ struct MessagesAppView: View {
     .pickerStyle(.segmented)
   }
 
-  private func photoButton(title: String) -> some View {
-    let hasImage = model.hasImage
-    return PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-      Label(title, systemImage: hasImage ? "photo.fill" : "photo")
-        .lineLimit(1)
+  private var mediaButton: some View {
+    PhotosPicker(selection: $selectedPhotoItem, matching: .any(of: [.images, .videos])) {
+      Label(mediaButtonTitle, systemImage: mediaButtonIcon)
         .frame(maxWidth: .infinity)
     }
     .buttonStyle(.bordered)
     .controlSize(.large)
   }
 
+  private var mediaButtonTitle: String {
+    switch model.selectedMediaKind {
+    case .none:
+      String(localized: "Add Media")
+    case .image:
+      String(localized: "Photo Added")
+    case .animatedGIF:
+      String(localized: "GIF Added")
+    case .video:
+      String(localized: "Video Added")
+    }
+  }
+
+  private var mediaButtonIcon: String {
+    switch model.selectedMediaKind {
+    case .none:
+      "photo.on.rectangle"
+    case .image:
+      "photo.fill"
+    case .animatedGIF:
+      "photo.stack.fill"
+    case .video:
+      "video.fill"
+    }
+  }
+
   private var generateButton: some View {
     Button {
+      if model.presentationStyle == .compact {
+        requestExpanded()
+      }
       model.generate()
     } label: {
-      Label("Generate", systemImage: "sparkles")
-        .lineLimit(1)
+      Label(String(localized: "Generate"), systemImage: "sparkles")
         .frame(maxWidth: .infinity)
     }
     .buttonStyle(.borderedProminent)
@@ -221,39 +336,29 @@ struct MessagesAppView: View {
     case .none:
       EmptyView()
     case .userText:
-      TextField("Caption text", text: $model.explicitCaption)
+      TextField(String(localized: "Caption text"), text: $model.explicitCaption)
         .font(.body)
-        .textFieldStyle(.plain)
         .padding(.horizontal, 14)
-        .frame(height: 46)
+        .padding(.vertical, 11)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
-        .overlay(
-          RoundedRectangle(cornerRadius: 14)
-            .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
-        )
     case .suggestWithAI:
       VStack(alignment: .leading, spacing: 10) {
         HStack(spacing: 10) {
-          TextField("Selected caption", text: $model.selectedCaption)
+          TextField(String(localized: "Selected caption"), text: $model.selectedCaption)
             .font(.body)
-            .textFieldStyle(.plain)
             .padding(.horizontal, 14)
-            .frame(height: 46)
+            .padding(.vertical, 11)
             .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
-            .overlay(
-              RoundedRectangle(cornerRadius: 14)
-                .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
-            )
 
           Button {
             model.requestCaptionSuggestions()
           } label: {
-            Label("Suggest", systemImage: "wand.and.stars")
+            Label(String(localized: "Suggest"), systemImage: "wand.and.stars")
               .labelStyle(.iconOnly)
-              .frame(width: 46, height: 46)
+              .padding(6)
           }
           .buttonStyle(.bordered)
-          .accessibilityLabel("Suggest caption")
+          .accessibilityLabel(String(localized: "Suggest caption"))
         }
 
         if !model.captionSuggestions.isEmpty {
@@ -280,26 +385,53 @@ struct MessagesAppView: View {
         .fill(Color(.secondarySystemBackground))
 
       if let previewGIFURL = model.previewGIFURL {
-        GIFPreviewView(url: previewGIFURL)
+        AnimatedGIFView(url: previewGIFURL)
           .clipShape(RoundedRectangle(cornerRadius: 18))
+          .accessibilityLabel(String(localized: "Animated GIF preview: \(model.prompt)"))
       } else if let data = model.sourceImageData, let image = UIImage(data: data) {
         Image(uiImage: image)
           .resizable()
           .scaledToFill()
           .clipShape(RoundedRectangle(cornerRadius: 18))
+          .accessibilityLabel(String(localized: "Selected photo"))
+      } else if model.selectedMediaKind == .animatedGIF, let url = model.selectedMediaPreviewURL {
+        AnimatedGIFView(url: url)
+          .clipShape(RoundedRectangle(cornerRadius: 18))
+          .accessibilityLabel(String(localized: "Selected animated GIF"))
+      } else if model.selectedMediaKind == .video {
+        VStack(spacing: 10) {
+          Image(systemName: "video.fill")
+            .font(.system(size: emptyStateIconSize, weight: .medium))
+            .foregroundStyle(.tint)
+            .accessibilityHidden(true)
+
+          Text(String(localized: "Video selected"))
+            .font(.headline)
+          Text(String(localized: "GifForge will transform this video into a GIF."))
+            .font(.subheadline)
+            // .subheadline+.secondary measured borderline on the containing
+            // app's automated contrast audit for the same text/size class;
+            // applied consistently here (no XCUITest harness reaches the
+            // extension target to verify directly).
+            .foregroundStyle(.primary)
+            .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 24)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(String(localized: "Selected video. GifForge will transform this video into a GIF."))
       } else {
         VStack(spacing: 10) {
           Image(systemName: "sparkles.rectangle.stack")
-            .font(.system(size: 34, weight: .medium))
+            .font(.system(size: emptyStateIconSize, weight: .medium))
             .foregroundStyle(.tint)
+            .accessibilityHidden(true)
 
-          Text("Ready to make a GIF")
+          Text(String(localized: "Ready to make a GIF"))
             .font(.headline)
-          Text("Start with a prompt, then add a photo if you want.")
+          Text(String(localized: "Start with a prompt, then add a photo if you want."))
             .font(.subheadline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.primary)
             .multilineTextAlignment(.center)
-            .lineLimit(2)
         }
         .padding(.horizontal, 24)
       }
@@ -307,8 +439,8 @@ struct MessagesAppView: View {
     .frame(maxWidth: .infinity)
     .frame(height: height)
     .overlay(alignment: .topTrailing) {
-      if model.hasImage && model.previewGIFURL == nil {
-        Label("Photo", systemImage: "checkmark.circle.fill")
+      if model.selectedMediaKind != .none, model.previewGIFURL == nil {
+        Label(mediaBadgeText, systemImage: "checkmark.circle.fill")
           .font(.caption.weight(.semibold))
           .padding(.horizontal, 10)
           .padding(.vertical, 6)
@@ -319,39 +451,32 @@ struct MessagesAppView: View {
     .clipShape(RoundedRectangle(cornerRadius: 18))
   }
 
-  @ViewBuilder
-  private var selectedImagePreview: some View {
-    if let data = model.sourceImageData, let image = UIImage(data: data) {
-      HStack(spacing: 12) {
-        Image(uiImage: image)
-          .resizable()
-          .scaledToFill()
-          .frame(width: 58, height: 58)
-          .clipShape(RoundedRectangle(cornerRadius: 12))
-
-        VStack(alignment: .leading, spacing: 3) {
-          Text("Photo added")
-            .font(.subheadline.weight(.semibold))
-          Text("Generate will animate this image.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-        Spacer()
-      }
-      .padding(10)
-      .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
+  private var mediaBadgeText: String {
+    switch model.selectedMediaKind {
+    case .none:
+      ""
+    case .image:
+      String(localized: "Photo")
+    case .animatedGIF:
+      String(localized: "GIF")
+    case .video:
+      String(localized: "Video")
     }
   }
 
   private var statusRow: some View {
     HStack(spacing: 6) {
-      if model.phase == .planning || model.phase == .submitting || model.phase == .generating || model.phase == .rendering {
+      if case let .rendering(frame, total) = model.renderProgress, total > 0 {
+        ProgressView(value: Double(frame), total: Double(total))
+          .frame(width: 60)
+      } else if model.isWorking {
         ProgressView()
           .controlSize(.small)
       } else {
         Circle()
           .fill(model.phase == .preview ? Color.green : Color.secondary.opacity(0.45))
-          .frame(width: 7, height: 7)
+          .frame(width: statusDotSize, height: statusDotSize)
+          .accessibilityHidden(true)
       }
       Text(model.phase.title)
         .font(.caption.weight(.medium))
@@ -360,13 +485,15 @@ struct MessagesAppView: View {
     .padding(.horizontal, 10)
     .padding(.vertical, 6)
     .background(Color(.secondarySystemBackground), in: Capsule())
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(String(localized: "Status: \(model.phase.title)"))
   }
 
   @ViewBuilder
   private var recentSection: some View {
     if !model.recentItems.isEmpty {
       VStack(alignment: .leading, spacing: 8) {
-        Text("Recent")
+        Text(String(localized: "Recent"))
           .font(.caption.weight(.semibold))
           .foregroundStyle(.secondary)
 
@@ -378,21 +505,20 @@ struct MessagesAppView: View {
                 model.phase = .preview
               } label: {
                 VStack(alignment: .leading, spacing: 8) {
-                  Image(systemName: "film.stack")
-                    .font(.title3)
-                    .foregroundStyle(.tint)
+                  RecentThumbnailView(url: item.gifURL, size: recentThumbnailSize)
                   Text(item.prompt)
                     .font(.caption)
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
-                    .frame(width: 96, alignment: .leading)
+                    .frame(width: recentCardWidth - 24, alignment: .leading)
                 }
                 .padding(10)
-                .frame(width: 120, height: 86, alignment: .leading)
+                .frame(width: recentCardWidth, height: recentCardHeight, alignment: .leading)
                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
               }
               .buttonStyle(.plain)
+              .accessibilityLabel(String(localized: "Recent GIF: \(item.prompt)"))
             }
           }
         }
@@ -401,18 +527,148 @@ struct MessagesAppView: View {
   }
 }
 
-private struct GIFPreviewView: UIViewRepresentable {
+/// Decodes and caches a GIF's first frame as a small static thumbnail, replacing
+/// the generic "film.stack" glyph history cards used to show. Decoding is
+/// off-main and only happens once per file URL (SwiftUI's `.task(id:)` re-runs
+/// only when the id changes, and this view's own identity is stable across
+/// re-renders of its parent list).
+private struct RecentThumbnailView: View {
+  var url: URL
+  var size: CGFloat
+
+  @State private var image: UIImage?
+
+  var body: some View {
+    Group {
+      if let image {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFill()
+      } else {
+        Image(systemName: "film.stack")
+          .font(.title3)
+          .foregroundStyle(.tint)
+      }
+    }
+    .frame(width: size, height: size)
+    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .accessibilityHidden(true)
+    .task(id: url) {
+      image = await Self.decodeFirstFrame(of: url)
+    }
+  }
+
+  private static func decodeFirstFrame(of url: URL) async -> UIImage? {
+    await Task.detached(priority: .utility) {
+      firstFrame(of: url)
+    }.value
+  }
+}
+
+/// Animated GIF preview backed by ImageIO's frame-by-frame animation callback —
+/// no WKWebView (and its separate web content process) inside the extension.
+/// Honors Reduce Motion by showing the first frame with tap-to-play.
+private struct AnimatedGIFView: UIViewRepresentable {
   var url: URL
 
-  func makeUIView(context: Context) -> WKWebView {
-    let webView = WKWebView()
-    webView.isOpaque = false
-    webView.backgroundColor = .clear
-    webView.scrollView.isScrollEnabled = false
-    return webView
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  func makeUIView(context: Context) -> AnimatedGIFUIView {
+    AnimatedGIFUIView()
   }
 
-  func updateUIView(_ webView: WKWebView, context: Context) {
-    webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+  func updateUIView(_ view: AnimatedGIFUIView, context: Context) {
+    view.configure(url: url, autoplay: !reduceMotion)
   }
+}
+
+final class AnimatedGIFUIView: UIView {
+  private let imageView = UIImageView()
+  private var currentURL: URL?
+  private var autoplay = true
+  private var animationToken: AnimationToken?
+
+  private final class AnimationToken {
+    var isCancelled = false
+  }
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    imageView.contentMode = .scaleAspectFill
+    imageView.clipsToBounds = true
+    imageView.translatesAutoresizingMaskIntoConstraints = false
+    addSubview(imageView)
+    NSLayoutConstraint.activate([
+      imageView.leadingAnchor.constraint(equalTo: leadingAnchor),
+      imageView.trailingAnchor.constraint(equalTo: trailingAnchor),
+      imageView.topAnchor.constraint(equalTo: topAnchor),
+      imageView.bottomAnchor.constraint(equalTo: bottomAnchor)
+    ])
+    isAccessibilityElement = true
+    accessibilityTraits = .image
+    addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleTap)))
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) is not supported")
+  }
+
+  // No deinit cancellation needed: the animation block captures self weakly and
+  // stops itself on the first callback after the view deallocates.
+
+  func configure(url: URL, autoplay: Bool) {
+    guard url != currentURL || autoplay != self.autoplay else {
+      return
+    }
+
+    currentURL = url
+    self.autoplay = autoplay
+    stopAnimation()
+
+    if autoplay {
+      startAnimation(url: url)
+    } else {
+      imageView.image = firstFrame(of: url)
+    }
+  }
+
+  @objc private func handleTap() {
+    guard let currentURL, animationToken == nil else {
+      return
+    }
+
+    startAnimation(url: currentURL)
+  }
+
+  private func startAnimation(url: URL) {
+    let token = AnimationToken()
+    animationToken = token
+    CGAnimateImageAtURLWithBlock(url as CFURL, nil) { [weak self] _, cgImage, stop in
+      guard let self, !token.isCancelled else {
+        stop.pointee = true
+        return
+      }
+
+      self.imageView.image = UIImage(cgImage: cgImage)
+    }
+  }
+
+  private func stopAnimation() {
+    animationToken?.isCancelled = true
+    animationToken = nil
+  }
+}
+
+/// Decodes just the first frame of a GIF/animated image file. Shared by the
+/// preview's Reduce-Motion static state and the recents-list thumbnails.
+private func firstFrame(of url: URL) -> UIImage? {
+  guard
+    let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+    let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil)
+  else {
+    return nil
+  }
+
+  return UIImage(cgImage: cgImage)
 }

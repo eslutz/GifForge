@@ -33,6 +33,14 @@ public struct GIFRenderOptions: Sendable {
     maxFrameCount: 18,
     maxFileSizeBytes: 4_000_000
   )
+
+  /// Progressively smaller encodes tried when a GIF exceeds the Messages byte budget,
+  /// instead of failing outright after all rendering work is done.
+  public static let messagesLadder: [GIFRenderOptions] = [
+    .messagesDefault,
+    GIFRenderOptions(maxPixelDimension: 400, maxFrameCount: 16, maxFileSizeBytes: 4_000_000),
+    GIFRenderOptions(maxPixelDimension: 320, maxFrameCount: 14, maxFileSizeBytes: 4_000_000)
+  ]
 }
 
 public struct GIFRenderer {
@@ -83,11 +91,35 @@ public struct GIFRenderer {
       let attributes = try FileManager.default.attributesOfItem(atPath: destinationURL.path)
       let fileSize = (attributes[.size] as? NSNumber)?.intValue ?? 0
       guard fileSize <= maxFileSizeBytes else {
-        throw GifForgeError.mediaRenderingFailed(message: "The GIF is too large for Messages. Try a shorter or simpler prompt.")
+        try? FileManager.default.removeItem(at: destinationURL)
+        throw GifForgeError.gifTooLarge(byteCount: fileSize, limit: maxFileSizeBytes)
       }
     }
 
     return destinationURL
+  }
+
+  /// Renders with each option set in turn, moving down the ladder whenever the encoded
+  /// file exceeds its byte budget. Rethrows the last oversize error if nothing fits.
+  @discardableResult
+  public func render(
+    frames: [GIFFrame],
+    to destinationURL: URL,
+    loopCount: Int = 0,
+    optionsLadder: [GIFRenderOptions]
+  ) throws -> URL {
+    precondition(!optionsLadder.isEmpty, "optionsLadder must contain at least one option set")
+
+    var lastOversizeError: Error?
+    for options in optionsLadder {
+      do {
+        return try render(frames: frames, to: destinationURL, loopCount: loopCount, options: options)
+      } catch GifForgeError.gifTooLarge(let byteCount, let limit) {
+        lastOversizeError = GifForgeError.gifTooLarge(byteCount: byteCount, limit: limit)
+      }
+    }
+
+    throw lastOversizeError ?? GifForgeError.mediaRenderingFailed(message: "Could not encode the GIF.")
   }
 
   private func optimizedFrames(_ frames: [GIFFrame], options: GIFRenderOptions) throws -> [GIFFrame] {

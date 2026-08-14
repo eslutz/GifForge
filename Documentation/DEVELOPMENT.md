@@ -8,7 +8,18 @@
 - .NET 10 SDK for the ASP.NET Core Minimal API backend.
 - Azure CLI with Bicep support for infrastructure validation/deployment.
 
-The current scaffold was generated and build-checked on Xcode 26.5 with the iOS 26.5 SDK.
+The current scaffold was generated and build-checked on Xcode 26.5 with the iOS 26.5 SDK, and re-verified on Xcode 26.6.
+
+### iOS 27 migration (staged)
+
+The project is migrating to an iOS 27.0 deployment target (Foundation Models `LanguageModel` protocol, `PrivateCloudComputeLanguageModel`, on-device image input, mandatory Liquid Glass). Until iOS 27 GA (~September 2026):
+
+1. Install the Xcode 27 beta **alongside** the release Xcode (for example at `/Applications/Xcode-27-beta.app`). Leave `xcode-select` pointing at the release Xcode.
+2. Use the beta per shell session: `export DEVELOPER_DIR=/Applications/Xcode-27-beta.app/Contents/Developer`.
+3. Enroll the test iPhone in the iOS 27 developer beta (Settings > General > Software Update > Beta Updates) only after a full validation pass on iOS 26.5 — the target bump makes iOS 27 mandatory on device.
+4. Bump `Client/project.yml` (`deploymentTarget.iOS`, `IPHONEOS_DEPLOYMENT_TARGET`, `xcodeVersion`) and `Client/Packages/GifForgeCore/Package.swift` (`.iOS("27.0")`, keep `.macOS("15.0")` so `swift test` runs on CI hosts), then `xcodegen generate` and commit.
+
+Xcode 27 requires an Apple silicon Mac on macOS 26.4+; GitHub-hosted runners may lack the iOS 27 SDK until GA, so the client workflow must tolerate a missing SDK (validators and package tests still run).
 
 ## Generate the Xcode Project
 
@@ -68,12 +79,21 @@ Production must use a separate production SQL database before real users or live
 
 When `GIFFORGE_IAP_DEMO_BYPASS=false`, an empty or invalid `GIFFORGE_APP_STORE_JWS_ROOT_CERTIFICATE_PEM` makes StoreKit transaction and App Store Server Notification verification fail closed. Do not rely on the container OS trust store for StoreKit JWS validation.
 
-Apply the SQL migration with a migration principal, not the runtime managed identity:
+Apply the SQL migrations in order with a migration principal, not the runtime managed identity:
 
 ```bash
 Backend/Database/Migrations/001_gifforge_accounts_iap_credits.sql
 Backend/Database/Migrations/002_optional_apple_recovery_accounts.sql
+Backend/Database/Migrations/003_55_credit_pack.sql
 ```
+
+Additional backend configuration introduced by the reliability hardening:
+
+- `GIFFORGE_AUTH_SIGNING_KEY` is **always required**, in every environment including local dev — there is no built-in development key to fall back to; startup fails closed if it's unset. Provision it (Key Vault reference) before deploying nonprod/prod, and set it to any local value when running the backend locally (see below).
+- `GIFFORGE_QUEUE_VISIBILITY_SECONDS` (default 600) and `GIFFORGE_QUEUE_MAX_DEQUEUE_COUNT` (default 5) control worker queue visibility and poison-message handling.
+- `GIFFORGE_PROVIDER_CALLBACK_ASSET_HOSTS` is a comma-separated HTTPS host allowlist for provider callback asset downloads; with no hosts configured, success callbacks are rejected (SSRF fail-closed).
+- Readiness is `/health/ready` (probes the job store); `/health` remains the cheap liveness endpoint. Container Apps probes are wired accordingly in `infra/main.bicep`.
+- Generation submissions are idempotent per client request id: resubmitting the same request replays the existing job instead of double-charging.
 
 Validate nonprod SQL readiness without storing credentials or secret values:
 
@@ -123,10 +143,10 @@ The generated evidence directory is ignored by git. Use the template while testi
 ## Run the Local Backend
 
 ```bash
-ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/GifForge.Backend.csproj
+GIFFORGE_AUTH_SIGNING_KEY=local-dev-signing-key ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/GifForge.Backend.csproj
 ```
 
-The backend listens at `http://127.0.0.1:8787`.
+The backend listens at `http://127.0.0.1:8787`. `GIFFORGE_AUTH_SIGNING_KEY` can be any string locally — it just needs to be set to *something*; there is no default.
 
 ## Backend Deployment Direction
 
@@ -164,6 +184,7 @@ The scaffold includes a demo-only App Attest bypass for local smoke testing:
 ```bash
 GIFFORGE_APP_ATTEST_REQUIRED=true \
 GIFFORGE_APP_ATTEST_DEMO_BYPASS=true \
+GIFFORGE_AUTH_SIGNING_KEY=local-dev-signing-key \
 ASPNETCORE_HTTP_PORTS=8787 \
 dotnet run --project Backend/GifForge.Backend.csproj
 ```

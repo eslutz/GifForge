@@ -60,7 +60,78 @@ jobs:
         working-directory: Client/Packages/GifForgeCore
         run: swift test --scratch-path /private/tmp/gifforge-swiftpm
 
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      # Not --strict: warnings (line/file/function length on the handful of
+      # larger existing screens) are visible but non-blocking; only
+      # error-severity violations (see Client/.swiftlint.yml) fail the job.
+      - name: Run SwiftLint
+        working-directory: Client
+        run: swiftlint lint
+
+      # Preparatory step for future runner images that may ship more than one
+      # Xcode (e.g. once an Xcode 27 GA build lands alongside an older
+      # release). Do not hardcode an Xcode 27 path/version here since it
+      # doesn't exist publicly yet - just avoid silently building with a
+      # stale/wrong Xcode if a runner image ever has two installed. See
+      # Documentation/DEVELOPMENT.md's "iOS 27 migration (staged)" section.
+      - name: Select newest available Xcode
+        run: |
+          set -euo pipefail
+          current="$(xcode-select -p)"
+          echo "Currently selected Xcode developer dir: ${current}"
+          newest_path=""
+          newest_version="0"
+          shopt -s nullglob
+          for app in /Applications/Xcode*.app; do
+            dev_dir="${app}/Contents/Developer"
+            version="$(DEVELOPER_DIR="${dev_dir}" xcodebuild -version 2>/dev/null | sed -n '1s/^Xcode //p')"
+            if [ -z "${version}" ]; then
+              continue
+            fi
+            echo "Found ${app} -> Xcode ${version}"
+            if [ "${version}" != "${newest_version}" ] && [ "$(printf '%s\n%s\n' "${newest_version}" "${version}" | sort -V | tail -n1)" = "${version}" ]; then
+              newest_version="${version}"
+              newest_path="${dev_dir}"
+            fi
+          done
+          if [ -n "${newest_path}" ] && [ "${newest_path}" != "${current}" ]; then
+            echo "Selecting newest installed Xcode (${newest_version}) at ${newest_path}"
+            sudo xcode-select -s "${newest_path}"
+          else
+            echo "Only one Xcode found (or the newest is already selected); leaving xcode-select as-is"
+          fi
+          xcodebuild -version
+
+      # Forward-looking resilience guard: once Client/project.yml's
+      # deploymentTarget bumps to iOS 27.0, GitHub-hosted macOS runners may
+      # lag behind and not yet have the iOS 27 SDK installed. Detect that
+      # case here and only skip the xcodebuild build-for-testing step below
+      # (via its `if:`) rather than hard-failing the whole job. The xcodegen
+      # parity check, ruby validators, swift test, and plist lint above/below
+      # always run and still gate the job.
+      - name: Check iOS SDK availability for deployment target
+        id: check-ios-sdk
+        run: |
+          set -euo pipefail
+          deployment_target="$(awk -F': *' '/^ *iOS: *"?[0-9]/ { gsub(/"/, "", $2); print $2; exit }' Client/project.yml)"
+          if [ -z "${deployment_target}" ]; then
+            echo "Could not parse deploymentTarget.iOS from Client/project.yml" >&2
+            exit 1
+          fi
+          major_version="${deployment_target%%.*}"
+          echo "Client/project.yml deployment target: iOS ${deployment_target} (major version ${major_version})"
+          if xcodebuild -showsdks | grep -Eq "iOS ${major_version}\.[0-9]+"; then
+            echo "iOS ${major_version} SDK is available on this runner"
+            echo "sdk_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::The iOS ${major_version} SDK required by Client/project.yml's deploymentTarget is not yet available on this GitHub-hosted runner (xcodebuild -showsdks did not list it). Skipping the 'Build iOS app and UI tests' step; the xcodegen parity check, ruby validators, swift test, and plist lint still ran and still gate this job."
+            echo "sdk_available=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build iOS app and UI tests
+        if: steps.check-ios-sdk.outputs.sdk_available == 'true'
         run: xcodebuild -project Client/GifForge.xcodeproj -scheme GifForge -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build-for-testing CODE_SIGNING_ALLOWED=NO
 
       - name: Lint plists and entitlements

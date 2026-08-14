@@ -51,42 +51,40 @@ public struct CaptionRenderer: Sendable {
       .split(separator: " ")
       .map(String.init)
 
-    var fontSize = style.fontSize
-    while fontSize >= style.minimumFontSize {
-      let lines = wrappedLines(words: words, fontSize: fontSize, maxWidth: maxWidth, maxLines: maxLines)
-      let widest = lines.map { lineWidth($0, fontSize: fontSize) }.max() ?? 0
-      if lines.count <= maxLines && widest <= maxWidth {
-        return CaptionTextLayout(
-          lines: lines,
-          fontSize: fontSize,
-          textBounds: CGRect(
-            x: 0,
-            y: 0,
-            width: widest,
-            height: CGFloat(lines.count) * fontSize * 1.16
-          )
+    func layout(at fontSize: CGFloat) -> (layout: CaptionTextLayout, fits: Bool) {
+      let font = Self.captionFont(size: fontSize)
+      let lines = wrappedLines(words: words, font: font, maxWidth: maxWidth, maxLines: maxLines)
+      let widest = lines.map { lineWidth($0, font: font) }.max() ?? 0
+      let result = CaptionTextLayout(
+        lines: lines,
+        fontSize: fontSize,
+        textBounds: CGRect(
+          x: 0,
+          y: 0,
+          width: min(maxWidth, widest),
+          height: CGFloat(lines.count) * fontSize * 1.16
         )
-      }
-
-      fontSize -= 1
+      )
+      return (result, lines.count <= maxLines && widest <= maxWidth)
     }
 
-    let lines = wrappedLines(
-      words: words,
-      fontSize: style.minimumFontSize,
-      maxWidth: maxWidth,
-      maxLines: maxLines
-    )
-    return CaptionTextLayout(
-      lines: lines,
-      fontSize: style.minimumFontSize,
-      textBounds: CGRect(
-        x: 0,
-        y: 0,
-        width: min(maxWidth, lines.map { lineWidth($0, fontSize: style.minimumFontSize) }.max() ?? 0),
-        height: CGFloat(lines.count) * style.minimumFontSize * 1.16
-      )
-    )
+    // Binary-search the largest whole-point size that fits; fitting is monotonic in size.
+    var low = Int(style.minimumFontSize)
+    var high = Int(style.fontSize)
+    var best: CaptionTextLayout?
+
+    while low <= high {
+      let mid = (low + high) / 2
+      let candidate = layout(at: CGFloat(mid))
+      if candidate.fits {
+        best = candidate.layout
+        low = mid + 1
+      } else {
+        high = mid - 1
+      }
+    }
+
+    return best ?? layout(at: style.minimumFontSize).layout
   }
 
   public func renderCaption(_ caption: String?, over image: CGImage) throws -> CGImage {
@@ -127,7 +125,7 @@ public struct CaptionRenderer: Sendable {
     context.textMatrix = .identity
 
     let layout = layoutCaption(caption, canvasSize: canvasSize)
-    let font = CTFontCreateWithName("HelveticaNeue-Bold" as CFString, layout.fontSize, nil)
+    let font = Self.captionFont(size: layout.fontSize)
     let lineHeight = layout.fontSize * 1.16
     var y = canvasSize.height - style.bottomInset - layout.textBounds.height
     context.setShadow(
@@ -141,8 +139,11 @@ public struct CaptionRenderer: Sendable {
         kCTFontAttributeName: font,
         kCTForegroundColorAttributeName: CGColor(red: 1, green: 1, blue: 1, alpha: 1)
       ] as CFDictionary
-      let attributed = CFAttributedStringCreate(nil, text as CFString, attributes)
-      let line = CTLineCreateWithAttributedString(attributed!)
+      guard let attributed = CFAttributedStringCreate(nil, text as CFString, attributes) else {
+        continue
+      }
+
+      let line = CTLineCreateWithAttributedString(attributed)
       let bounds = CTLineGetBoundsWithOptions(line, [.useGlyphPathBounds, .useOpticalBounds])
       let x = max(style.horizontalInset, (canvasSize.width - bounds.width) / 2)
       context.textPosition = CGPoint(x: x, y: y)
@@ -155,7 +156,7 @@ public struct CaptionRenderer: Sendable {
 
   private func wrappedLines(
     words: [String],
-    fontSize: CGFloat,
+    font: CTFont,
     maxWidth: CGFloat,
     maxLines: Int
   ) -> [String] {
@@ -168,7 +169,7 @@ public struct CaptionRenderer: Sendable {
 
     for word in words {
       let candidate = current.isEmpty ? word : "\(current) \(word)"
-      if lineWidth(candidate, fontSize: fontSize) <= maxWidth || current.isEmpty {
+      if lineWidth(candidate, font: font) <= maxWidth || current.isEmpty {
         current = candidate
       } else {
         lines.append(current)
@@ -193,11 +194,22 @@ public struct CaptionRenderer: Sendable {
     return lines
   }
 
-  private func lineWidth(_ text: String, fontSize: CGFloat) -> CGFloat {
-    let font = CTFontCreateWithName("HelveticaNeue-Bold" as CFString, fontSize, nil)
-    let attributes = [kCTFontAttributeName: font] as CFDictionary
-    let attributed = CFAttributedStringCreate(nil, text as CFString, attributes)
-    let line = CTLineCreateWithAttributedString(attributed!)
+  private func lineWidth(_ text: String, font: CTFont) -> CGFloat {
+    guard let attributed = CFAttributedStringCreate(nil, text as CFString, [kCTFontAttributeName: font] as CFDictionary) else {
+      return 0
+    }
+
+    let line = CTLineCreateWithAttributedString(attributed)
     return CTLineGetBoundsWithOptions(line, [.useGlyphPathBounds, .useOpticalBounds]).width
+  }
+
+  /// The system's bold UI font so captions match platform typography, with the
+  /// historical HelveticaNeue-Bold as fallback where the UI font is unavailable.
+  static func captionFont(size: CGFloat) -> CTFont {
+    if let uiFont = CTFontCreateUIFontForLanguage(.emphasizedSystem, size, nil) {
+      return uiFont
+    }
+
+    return CTFontCreateWithName("HelveticaNeue-Bold" as CFString, size, nil)
   }
 }

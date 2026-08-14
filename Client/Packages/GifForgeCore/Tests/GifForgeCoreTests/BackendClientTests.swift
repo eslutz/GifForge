@@ -9,8 +9,8 @@ struct BackendClientTests {
     final class MockProtocol: URLProtocol {
       nonisolated(unsafe) static var capturedAuthorization: String?
 
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         Self.capturedAuthorization = request.value(forHTTPHeaderField: "Authorization")
@@ -20,7 +20,7 @@ struct BackendClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "jobId": "job-1",
           "status": "queued",
@@ -28,7 +28,7 @@ struct BackendClientTests {
           "expiresAt": "2026-06-16T12:00:00Z",
           "requiredCredits": 5
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -66,8 +66,8 @@ struct BackendClientTests {
   @Test("Job status preserves backend expiration timestamp")
   func jobStatusPreservesExpirationTimestamp() async throws {
     final class MockProtocol: URLProtocol {
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         let response = HTTPURLResponse(
@@ -76,7 +76,7 @@ struct BackendClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "jobId": "job-1",
           "status": "running",
@@ -84,7 +84,7 @@ struct BackendClientTests {
           "message": null,
           "expiresAt": "2026-06-16T12:00:00.123Z"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -112,8 +112,8 @@ struct BackendClientTests {
   @Test("Job status decodes retry metadata")
   func jobStatusDecodesRetryMetadata() async throws {
     final class MockProtocol: URLProtocol {
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         let response = HTTPURLResponse(
@@ -122,7 +122,7 @@ struct BackendClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "jobId": "job-1",
           "status": "failed",
@@ -133,7 +133,7 @@ struct BackendClientTests {
           "retryReason": "provider_failed",
           "retryOfJobId": "job-1"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -162,8 +162,8 @@ struct BackendClientTests {
   @Test("App Attest challenge request decodes backend challenge")
   func appAttestChallengeDecodesBackendResponse() async throws {
     final class MockProtocol: URLProtocol {
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         let response = HTTPURLResponse(
@@ -172,13 +172,13 @@ struct BackendClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "challengeId": "challenge-1",
           "challenge": "abc123",
           "expiresAt": "2026-06-15T03:00:00Z"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -204,8 +204,8 @@ struct BackendClientTests {
   @Test("Download motion asset stores MP4 payloads locally")
   func downloadMotionAssetStoresMP4Payloads() async throws {
     final class MockProtocol: URLProtocol {
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         let response = HTTPURLResponse(

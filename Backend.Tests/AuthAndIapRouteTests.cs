@@ -516,11 +516,14 @@ public sealed class AuthAndIapRouteTests
       Mode = "video_to_gif",
       SourceMedia = TestSourceMedia.Mp4()
     };
-    var generationJson = JsonSerializer.Serialize(request, JsonOptions());
+    // Each attempt is a distinct client generation (fresh request id); identical ids
+    // would be deduplicated by the idempotent-submit path instead of re-reserving.
+    string GenerationJson() =>
+      JsonSerializer.Serialize(request with { Id = Guid.NewGuid().ToString("D") }, JsonOptions());
 
-    using var firstRequest = AuthorizedRequest(HttpMethod.Post, "/v1/generations", auth.AccessToken, generationJson);
-    using var secondRequest = AuthorizedRequest(HttpMethod.Post, "/v1/generations", auth.AccessToken, generationJson);
-    using var thirdRequest = AuthorizedRequest(HttpMethod.Post, "/v1/generations", auth.AccessToken, generationJson);
+    using var firstRequest = AuthorizedRequest(HttpMethod.Post, "/v1/generations", auth.AccessToken, GenerationJson());
+    using var secondRequest = AuthorizedRequest(HttpMethod.Post, "/v1/generations", auth.AccessToken, GenerationJson());
+    using var thirdRequest = AuthorizedRequest(HttpMethod.Post, "/v1/generations", auth.AccessToken, GenerationJson());
 
     var firstResponse = await client.SendAsync(firstRequest);
     var secondResponse = await client.SendAsync(secondRequest);

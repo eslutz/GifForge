@@ -324,6 +324,19 @@ public sealed class MemoryGifForgeAccountStore : IGifForgeAccountStore
       if (reservationsByJobId.TryGetValue(jobId, out var reservation) &&
           reservation.Status == "reserved")
       {
+        // Expired holds have already been returned to the spendable balance;
+        // capturing one would double-spend, so release it instead.
+        if (reservation.ExpiresAt <= DateTimeOffset.UtcNow)
+        {
+          reservationsByJobId[jobId] = reservation with
+          {
+            Status = "released",
+            ReleasedAt = DateTimeOffset.UtcNow
+          };
+          Ledger(reservation.UserId).Add(new LedgerEntry("release", 0, jobId));
+          return Task.CompletedTask;
+        }
+
         reservationsByJobId[jobId] = reservation with
         {
           Status = "captured",

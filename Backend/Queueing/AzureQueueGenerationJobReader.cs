@@ -7,15 +7,22 @@ namespace GifForge.Backend.Queueing;
 public sealed class AzureQueueGenerationJobReader : IGenerationJobQueueReader
 {
   private readonly QueueClient queueClient;
+  private readonly GenerationQueueOptions options;
 
-  public AzureQueueGenerationJobReader(QueueClient queueClient)
+  public AzureQueueGenerationJobReader(QueueClient queueClient, GenerationQueueOptions? options = null)
   {
     this.queueClient = queueClient;
+    this.options = options ?? GenerationQueueOptions.Default;
   }
 
   public async Task<DequeuedGenerationJob?> DequeueAsync(CancellationToken cancellationToken)
   {
-    var response = await queueClient.ReceiveMessageAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+    // The default 30s visibility timeout is far shorter than a video generation,
+    // so the message would reappear mid-processing and a second replica would
+    // duplicate the provider work and the credit capture.
+    var response = await queueClient
+      .ReceiveMessageAsync(visibilityTimeout: options.VisibilityTimeout, cancellationToken: cancellationToken)
+      .ConfigureAwait(false);
     if (!response.HasValue)
     {
       return null;
@@ -38,7 +45,7 @@ public sealed class AzureQueueGenerationJobReader : IGenerationJobQueueReader
 
     return payload is null
       ? null
-      : new DequeuedGenerationJob(payload.JobId, message.MessageId, message.PopReceipt);
+      : new DequeuedGenerationJob(payload.JobId, message.MessageId, message.PopReceipt, message.DequeueCount);
   }
 
   public async Task CompleteAsync(DequeuedGenerationJob job, CancellationToken cancellationToken)

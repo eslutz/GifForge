@@ -6,21 +6,16 @@ public protocol AppAttestSessionProviding: Sendable {
 
 public actor AppAttestSessionAuthorizer: BackendRequestAuthorizing {
   private let provider: any AppAttestSessionProviding
-  private var cachedToken: String?
 
   public init(provider: any AppAttestSessionProviding) {
     self.provider = provider
   }
 
   public func authorizedRequest(for request: URLRequest) async throws -> URLRequest {
-    let token: String
-    if let cachedToken {
-      token = cachedToken
-    } else {
-      let newToken = try await provider.sessionToken()
-      cachedToken = newToken
-      token = newToken
-    }
+    // Providers own caching and expiry (shared store reads are cheap; the DeviceCheck
+    // provider re-attests only when its stored session lapses). Caching here as well
+    // pinned an expired token in memory for the life of the process.
+    let token = try await provider.sessionToken()
 
     var request = request
     request.setValue(token, forHTTPHeaderField: "X-GifForge-App-Attest-Session")
@@ -116,7 +111,9 @@ public struct SharedAppAttestSessionProvider: AppAttestSessionProviding {
 
   public func sessionToken() async throws -> String {
     guard let token = store.loadValidToken() else {
-      throw GifForgeError.appAttestUnavailable
+      // The extension cannot mint App Attest sessions (Apple only allows key
+      // generation in apps); the containing app must be opened to create one.
+      throw GifForgeError.accountSessionMissing
     }
 
     return token

@@ -28,6 +28,37 @@ private struct FoundationCaptionPlan {
   @Guide(description: "A third short caption under 64 characters.")
   var third: String
 }
+
+/// Classifies FoundationModels errors without touching a live model, so this
+/// logic is unit-testable by constructing real `LanguageModelSession.GenerationError`
+/// values directly (their cases and `Context`/`Refusal` payloads are public and
+/// constructible).
+@available(iOS 26.0, macOS 26.0, *)
+enum FoundationModelsErrorClassifier {
+  /// A guardrail rejection must never be silently routed around by falling back
+  /// to the deterministic planner — the user needs to actually change the
+  /// prompt, not receive templated content instead without knowing why.
+  static func isGuardrailRejection(_ error: Error) -> Bool {
+    guard let generationError = error as? LanguageModelSession.GenerationError else {
+      return false
+    }
+
+    switch generationError {
+    case .guardrailViolation, .refusal:
+      return true
+    default:
+      return false
+    }
+  }
+
+  static func explanation(for error: Error) -> String? {
+    guard let generationError = error as? LanguageModelSession.GenerationError else {
+      return nil
+    }
+
+    return generationError.errorDescription
+  }
+}
 #endif
 
 public struct FoundationModelsPromptPlanner: PromptPlanning {
@@ -73,6 +104,19 @@ public struct FoundationModelsPromptPlanner: PromptPlanning {
     #endif
   }
 
+  public func prewarmIfPossible() {
+    #if canImport(FoundationModels)
+    guard #available(iOS 26.0, macOS 26.0, *), canUseOnDeviceFoundationModels else {
+      return
+    }
+
+    // The underlying model resources are managed centrally by the OS and shared
+    // across Apple Intelligence features, so warming a throwaway session here
+    // still benefits the real session created for the next actual request.
+    LanguageModelSession().prewarm()
+    #endif
+  }
+
   #if canImport(FoundationModels)
   @available(iOS 26.0, macOS 26.0, *)
   private func makeFoundationStructuredRequest(from intent: GenerationIntent) async throws -> StructuredGenerationRequest {
@@ -104,6 +148,10 @@ public struct FoundationModelsPromptPlanner: PromptPlanning {
         options: intent.options
       )
     } catch {
+      if FoundationModelsErrorClassifier.isGuardrailRejection(error) {
+        throw GifForgeError.promptRejected(explanation: FoundationModelsErrorClassifier.explanation(for: error))
+      }
+
       return try await fallback.makeStructuredRequest(from: intent)
     }
   }
@@ -134,6 +182,10 @@ public struct FoundationModelsPromptPlanner: PromptPlanning {
 
       return candidates.map { CaptionSuggestion(text: $0) }
     } catch {
+      if FoundationModelsErrorClassifier.isGuardrailRejection(error) {
+        throw GifForgeError.promptRejected(explanation: FoundationModelsErrorClassifier.explanation(for: error))
+      }
+
       return try await fallback.suggestCaptions(for: request)
     }
   }
@@ -198,4 +250,41 @@ public struct FoundationModelsPromptPlanner: PromptPlanning {
 
     return intent.sourceImage == nil ? .textToGIF : .imageToGIF
   }
+}
+
+extension FoundationModelsPromptPlanner: PlannerAvailabilityReporting {
+  public var plannerAvailability: PlannerAvailability {
+    #if canImport(FoundationModels)
+    guard #available(iOS 26.0, macOS 26.0, *) else {
+      return .unavailable(.osVersionTooOld)
+    }
+
+    switch SystemLanguageModel.default.availability {
+    case .available:
+      return .onDevice
+    case let .unavailable(reason):
+      return .unavailable(Self.mapUnavailableReason(reason))
+    }
+    #else
+    return .unavailable(.frameworkUnavailable)
+    #endif
+  }
+
+  #if canImport(FoundationModels)
+  @available(iOS 26.0, macOS 26.0, *)
+  private static func mapUnavailableReason(
+    _ reason: SystemLanguageModel.Availability.UnavailableReason
+  ) -> PlannerUnavailableReason {
+    switch reason {
+    case .deviceNotEligible:
+      .deviceNotEligible
+    case .appleIntelligenceNotEnabled:
+      .appleIntelligenceNotEnabled
+    case .modelNotReady:
+      .modelNotReady
+    @unknown default:
+      .modelNotReady
+    }
+  }
+  #endif
 }

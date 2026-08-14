@@ -4,6 +4,13 @@ public protocol BackendRequestAuthorizing: Sendable {
   func authorizedRequest(for request: URLRequest) async throws -> URLRequest
 }
 
+/// Authorizers that can repair their credentials after an authorization failure
+/// (for example by redeeming a refresh token). Returning `true` asks the client
+/// to retry the original request exactly once.
+public protocol BackendAuthorizationRecovering: Sendable {
+  func recoverAuthorization(afterStatusCode statusCode: Int) async -> Bool
+}
+
 public struct NoopBackendRequestAuthorizer: BackendRequestAuthorizing {
   public init() {}
 
@@ -26,7 +33,7 @@ public struct StaticBearerTokenAuthorizer: BackendRequestAuthorizing {
   }
 }
 
-public struct CompositeBackendRequestAuthorizer: BackendRequestAuthorizing {
+public struct CompositeBackendRequestAuthorizer: BackendRequestAuthorizing, BackendAuthorizationRecovering {
   public var authorizers: [any BackendRequestAuthorizing]
 
   public init(authorizers: [any BackendRequestAuthorizing]) {
@@ -39,6 +46,17 @@ public struct CompositeBackendRequestAuthorizer: BackendRequestAuthorizing {
       authorized = try await authorizer.authorizedRequest(for: authorized)
     }
     return authorized
+  }
+
+  public func recoverAuthorization(afterStatusCode statusCode: Int) async -> Bool {
+    var recovered = false
+    for authorizer in authorizers {
+      if let recovering = authorizer as? any BackendAuthorizationRecovering,
+         await recovering.recoverAuthorization(afterStatusCode: statusCode) {
+        recovered = true
+      }
+    }
+    return recovered
   }
 }
 

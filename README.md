@@ -19,8 +19,9 @@ The v1 architecture is deliberately provider-neutral:
 - `Client/Packages/GifForgeCore` - shared Swift package for planning models, backend client, image preprocessing, GIF rendering, and history.
 - `Backend` - ASP.NET Core Minimal API backend with Native AOT settings, provider abstraction, and job polling endpoints.
 - `Backend.Tests` - xUnit backend integration and unit tests.
+- `ProviderLogDrain` - Azure Function that receives provider log-drain webhooks (fal.ai) into the shared Log Analytics workspace.
 - `Documentation` - product, architecture, privacy, roadmap, and implementation plan.
-- `infra` - Azure Bicep templates for the Container Apps backend environment.
+- `infra` - Azure Bicep templates for the Container Apps backend environment and shared observability.
 - `scripts` - local and deployment smoke-test helpers.
 - `.github/workflows` - CI for backend, infrastructure, and iOS project checks.
 
@@ -59,7 +60,9 @@ See [infra/README.md](infra/README.md) for the Azure resources and deployment no
 
 ## Current Toolchain Note
 
-This project is configured for iOS 26.5+ and has been verified with Xcode 26.5 and the iOS 26.5 SDK. The scaffold keeps the Apple Foundation Models integration boundary explicit and provides a deterministic local fallback for development.
+This project is configured for iOS 26.5+ and has been verified with Xcode 26.5/26.6 and the iOS 26.5 SDK. The scaffold keeps the Apple Foundation Models integration boundary explicit and provides a deterministic local fallback for development.
+
+A staged migration to an iOS 27.0 deployment target (Foundation Models `LanguageModel` protocol with Private Cloud Compute escalation, on-device image input, mandatory Liquid Glass) is planned; see the "iOS 27 migration" section in [Documentation/DEVELOPMENT.md](Documentation/DEVELOPMENT.md).
 
 ## Documentation
 

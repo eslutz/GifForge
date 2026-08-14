@@ -15,7 +15,6 @@ using Azure.Storage.Queues.Models;
 using GifForge.Backend.Configuration;
 using GifForge.Backend.Costs;
 using GifForge.Backend.Jobs;
-using GifForge.Backend.Media;
 using GifForge.Backend.Models;
 using GifForge.Backend.Operations;
 using GifForge.Backend.Providers;
@@ -58,12 +57,15 @@ public static class GifForgeBackendApp
     ConfigureAzureConfiguration(builder);
     ConfigureOpenTelemetry(builder);
 
+    // Kestrel's 30MB default silently rejected payloads the moderation policy is
+    // documented to accept (up to 50MB decoded media as base64 JSON).
+    builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 100_000_000);
+
     builder.Services.ConfigureHttpJsonOptions(ConfigureJson);
     builder.Services.AddSingleton(BackendLogContext.FromConfiguration(builder.Configuration));
     var retentionOptions = GenerationRetentionOptions.FromConfiguration(builder.Configuration);
     builder.Services.AddSingleton(retentionOptions);
     builder.Services.AddSingleton(GenerationRetryOptions.FromConfiguration(builder.Configuration));
-    builder.Services.AddSingleton<MediaNormalizationService>();
     if (provider is not null)
     {
       builder.Services.AddSingleton<IGenerationProvider>(provider);
@@ -111,10 +113,11 @@ public static class GifForgeBackendApp
       builder.Services.AddSingleton(accountSecurity);
     }
     builder.Services.AddSingleton(new GifForgeRateLimiter(AccountSecurityOptions.FromConfiguration(builder.Configuration)));
+    builder.Services.AddSingleton<KeyedAsyncLock>();
     ConfigureWorkerServices(builder);
     ConfigureRetentionCleanup(builder, retentionOptions);
     builder.Services.AddSingleton(new BackendOptions(
-      publicBaseUrl ?? builder.Configuration["GIFFORGE_PUBLIC_BASE_URL"]
+      publicBaseUrl ?? ResolvePublicBaseUrl(builder.Configuration)
     ));
     ConfigureModelCostServices(builder);
     builder.Services.AddSingleton<IModelCostRefreshAuthorizer>(modelCostRefreshAuthorizer ?? new EntraModelCostRefreshAuthorizer(builder.Configuration));
@@ -125,18 +128,37 @@ public static class GifForgeBackendApp
       app.UseAzureAppConfiguration();
     }
 
-    var forwardedHeadersOptions = new ForwardedHeadersOptions
-    {
-      ForwardedHeaders = ForwardedHeaders.XForwardedHost | ForwardedHeaders.XForwardedProto,
-      ForwardLimit = 1
-    };
-    forwardedHeadersOptions.KnownIPNetworks.Clear();
-    forwardedHeadersOptions.KnownProxies.Clear();
-    app.UseForwardedHeaders(forwardedHeadersOptions);
+    // Forwarded headers are deliberately NOT honored: with no trusted-proxy list,
+    // any client could spoof X-Forwarded-Host and control the statusUrl/downloadUrl
+    // returned by the API. Deployed environments resolve their public base URL from
+    // configuration or the Container Apps environment instead (ResolvePublicBaseUrl).
     UseBackendLogScope(app);
 
     MapRoutes(app);
     return app;
+  }
+
+  /// <summary>
+  /// Resolves the base URL used in returned status/download links: explicit
+  /// configuration first, then the Azure Container Apps ingress FQDN derived from
+  /// the environment variables Container Apps injects into every replica.
+  /// </summary>
+  private static string? ResolvePublicBaseUrl(IConfiguration configuration)
+  {
+    var configured = configuration["GIFFORGE_PUBLIC_BASE_URL"];
+    if (!string.IsNullOrWhiteSpace(configured))
+    {
+      return configured;
+    }
+
+    var containerAppName = configuration["CONTAINER_APP_NAME"];
+    var containerAppDomain = configuration["CONTAINER_APP_ENV_DNS_SUFFIX"];
+    if (!string.IsNullOrWhiteSpace(containerAppName) && !string.IsNullOrWhiteSpace(containerAppDomain))
+    {
+      return $"https://{containerAppName}.{containerAppDomain}";
+    }
+
+    return null;
   }
 
   private static void UseBackendLogScope(WebApplication app)
@@ -157,9 +179,6 @@ public static class GifForgeBackendApp
   {
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, GifForgeJsonSerializerContext.Default);
   }
-
-  private static IGenerationProvider CreateGenerationProvider(IConfiguration configuration)
-    => new ConfiguredGenerationProvider(configuration);
 
   private static void ConfigureModelCostServices(WebApplicationBuilder builder)
   {
@@ -430,7 +449,9 @@ public static class GifForgeBackendApp
       }
     );
 
-    builder.Services.AddSingleton<IGenerationJobQueueReader>(new AzureQueueGenerationJobReader(queueClient));
+    var queueOptions = GenerationQueueOptions.FromConfiguration(builder.Configuration);
+    builder.Services.AddSingleton(queueOptions);
+    builder.Services.AddSingleton<IGenerationJobQueueReader>(new AzureQueueGenerationJobReader(queueClient, queueOptions));
     builder.Services.AddSingleton(serviceProvider => new GenerationWorker(
       serviceProvider.GetRequiredService<IJobStore>(),
       serviceProvider.GetRequiredService<IGenerationProvider>(),
@@ -459,6 +480,24 @@ public static class GifForgeBackendApp
   {
     app.MapGet("/health", (IGenerationProvider provider) =>
       Json(new HealthResponse(true, provider.Name, provider.Mode), GifForgeJsonSerializerContext.Default.HealthResponse));
+
+    // Readiness actually exercises the job store (Table Storage or memory) so a
+    // replica that cannot reach its dependencies drops out of rotation instead of
+    // surfacing storage outages as user-facing errors.
+    app.MapGet("/health/ready", async (IGenerationProvider provider, IJobStore jobStore, CancellationToken cancellationToken) =>
+    {
+      try
+      {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        _ = await jobStore.GetAsync("health-readiness-probe", timeout.Token);
+        return Json(new HealthResponse(true, provider.Name, provider.Mode), GifForgeJsonSerializerContext.Default.HealthResponse);
+      }
+      catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+      {
+        return Error(StatusCodes.Status503ServiceUnavailable, "A backend dependency is unavailable.");
+      }
+    });
 
     app.MapPost("/v1/operations/model-costs/refresh", async (
       ModelCostRefreshRequest? request,
@@ -769,11 +808,11 @@ public static class GifForgeBackendApp
       IGenerationJobDispatcher jobDispatcher,
       IAppAttestService appAttest,
       BackendOptions options,
-      MediaNormalizationService mediaNormalization,
       GenerationRetryOptions retryOptions,
       IGenerationEventSink generationEvents,
       GifForgeRateLimiter rateLimiter,
-      AccountSecurityService accountSecurity
+      AccountSecurityService accountSecurity,
+      KeyedAsyncLock generationJobLocks
     ) =>
     {
       var authenticatedUser = accountSecurity.Authenticate(context);
@@ -799,8 +838,19 @@ public static class GifForgeBackendApp
         return Error(validation.StatusCode, validation.Message);
       }
 
-      _ = mediaNormalization.Normalize(request);
-      var jobId = Guid.NewGuid().ToString("D");
+      // Deterministic job ids make resubmission of the same client request (for
+      // example a retry after a lost 202) idempotent instead of double-charging.
+      var jobId = string.IsNullOrWhiteSpace(request.Id)
+        ? Guid.NewGuid().ToString("D")
+        : DeterministicJobId(authenticatedUser?.UserId.ToString("D"), request);
+
+      // Two requests carrying the same client-supplied idempotency key can arrive
+      // genuinely concurrently (client retry racing the original, or a duplicated
+      // send). Without this, both pass the "does a job already exist" check below
+      // before either has created one, so the provider gets charged twice. Serialize
+      // per jobId rather than globally so unrelated submissions never wait on this.
+      await using var jobLockHandle = await generationJobLocks.AcquireAsync(jobId, context.RequestAborted);
+
       if (authenticatedUser is not null)
       {
         if (!string.IsNullOrWhiteSpace(request.RetryOfJobId) &&
@@ -818,6 +868,30 @@ public static class GifForgeBackendApp
       if (!retryContext.IsValid)
       {
         return Error(StatusCodes.Status409Conflict, retryContext.ErrorMessage ?? "Retry is not available.");
+      }
+
+      if (!string.IsNullOrWhiteSpace(request.Id))
+      {
+        var existingJob = await jobStore.GetAsync(jobId, context.RequestAborted);
+        if (existingJob is not null && !existingJob.IsExpired(DateTimeOffset.UtcNow))
+        {
+          int replayedCredits;
+          try
+          {
+            replayedCredits = EstimateGenerationCredits(provider, request, retryContext).RequiredCredits;
+          }
+          catch (GenerationPermanentFailureException)
+          {
+            replayedCredits = 1;
+          }
+
+          var existingStatusUrl = $"{RequestBaseUrl(context, options)}/v1/generations/{existingJob.Id}";
+          return Json(
+            new JobSubmissionResponse(existingJob.Id, "queued", existingStatusUrl, existingJob.ExpiresAt, replayedCredits),
+            GifForgeJsonSerializerContext.Default.JobSubmissionResponse,
+            statusCode: StatusCodes.Status202Accepted
+          );
+        }
       }
 
       if (provider is IModelCostRefreshAwareGenerationProvider costAwareProvider)
@@ -1062,10 +1136,10 @@ public static class GifForgeBackendApp
         return Error(StatusCodes.Status503ServiceUnavailable, "Provider callbacks are not configured.");
       }
 
-      if (!string.Equals(
-        context.Request.Headers["X-GifForge-Provider-Callback-Secret"].ToString(),
-        expectedSecret,
-        StringComparison.Ordinal
+      var presentedSecret = context.Request.Headers["X-GifForge-Provider-Callback-Secret"].ToString();
+      if (!CryptographicOperations.FixedTimeEquals(
+        Encoding.UTF8.GetBytes(presentedSecret),
+        Encoding.UTF8.GetBytes(expectedSecret)
       ))
       {
         return Error(StatusCodes.Status401Unauthorized, "Provider callback authorization is required.");
@@ -1112,8 +1186,42 @@ public static class GifForgeBackendApp
         return Error(StatusCodes.Status400BadRequest, "Successful callbacks must include assetUrl.");
       }
 
-      using var httpClient = new HttpClient();
-      var bytes = await httpClient.GetByteArrayAsync(callback.AssetUrl, cancellationToken);
+      // The asset URL is caller-supplied: restrict fetches to explicitly allowlisted
+      // provider hosts over HTTPS so the callback cannot be used for SSRF from the
+      // managed-identity workload, and bound the download size and duration.
+      if (!IsAllowedCallbackAssetUrl(callback.AssetUrl, configuration, out var assetUri))
+      {
+        return Error(StatusCodes.Status400BadRequest, "Callback assetUrl host is not allowed.");
+      }
+
+      byte[] bytes;
+      try
+      {
+        using var assetResponse = await CallbackAssetHttpClient.GetAsync(
+          assetUri,
+          HttpCompletionOption.ResponseHeadersRead,
+          cancellationToken
+        );
+        assetResponse.EnsureSuccessStatusCode();
+        if (assetResponse.Content.Headers.ContentLength is > MaxCallbackAssetBytes)
+        {
+          return Error(StatusCodes.Status400BadRequest, "Callback asset is too large.");
+        }
+
+        await using var assetStream = await assetResponse.Content.ReadAsStreamAsync(cancellationToken);
+        using var buffer = new MemoryStream();
+        await CopyBoundedAsync(assetStream, buffer, MaxCallbackAssetBytes, cancellationToken);
+        bytes = buffer.ToArray();
+      }
+      catch (HttpRequestException)
+      {
+        return Error(StatusCodes.Status502BadGateway, "Callback asset could not be downloaded.");
+      }
+      catch (InvalidOperationException)
+      {
+        return Error(StatusCodes.Status400BadRequest, "Callback asset is too large.");
+      }
+
       if (bytes.Length == 0)
       {
         return Error(StatusCodes.Status400BadRequest, "Callback asset is empty.");
@@ -1225,6 +1333,87 @@ public static class GifForgeBackendApp
     var retryAfterSeconds = Math.Max(1, (int)Math.Ceiling(decision.RetryAfter.TotalSeconds));
     context.Response.Headers.RetryAfter = retryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
     return Error(StatusCodes.Status429TooManyRequests, "Too many requests. Try again later.");
+  }
+
+  /// <summary>
+  /// Derives a stable job id from the caller identity and the client-supplied
+  /// request id (plus the retry lineage, so a retry is a distinct job while its
+  /// own resubmission is not). Same inputs always map to the same job.
+  /// </summary>
+  private static string DeterministicJobId(string? userId, GenerationRequest request)
+  {
+    var name = $"gifforge-generation:{userId ?? "anonymous"}:{request.Id}:{request.RetryOfJobId ?? string.Empty}";
+    var hash = SHA256.HashData(Encoding.UTF8.GetBytes(name));
+    var bytes = hash.AsSpan(0, 16).ToArray();
+    bytes[6] = (byte)((bytes[6] & 0x0F) | 0x50);
+    bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
+    return new Guid(bytes).ToString("D");
+  }
+
+  private const long MaxCallbackAssetBytes = 100_000_000;
+
+  private static readonly HttpClient CallbackAssetHttpClient = new(new SocketsHttpHandler
+  {
+    PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+    AllowAutoRedirect = false
+  })
+  {
+    Timeout = TimeSpan.FromSeconds(60)
+  };
+
+  private static bool IsAllowedCallbackAssetUrl(
+    string assetUrl,
+    IConfiguration configuration,
+    out Uri assetUri
+  )
+  {
+    assetUri = null!;
+    if (!Uri.TryCreate(assetUrl, UriKind.Absolute, out var parsed) ||
+        parsed.Scheme != Uri.UriSchemeHttps)
+    {
+      return false;
+    }
+
+    var allowedHosts = (configuration["GIFFORGE_PROVIDER_CALLBACK_ASSET_HOSTS"] ?? string.Empty)
+      .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    if (allowedHosts.Length == 0)
+    {
+      return false;
+    }
+
+    foreach (var allowedHost in allowedHosts)
+    {
+      if (parsed.Host.Equals(allowedHost, StringComparison.OrdinalIgnoreCase) ||
+          parsed.Host.EndsWith($".{allowedHost}", StringComparison.OrdinalIgnoreCase))
+      {
+        assetUri = parsed;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private static async Task CopyBoundedAsync(
+    Stream source,
+    Stream destination,
+    long maxBytes,
+    CancellationToken cancellationToken
+  )
+  {
+    var buffer = new byte[81920];
+    long total = 0;
+    int read;
+    while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
+    {
+      total += read;
+      if (total > maxBytes)
+      {
+        throw new InvalidOperationException("Callback asset exceeds the maximum allowed size.");
+      }
+
+      await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+    }
   }
 
   private static string RequestBaseUrl(HttpContext context, BackendOptions options)

@@ -12,12 +12,16 @@ public struct MotionAssetFrameRenderer: Sendable {
     self.mp4FrameExtractor = mp4FrameExtractor
   }
 
-  public func renderFrames(from asset: GeneratedMotionAsset, caption: String?) async throws -> [GIFFrame] {
+  public func renderFrames(
+    from asset: GeneratedMotionAsset,
+    caption: String?,
+    onFrame: (@Sendable (_ completed: Int, _ total: Int) -> Void)? = nil
+  ) async throws -> [GIFFrame] {
     switch asset {
     case let .frameSequence(frameSequence):
       try frameSequenceRenderer.renderFrames(from: frameSequence, caption: caption)
     case let .mp4(url):
-      try await mp4FrameExtractor.extractFrames(from: url, caption: caption)
+      try await mp4FrameExtractor.extractFrames(from: url, caption: caption, onFrame: onFrame)
     }
   }
 }

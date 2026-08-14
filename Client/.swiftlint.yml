@@ -1,0 +1,53 @@
+excluded:
+  - Packages/GifForgeCore/.build
+  - GifForge.xcodeproj
+
+# Non-default, opt-in rules worth having on top of SwiftLint's defaults.
+# force_unwrapping was tried and dropped: it flagged ~30 sites that are all
+# `URL(string: "https://example.test")!`-style unwraps of hardcoded literals
+# in test fixtures — safe by construction, not a real risk signal here.
+opt_in_rules:
+  - contains_over_filter_count
+  - empty_count
+  - fatal_error_message
+  - first_where
+  - last_where
+  - redundant_type_annotation
+  - unneeded_parentheses_in_closure_argument
+
+# The project's existing style favors longer, more descriptive lines
+# (multi-clause doc comments explaining the *why* behind a decision) over
+# hard-wrapping — matches actual practice rather than fighting it.
+line_length:
+  warning: 160
+  error: 240
+
+# A handful of files (the Messages composer model/view, Settings screen) are
+# legitimately larger than SwiftLint's defaults without being unreasonable for
+# a single-target SwiftUI screen. Raised rather than silently disabled so a
+# genuinely oversized file still gets flagged.
+file_length:
+  warning: 500
+  error: 700
+type_body_length:
+  warning: 400
+  error: 550
+function_body_length:
+  warning: 60
+  error: 100
+
+identifier_name:
+  # Prepositions/short labels that read naturally as parameter or associated
+  # value names per Swift's own API Design Guidelines (e.g. `rendering(frame:
+  # of:)`), plus common short loop/coordinate names.
+  excluded:
+    - id
+    - of
+    - to
+    - at
+    - x
+    - y
+    - dx
+    - dy
+    - a # greatestCommonDivisor(_:_:) — conventional Euclidean algorithm notation
+    - b

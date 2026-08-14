@@ -6,4 +6,4 @@ public interface IGenerationJobQueueReader
   Task CompleteAsync(DequeuedGenerationJob job, CancellationToken cancellationToken);
 }
 
-public sealed record DequeuedGenerationJob(string JobId, string MessageId, string PopReceipt);
+public sealed record DequeuedGenerationJob(string JobId, string MessageId, string PopReceipt, long DequeueCount = 1);

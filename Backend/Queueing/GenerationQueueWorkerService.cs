@@ -11,18 +11,21 @@ public sealed class GenerationQueueWorkerService : BackgroundService
 
   private readonly IGenerationJobQueueReader queueReader;
   private readonly GenerationWorker worker;
+  private readonly GenerationQueueOptions options;
   private readonly ILogger<GenerationQueueWorkerService> logger;
   private readonly BackendLogContext logContext;
 
   public GenerationQueueWorkerService(
     IGenerationJobQueueReader queueReader,
     GenerationWorker worker,
+    GenerationQueueOptions options,
     ILogger<GenerationQueueWorkerService> logger,
     BackendLogContext logContext
   )
   {
     this.queueReader = queueReader;
     this.worker = worker;
+    this.options = options;
     this.logger = logger;
     this.logContext = logContext;
   }
@@ -37,6 +40,19 @@ public sealed class GenerationQueueWorkerService : BackgroundService
         if (queuedJob is null)
         {
           await Task.Delay(EmptyQueueDelay, stoppingToken).ConfigureAwait(false);
+          continue;
+        }
+
+        if (queuedJob.DequeueCount > options.MaxDequeueCount)
+        {
+          // Poison message: without this ceiling a stuck job re-polls the provider
+          // roughly every visibility timeout until the 24h job expiry.
+          logger.LogError(
+            "Generation queue job {JobId} exceeded {MaxDequeueCount} deliveries and was marked failed.",
+            queuedJob.JobId,
+            options.MaxDequeueCount
+          );
+          await FailPoisonedJobAsync(queuedJob, stoppingToken).ConfigureAwait(false);
           continue;
         }
 
@@ -55,6 +71,25 @@ public sealed class GenerationQueueWorkerService : BackgroundService
           await Task.Delay(EmptyQueueDelay, stoppingToken).ConfigureAwait(false);
         }
       }
+    }
+  }
+
+  private async Task FailPoisonedJobAsync(DequeuedGenerationJob queuedJob, CancellationToken stoppingToken)
+  {
+    try
+    {
+      await worker.FailJobAsync(
+        queuedJob.JobId,
+        "The generation could not be completed after repeated attempts.",
+        "poison_message",
+        stoppingToken
+      ).ConfigureAwait(false);
+      await queueReader.CompleteAsync(queuedJob, stoppingToken).ConfigureAwait(false);
+    }
+    catch (Exception error) when (error is not OperationCanceledException)
+    {
+      logger.LogError(error, "Failed to finalize poisoned generation job {JobId}.", queuedJob.JobId);
+      await Task.Delay(EmptyQueueDelay, stoppingToken).ConfigureAwait(false);
     }
   }
 }

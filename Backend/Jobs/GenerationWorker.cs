@@ -32,6 +32,45 @@ public sealed class GenerationWorker
     this.configurationRefreshers = configurationRefreshers;
   }
 
+  /// <summary>
+  /// Marks a job failed outside the normal provider flow (for example when its
+  /// queue message poisoned), releasing any credit hold exactly like a permanent
+  /// provider failure would.
+  /// </summary>
+  public async Task FailJobAsync(
+    string jobId,
+    string message,
+    string failureKind,
+    CancellationToken cancellationToken
+  )
+  {
+    var job = await jobStore.GetAsync(jobId, cancellationToken).ConfigureAwait(false);
+    if (job is null ||
+        job.Status is GenerationJobStatus.Succeeded or GenerationJobStatus.Failed)
+    {
+      return;
+    }
+
+    var failed = job with
+    {
+      Status = GenerationJobStatus.Failed,
+      FailedMessage = message,
+      UpdatedAt = DateTimeOffset.UtcNow
+    };
+
+    await jobStore.SaveAsync(failed, cancellationToken).ConfigureAwait(false);
+    if (accountSecurity is not null)
+    {
+      await accountSecurity.ReleaseGenerationCreditAsync(failed.Id, failureKind, cancellationToken)
+        .ConfigureAwait(false);
+    }
+    generationEvents.Record(GenerationOperationalEvent.FromJob(
+      "generation.failed",
+      failed,
+      failureKind: failureKind
+    ));
+  }
+
   public async Task ProcessJobAsync(string jobId, CancellationToken cancellationToken)
   {
     var job = await jobStore.GetAsync(jobId, cancellationToken).ConfigureAwait(false);

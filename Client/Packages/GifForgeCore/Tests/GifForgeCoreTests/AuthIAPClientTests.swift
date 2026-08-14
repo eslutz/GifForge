@@ -16,8 +16,8 @@ struct AuthIAPClientTests {
   @Test("Sign in with Apple decodes backend auth session")
   func signInWithAppleDecodesBackendAuthSession() async throws {
     final class MockProtocol: URLProtocol {
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         let response = HTTPURLResponse(
@@ -26,7 +26,7 @@ struct AuthIAPClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "userId": "user-1",
           "appAccountToken": "00000000-0000-0000-0000-000000000001",
@@ -35,7 +35,7 @@ struct AuthIAPClientTests {
           "refreshToken": "refresh-token",
           "refreshTokenExpiresAt": "2026-07-16T23:00:00Z"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -63,8 +63,8 @@ struct AuthIAPClientTests {
     final class MockProtocol: URLProtocol {
       nonisolated(unsafe) static var capturedPath: String?
 
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         Self.capturedPath = request.url?.path
@@ -74,7 +74,7 @@ struct AuthIAPClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "userId": "anonymous-1",
           "appAccountToken": "00000000-0000-0000-0000-000000000002",
@@ -83,7 +83,7 @@ struct AuthIAPClientTests {
           "refreshToken": "anonymous-refresh-token",
           "refreshTokenExpiresAt": "2026-07-16T23:00:00Z"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -113,8 +113,8 @@ struct AuthIAPClientTests {
       nonisolated(unsafe) static var capturedPath: String?
       nonisolated(unsafe) static var capturedBody: String?
 
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         Self.capturedPath = request.url?.path
@@ -125,7 +125,7 @@ struct AuthIAPClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "userId": "refreshed-1",
           "appAccountToken": "00000000-0000-0000-0000-000000000004",
@@ -134,7 +134,7 @@ struct AuthIAPClientTests {
           "refreshToken": "rotated-refresh-token",
           "refreshTokenExpiresAt": "2026-07-16T23:15:00Z"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -164,8 +164,8 @@ struct AuthIAPClientTests {
       nonisolated(unsafe) static var capturedAuthorization: String?
       nonisolated(unsafe) static var capturedPath: String?
 
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         Self.capturedAuthorization = request.value(forHTTPHeaderField: "Authorization")
@@ -176,7 +176,7 @@ struct AuthIAPClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "userId": "recovered-1",
           "appAccountToken": "00000000-0000-0000-0000-000000000003",
@@ -185,7 +185,7 @@ struct AuthIAPClientTests {
           "refreshToken": "recovered-refresh-token",
           "refreshTokenExpiresAt": "2026-07-16T23:00:00Z"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -212,8 +212,8 @@ struct AuthIAPClientTests {
   @Test("Profile decodes recovery status")
   func profileDecodesRecoveryStatus() async throws {
     final class MockProtocol: URLProtocol {
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         let response = HTTPURLResponse(
@@ -222,14 +222,14 @@ struct AuthIAPClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "userId": "user-1",
           "appAccountToken": "00000000-0000-0000-0000-000000000001",
           "accountKind": "appleLinked",
           "recoveryProvider": "apple"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -255,8 +255,8 @@ struct AuthIAPClientTests {
   @Test("Sign in with Apple backend rejection uses auth-specific error")
   func signInWithAppleBackendRejectionUsesAuthSpecificError() async throws {
     final class MockProtocol: URLProtocol {
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         let response = HTTPURLResponse(
@@ -265,7 +265,7 @@ struct AuthIAPClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = #"{"error":"unauthorized","message":"Authentication failed."}"#.data(using: .utf8)!
+        let body = Data(#"{"error":"unauthorized","message":"Authentication failed."}"#.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -294,8 +294,8 @@ struct AuthIAPClientTests {
       nonisolated(unsafe) static var capturedAuthorization: String?
       nonisolated(unsafe) static var capturedBody: String?
 
-      override class func canInit(with request: URLRequest) -> Bool { true }
-      override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+      override static func canInit(with request: URLRequest) -> Bool { true }
+      override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
       override func startLoading() {
         Self.capturedAuthorization = request.value(forHTTPHeaderField: "Authorization")
@@ -306,7 +306,7 @@ struct AuthIAPClientTests {
           httpVersion: nil,
           headerFields: ["Content-Type": "application/json"]
         )!
-        let body = """
+        let body = Data("""
         {
           "transactionId": "tx-1",
           "productId": "dev.ericslutz.gifforge.credits.10",
@@ -314,7 +314,7 @@ struct AuthIAPClientTests {
           "alreadyProcessed": false,
           "availableCredits": 10
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)

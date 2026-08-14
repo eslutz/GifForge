@@ -252,8 +252,10 @@ public sealed class BackendRouteTests
   }
 
   [Fact]
-  public async Task CreateGenerationUsesForwardedHttpsHostInStatusUrl()
+  public async Task CreateGenerationIgnoresSpoofedForwardedHostInStatusUrl()
   {
+    // Forwarded headers are untrusted (no known-proxy list): a spoofed
+    // X-Forwarded-Host must never control the URLs the API hands back.
     var dispatcher = new RecordingGenerationJobDispatcher();
     await using var app = GifForgeBackendApp.Create(
       provider: new FakeFrameSequenceProvider(),
@@ -268,7 +270,7 @@ public sealed class BackendRouteTests
       Content = new StringContent(requestJson, Encoding.UTF8, "application/json")
     };
     request.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
-    request.Headers.TryAddWithoutValidation("X-Forwarded-Host", "api.gifforge.example");
+    request.Headers.TryAddWithoutValidation("X-Forwarded-Host", "attacker.example");
 
     var response = await client.SendAsync(request);
 
@@ -277,10 +279,48 @@ public sealed class BackendRouteTests
     var submission = JsonSerializer.Deserialize<JobSubmissionResponse>(body, JsonOptions());
     Assert.NotNull(submission);
     Assert.Equal(
-      $"https://api.gifforge.example/v1/generations/{submission.JobId}",
+      $"{baseAddress.Scheme}://{baseAddress.Authority}/v1/generations/{submission.JobId}",
       submission.StatusUrl
     );
     Assert.True(submission.ExpiresAt > DateTimeOffset.UtcNow);
+  }
+
+  [Fact]
+  public async Task CreateGenerationIsIdempotentForTheSameClientRequestId()
+  {
+    var dispatcher = new RecordingGenerationJobDispatcher();
+    await using var app = GifForgeBackendApp.Create(
+      provider: new FakeFrameSequenceProvider(),
+      jobStore: new MemoryJobStore(),
+      jobDispatcher: dispatcher
+    );
+    var baseAddress = await BackendRouteTestHost.StartAsync(app);
+    using var client = new HttpClient { BaseAddress = baseAddress };
+    var requestJson = JsonSerializer.Serialize(
+      TestGenerationRequests.Valid(id: Guid.NewGuid().ToString("D")),
+      JsonOptions()
+    );
+
+    using var firstContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+    var firstResponse = await client.PostAsync("/v1/generations", firstContent);
+    var first = JsonSerializer.Deserialize<JobSubmissionResponse>(
+      await firstResponse.Content.ReadAsStringAsync(),
+      JsonOptions()
+    );
+
+    using var secondContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+    var secondResponse = await client.PostAsync("/v1/generations", secondContent);
+    var second = JsonSerializer.Deserialize<JobSubmissionResponse>(
+      await secondResponse.Content.ReadAsStringAsync(),
+      JsonOptions()
+    );
+
+    Assert.Equal(HttpStatusCode.Accepted, firstResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.Accepted, secondResponse.StatusCode);
+    Assert.NotNull(first);
+    Assert.NotNull(second);
+    Assert.Equal(first.JobId, second.JobId);
+    Assert.Single(dispatcher.JobIds);
   }
 
   [Fact]

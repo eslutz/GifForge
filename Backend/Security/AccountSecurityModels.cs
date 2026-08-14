@@ -214,7 +214,7 @@ public sealed class AccountSecurityOptions
   public bool IapDemoBypassEnabled { get; init; }
   public string Issuer { get; init; } = "gifforge-backend";
   public string Audience { get; init; } = "gifforge-ios";
-  public string SigningKey { get; init; } = "dev-only-gifforge-auth-signing-key-change-before-production";
+  public required string SigningKey { get; init; }
   public TimeSpan AccessTokenLifetime { get; init; } = TimeSpan.FromMinutes(15);
   public TimeSpan RefreshTokenLifetime { get; init; } = TimeSpan.FromDays(30);
   public TimeSpan ReservationLifetime { get; init; } = TimeSpan.FromHours(1);
@@ -230,17 +230,29 @@ public sealed class AccountSecurityOptions
   public int GenerationStatusRateLimitMax { get; init; } = 120;
   public TimeSpan RateLimitWindow { get; init; } = TimeSpan.FromMinutes(1);
 
-  public static AccountSecurityOptions FromConfiguration(IConfiguration configuration) =>
-    new()
+  public static AccountSecurityOptions FromConfiguration(IConfiguration configuration)
+  {
+    var authRequired = string.Equals(configuration["GIFFORGE_AUTH_REQUIRED"], "true", StringComparison.OrdinalIgnoreCase);
+    var authDemoBypass = string.Equals(configuration["GIFFORGE_AUTH_DEMO_BYPASS"], "true", StringComparison.OrdinalIgnoreCase);
+    var signingKey = configuration["GIFFORGE_AUTH_SIGNING_KEY"];
+    if (string.IsNullOrWhiteSpace(signingKey))
     {
-      AuthRequired = string.Equals(configuration["GIFFORGE_AUTH_REQUIRED"], "true", StringComparison.OrdinalIgnoreCase),
-      AuthDemoBypassEnabled = string.Equals(configuration["GIFFORGE_AUTH_DEMO_BYPASS"], "true", StringComparison.OrdinalIgnoreCase),
+      // No fallback, in any environment, including local dev: a silent
+      // default would let a misconfigured deployment mint/validate real
+      // tokens with a well-known, source-visible key.
+      throw new InvalidOperationException(
+        "GIFFORGE_AUTH_SIGNING_KEY must be configured; there is no default signing key."
+      );
+    }
+
+    return new()
+    {
+      AuthRequired = authRequired,
+      AuthDemoBypassEnabled = authDemoBypass,
       IapDemoBypassEnabled = string.Equals(configuration["GIFFORGE_IAP_DEMO_BYPASS"], "true", StringComparison.OrdinalIgnoreCase),
       Issuer = configuration["GIFFORGE_AUTH_TOKEN_ISSUER"] ?? "gifforge-backend",
       Audience = configuration["GIFFORGE_AUTH_TOKEN_AUDIENCE"] ?? "gifforge-ios",
-      SigningKey = string.IsNullOrWhiteSpace(configuration["GIFFORGE_AUTH_SIGNING_KEY"])
-        ? "dev-only-gifforge-auth-signing-key-change-before-production"
-        : configuration["GIFFORGE_AUTH_SIGNING_KEY"]!,
+      SigningKey = signingKey,
       AccessTokenLifetime = Minutes(configuration["GIFFORGE_AUTH_ACCESS_TOKEN_MINUTES"], 15),
       RefreshTokenLifetime = Days(configuration["GIFFORGE_AUTH_REFRESH_TOKEN_DAYS"], 30),
       ReservationLifetime = Minutes(configuration["GIFFORGE_CREDIT_RESERVATION_MINUTES"], 60),
@@ -261,6 +273,7 @@ public sealed class AccountSecurityOptions
       GenerationStatusRateLimitMax = PositiveInt(configuration["GIFFORGE_RATE_LIMIT_GENERATION_STATUS_MAX"], 120),
       RateLimitWindow = Seconds(configuration["GIFFORGE_RATE_LIMIT_WINDOW_SECONDS"], 60)
     };
+  }
 
   private static TimeSpan Minutes(string? value, int fallback) =>
     int.TryParse(value, out var minutes) && minutes > 0
