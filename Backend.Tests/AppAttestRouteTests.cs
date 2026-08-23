@@ -30,57 +30,7 @@ public sealed class AppAttestRouteTests
   }
 
   [Fact]
-  public async Task DemoAppAttestSessionAllowsGenerationRequestWhenDemoBypassIsEnabled()
-  {
-    await using var app = GifForgeBackendApp.Create(
-      args: [
-        "--GIFFORGE_APP_ATTEST_REQUIRED=true",
-        "--GIFFORGE_APP_ATTEST_DEMO_BYPASS=true"
-      ],
-      provider: new FakeFrameSequenceProvider(),
-      jobStore: new MemoryJobStore(),
-      jobDispatcher: new NoopGenerationJobDispatcher()
-    );
-    var baseAddress = await BackendRouteTestHost.StartAsync(app);
-    using var client = new HttpClient { BaseAddress = baseAddress };
-    var challengeResponse = await client.PostAsync("/v1/app-attest/challenges", null);
-    var challenge = JsonSerializer.Deserialize<AppAttestChallengeResponse>(
-      await challengeResponse.Content.ReadAsStringAsync(),
-      JsonOptions()
-    );
-    Assert.NotNull(challenge);
-    var attestationJson = JsonSerializer.Serialize(
-      new AppAttestAttestationRequest(
-        "test-key-id",
-        challenge.ChallengeId,
-        "test-attestation-object",
-        "test-client-data-hash"
-      ),
-      JsonOptions()
-    );
-    var attestationResponse = await client.PostAsync(
-      "/v1/app-attest/attestations",
-      new StringContent(attestationJson, Encoding.UTF8, "application/json")
-    );
-    var session = JsonSerializer.Deserialize<AppAttestSessionResponse>(
-      await attestationResponse.Content.ReadAsStringAsync(),
-      JsonOptions()
-    );
-    Assert.NotNull(session);
-
-    var request = new HttpRequestMessage(HttpMethod.Post, "/v1/generations")
-    {
-      Content = GenerationRequestContent()
-    };
-    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", session.SessionToken);
-
-    var response = await client.SendAsync(request);
-
-    Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-  }
-
-  [Fact]
-  public async Task ProductionAppAttestRejectsDemoAttestationWhenDemoBypassIsDisabled()
+  public async Task AppAttestRejectsAnUnverifiableAttestation()
   {
     await using var app = GifForgeBackendApp.Create(
       args: ["--GIFFORGE_APP_ATTEST_REQUIRED=true"],
@@ -115,7 +65,7 @@ public sealed class AppAttestRouteTests
   }
 
   [Fact]
-  public async Task ProductionAppAttestSessionAllowsGenerationRequestWhenVerifierAccepts()
+  public async Task AppAttestSessionAllowsGenerationRequestWhenVerifierAccepts()
   {
     var verifier = new AcceptingAppAttestVerifier();
     await using var app = GifForgeBackendApp.Create(

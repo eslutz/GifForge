@@ -58,12 +58,11 @@ public sealed class AppAttestServiceTests
     new(
       new AppAttestOptions(
         Required: true,
-        DemoBypassEnabled: true,
         AppIdentifier: null,
         AppIdentifiers: [],
         RootCertificatePem: null
       ),
-      new UnavailableAppAttestVerifier(),
+      new AcceptingAppAttestVerifier(),
       stateStore
     );
 }

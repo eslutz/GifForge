@@ -208,7 +208,7 @@ If prod has legacy suffixed App Attest secret names, recreate the root certifica
 
 Provider API keys are not GitHub deployment secrets. Store `GIFFORGE_FAL_API_KEY` and `GIFFORGE_LUMA_API_KEY` in Key Vault, and store non-secret provider enablement/cost values in Azure App Configuration.
 
-Production dispatch rejects `latest` and requires an immutable 40-character commit SHA image tag. Production always starts the direct video router, uses `appAttestDemoBypassEnabled=false`, and applies the selected `minReplicas`, `workerMinReplicas`, and `maxReplicas` values.
+Production dispatch rejects `latest` and requires an immutable 40-character commit SHA image tag. Production always starts the direct video router and applies the selected `minReplicas`, `workerMinReplicas`, and `maxReplicas` values.
 
 Before creating production resources, run a subscription-scope what-if with placeholder provider/App Attest values and the intended image tag:
 
@@ -225,7 +225,6 @@ az deployment sub what-if \
     containerImage=ghcr.io/eslutz/gifforge-backend:<commit-sha> \
     appAttestAppIdentifier=QS3GC3CT43.dev.ericslutz.gifforge,QS3GC3CT43.dev.ericslutz.gifforge.messagesextension \
     appAttestRootCertificatePem=placeholder \
-    appAttestDemoBypassEnabled=false \
     minReplicas=0 \
     workerMinReplicas=0 \
     maxReplicas=10
@@ -329,7 +328,7 @@ The API and worker Container Apps receive these environment variables:
 
 The worker also sets `GIFFORGE_WORKER_ENABLED=true` and processes jobs from the `generation-jobs` queue. Worker baseline availability is controlled by the `workerMinReplicas` deployment parameter; queue depth controls scale-out from zero through the Azure Queue scale rule.
 
-The templates set `GIFFORGE_APP_ATTEST_DEMO_BYPASS=false` for deployed environments. The bypass exists only for local development and must not be enabled in nonprod or production. Set `appAttestAppIdentifier` and `appAttestRootCertificatePem` before testing real App Attest enforcement.
+There is no App Attest demo bypass in any environment, including local dev — App Attest session creation always requires real attestation verification. Set `appAttestAppIdentifier` and `appAttestRootCertificatePem` before testing App Attest enforcement.
 
 The backend always starts the direct AI video router. It reads provider enablement and model cost overrides from Azure App Configuration when `AZURE_APP_CONFIG_ENDPOINT` is present and reads secrets from Key Vault when `AZURE_KEY_VAULT_ENDPOINT` or `GIFFORGE_KEY_VAULT_URI` is present. Use Key Vault for `GIFFORGE_FAL_API_KEY` and `GIFFORGE_LUMA_API_KEY`; do not store provider API keys in parameter files. If `GIFFORGE_FAL_ENABLED` or `GIFFORGE_LUMA_ENABLED` is omitted, that provider is enabled only when its API key exists. Explicitly setting an enabled flag to `true` without the matching API key fails startup.
 

@@ -47,9 +47,6 @@
     "appAttestRootCertificatePem": {
       "value": ""
     },
-    "appAttestDemoBypassEnabled": {
-      "value": false
-    },
     "minReplicas": {
       "value": 0
     },

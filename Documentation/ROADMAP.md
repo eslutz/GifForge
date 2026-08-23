@@ -12,7 +12,7 @@
 - Azure Container Apps infrastructure for nonprod/prod, with Queue Storage, Blob Storage, Table Storage, Key Vault, managed identity, and scale-to-zero defaults.
 - Manual nonprod deployment workflow with resource-group-scoped Azure OIDC setup and backend smoke testing.
 - Dry-run-first Azure OIDC setup helper for both `nonprod` and `prod` GitHub environments.
-- Guarded manual production deployment workflow with immutable image tags, required App Attest/provider settings, disabled demo bypass, and health checks.
+- Guarded manual production deployment workflow with immutable image tags, required App Attest/provider settings, and health checks.
 
 ## Future Items
 

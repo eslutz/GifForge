@@ -31,7 +31,7 @@ param appleIdTokenAudiences string = 'dev.ericslutz.gifforge'
 @description('Apple bundle id expected in StoreKit transaction JWS payloads.')
 param appStoreBundleId string = 'dev.ericslutz.gifforge'
 
-@description('PEM-encoded Apple root certificate for StoreKit and App Store Server Notification JWS chain validation. Required when GIFFORGE_IAP_DEMO_BYPASS=false; empty fails closed.')
+@description('PEM-encoded Apple root certificate for StoreKit and App Store Server Notification JWS chain validation. Required; empty fails closed.')
 param appStoreJwsRootCertificatePem string = ''
 
 @description('Apple App Attest app identifier allowlist in TeamID.BundleID form. Use a comma-separated list when both the containing app and Messages extension need backend access.')
@@ -39,9 +39,6 @@ param appAttestAppIdentifier string = ''
 
 @description('PEM-encoded Apple App Attest root certificate. Public CA material; leave empty to fail closed until configured.')
 param appAttestRootCertificatePem string = ''
-
-@description('Enable demo App Attest session bypass for direct lower-environment experiments. GitHub deploy workflows pass false, and the value is ignored for prod.')
-param appAttestDemoBypassEnabled bool = false
 
 @description('Minimum Container Apps replicas. Use 0 for scale-to-zero, or 1+ when warm API capacity is required.')
 @minValue(0)
@@ -125,7 +122,6 @@ module backend './main.bicep' = {
     appStoreJwsRootCertificatePem: appStoreJwsRootCertificatePem
     appAttestAppIdentifier: appAttestAppIdentifier
     appAttestRootCertificatePem: appAttestRootCertificatePem
-    appAttestDemoBypassEnabled: appAttestDemoBypassEnabled
     minReplicas: minReplicas
     maxReplicas: maxReplicas
     workerMinReplicas: workerMinReplicas

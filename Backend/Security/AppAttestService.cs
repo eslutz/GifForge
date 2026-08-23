@@ -53,8 +53,7 @@ public sealed class AppAttestService : IAppAttestService
       return null;
     }
 
-    if (!options.DemoBypassEnabled &&
-        verifier.Verify(request, challenge) is null)
+    if (verifier.Verify(request, challenge) is null)
     {
       return null;
     }

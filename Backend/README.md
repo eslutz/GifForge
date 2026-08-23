@@ -26,7 +26,7 @@ The backend listens on `http://127.0.0.1:8787` by default when launched directly
 dotnet test Backend.Tests/GifForge.Backend.Tests.csproj
 ```
 
-The xUnit test suite verifies the HTTP contract, App Attest authorization gates, shared App Attest state storage, explicit demo App Attest bypass behavior, demo provider, durable job mapping, retention expiry behavior, sanitized operational generation events, queue worker retry behavior, fake frame-sequence output, and moderation rejection.
+The xUnit test suite verifies the HTTP contract, App Attest authorization gates, shared App Attest state storage, durable job mapping, retention expiry behavior, sanitized operational generation events, queue worker retry behavior, fake frame-sequence output, and moderation rejection.
 
 ## App Attest Modes
 
@@ -34,7 +34,7 @@ The xUnit test suite verifies the HTTP contract, App Attest authorization gates,
 
 Local development uses an in-memory App Attest state store. Storage-configured deployments use Azure Table Storage for challenge and session state so challenge exchange and authorized generation requests keep working across multiple API replicas and restarts.
 
-The demo bypass only issues session tokens when `GIFFORGE_APP_ATTEST_DEMO_BYPASS=true`. Do not set `GIFFORGE_APP_ATTEST_DEMO_BYPASS` in deployed nonprod or production environments.
+There is no demo bypass — session creation always requires a real attestation the verifier accepts, in every environment including local dev. Testing App Attest locally without physical hardware means injecting a test-double `IAppAttestVerifier` in code (see `Backend.Tests/AppAttestRouteTests.cs`), not a runtime flag.
 
 ## Auth, Credits, and IAP
 

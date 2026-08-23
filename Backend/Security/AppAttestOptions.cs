@@ -4,7 +4,6 @@ namespace GifForge.Backend.Security;
 
 public sealed record AppAttestOptions(
   bool Required,
-  bool DemoBypassEnabled,
   string? AppIdentifier,
   IReadOnlyList<string> AppIdentifiers,
   string? RootCertificatePem
@@ -14,11 +13,6 @@ public sealed record AppAttestOptions(
     new(
       string.Equals(
         configuration["GIFFORGE_APP_ATTEST_REQUIRED"],
-        "true",
-        StringComparison.OrdinalIgnoreCase
-      ),
-      string.Equals(
-        configuration["GIFFORGE_APP_ATTEST_DEMO_BYPASS"],
         "true",
         StringComparison.OrdinalIgnoreCase
       ),

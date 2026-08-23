@@ -192,23 +192,13 @@ public sealed class SigningKeyFailClosedTests
   }
 
   // Closes the actual gap: previously, a missing signing key only threw when
-  // GIFFORGE_AUTH_REQUIRED=true and demo bypass was off. Neither flag
-  // exempts a deployment from needing a real key now — there is no
-  // environment, including no-auth-required or demo-bypass local setups,
-  // where a missing key silently falls back to a hardcoded default.
+  // GIFFORGE_AUTH_REQUIRED=true. There is no environment, including
+  // no-auth-required local setups, where a missing key silently falls back
+  // to a hardcoded default.
   [Fact]
   public void MissingSigningKeyThrowsEvenWithoutAuthRequired()
   {
     Assert.Throws<InvalidOperationException>(() => AccountSecurityOptions.FromConfiguration(Config()));
-  }
-
-  [Fact]
-  public void DemoBypassStillRequiresASigningKey()
-  {
-    Assert.Throws<InvalidOperationException>(() => AccountSecurityOptions.FromConfiguration(Config(
-      ("GIFFORGE_AUTH_REQUIRED", "true"),
-      ("GIFFORGE_AUTH_DEMO_BYPASS", "true")
-    )));
   }
 
   [Fact]
@@ -219,19 +209,7 @@ public sealed class SigningKeyFailClosedTests
       ("GIFFORGE_AUTH_SIGNING_KEY", "a-real-signing-key")
     ));
 
-    Assert.Equal("a-real-signing-key", options.SigningKey);
-  }
-
-  [Fact]
-  public void DemoBypassKeepsLocalRunsWorking()
-  {
-    var options = AccountSecurityOptions.FromConfiguration(Config(
-      ("GIFFORGE_AUTH_REQUIRED", "true"),
-      ("GIFFORGE_AUTH_DEMO_BYPASS", "true"),
-      ("GIFFORGE_AUTH_SIGNING_KEY", "a-real-signing-key")
-    ));
-
     Assert.True(options.AuthRequired);
-    Assert.True(options.AuthDemoBypassEnabled);
+    Assert.Equal("a-real-signing-key", options.SigningKey);
   }
 }

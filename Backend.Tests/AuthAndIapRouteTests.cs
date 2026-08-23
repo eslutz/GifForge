@@ -5,6 +5,10 @@ using System.Text.Json;
 using GifForge.Backend.Jobs;
 using GifForge.Backend.Providers;
 using GifForge.Backend.Queueing;
+using GifForge.Backend.Security;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GifForge.Backend.Tests;
 
@@ -13,10 +17,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task AppleAuthCreatesBackendSessionAndAuthenticatedProfile()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
 
@@ -43,10 +44,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task AnonymousAuthCreatesBackendSessionAndAuthenticatedProfile()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
 
@@ -71,10 +69,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task StoreKitConsumableTransactionGrantsCreditsIdempotently()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     var auth = await AnonymousAsync(client);
@@ -123,10 +118,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task StoreKitTransactionRejectsProductIdMismatch()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     var auth = await AnonymousAsync(client);
@@ -150,8 +142,11 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task StoreKitVerificationFailsClosedWithoutPinnedAppleRoot()
   {
+    // Deliberately not CreateAppWithDemoAuth: this test exercises the real
+    // (only) StoreKit verifier, which must fail closed without a pinned
+    // Apple root certificate configured.
     await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs("--GIFFORGE_IAP_DEMO_BYPASS=false"),
+      args: AuthArgs(),
       provider: new FakeFrameSequenceProvider()
     );
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
@@ -177,10 +172,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task RefreshTokenReuseRevokesRotatedFamily()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     var auth = await SignInAsync(client);
@@ -202,10 +194,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task AppleRecoveryLinkEnablesRecoveryForAnonymousAccount()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     var anonymous = await AnonymousAsync(client);
@@ -233,10 +222,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task AppleRecoveryLinkMergesAnonymousCreditsIntoExistingAppleAccount()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     var apple = await SignInAsync(client, "demo.apple-existing");
@@ -263,10 +249,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task SignInWithAppleNotificationRejectsInvalidPayload()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
 
@@ -284,10 +267,7 @@ public sealed class AuthAndIapRouteTests
   [InlineData("account-deleted")]
   public async Task SignInWithAppleDeletionNotificationRevokesUserSessions(string eventType)
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     var auth = await SignInAsync(client, "demo.apple-delete-subject");
@@ -313,10 +293,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task SignInWithAppleEmailNotificationDoesNotRevokeSession()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     var auth = await SignInAsync(client, "demo.apple-email-subject");
@@ -336,10 +313,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task SignInWithAppleDeletedUserCanSignInAgainWithSameSubject()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     _ = await SignInAsync(client, "demo.apple-relink-subject");
@@ -360,10 +334,7 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task ConcurrentRefreshOnlyIssuesOneReplacementAndRevokesFamily()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider()
-    );
+    await using var app = CreateAppWithDemoAuth();
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     var auth = await AnonymousAsync(client);
@@ -387,12 +358,8 @@ public sealed class AuthAndIapRouteTests
   [Fact]
   public async Task AuthEndpointIsRateLimited()
   {
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(
-        "--GIFFORGE_RATE_LIMIT_AUTH_MAX=1",
-        "--GIFFORGE_RATE_LIMIT_WINDOW_SECONDS=60"
-      ),
-      provider: new FakeFrameSequenceProvider()
+    await using var app = CreateAppWithDemoAuth(
+      extraArgs: ["--GIFFORGE_RATE_LIMIT_AUTH_MAX=1", "--GIFFORGE_RATE_LIMIT_WINDOW_SECONDS=60"]
     );
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
@@ -415,13 +382,12 @@ public sealed class AuthAndIapRouteTests
   public async Task StatusPollingDoesNotConsumeGenerationSubmissionQuota()
   {
     var dispatcher = new RecordingGenerationJobDispatcher();
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(
+    await using var app = CreateAppWithDemoAuth(
+      extraArgs: [
         "--GIFFORGE_RATE_LIMIT_GENERATION_MAX=1",
         "--GIFFORGE_RATE_LIMIT_GENERATION_STATUS_MAX=5",
         "--GIFFORGE_RATE_LIMIT_WINDOW_SECONDS=60"
-      ),
-      provider: new FakeFrameSequenceProvider(),
+      ],
       jobStore: new MemoryJobStore(),
       jobDispatcher: dispatcher
     );
@@ -451,12 +417,7 @@ public sealed class AuthAndIapRouteTests
   public async Task GenerationRequiresBackendAuthAndReservesCredit()
   {
     var dispatcher = new RecordingGenerationJobDispatcher();
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider(),
-      jobStore: new MemoryJobStore(),
-      jobDispatcher: dispatcher
-    );
+    await using var app = CreateAppWithDemoAuth(jobStore: new MemoryJobStore(), jobDispatcher: dispatcher);
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     var generationJson = JsonSerializer.Serialize(TestGenerationRequests.Valid(), JsonOptions());
@@ -501,8 +462,7 @@ public sealed class AuthAndIapRouteTests
         new VideoGenerationModel("ray-3.2-v2v", VideoGenerationCapability.VideoToVideo, 0.72m, true)
       ]
     );
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
+    await using var app = CreateAppWithDemoAuth(
       provider: new RoutedVideoGenerationProvider([luma]),
       jobStore: new MemoryJobStore(),
       jobDispatcher: dispatcher
@@ -549,12 +509,7 @@ public sealed class AuthAndIapRouteTests
   {
     var dispatcher = new RecordingGenerationJobDispatcher();
     var jobStore = new MemoryJobStore();
-    await using var app = GifForgeBackendApp.Create(
-      args: AuthArgs(),
-      provider: new FakeFrameSequenceProvider(),
-      jobStore: jobStore,
-      jobDispatcher: dispatcher
-    );
+    await using var app = CreateAppWithDemoAuth(jobStore: jobStore, jobDispatcher: dispatcher);
     var baseAddress = await BackendRouteTestHost.StartAsync(app);
     using var client = new HttpClient { BaseAddress = baseAddress };
     var owner = await SignInAsync(client, "demo.owner");
@@ -575,10 +530,46 @@ public sealed class AuthAndIapRouteTests
   private static string[] AuthArgs(params string[] extraArgs) =>
   [
     "--GIFFORGE_AUTH_REQUIRED=true",
-    "--GIFFORGE_AUTH_DEMO_BYPASS=true",
-    "--GIFFORGE_IAP_DEMO_BYPASS=true",
     ..extraArgs
   ];
+
+  // Demo Apple/StoreKit validators exist only as an explicit, test-injected
+  // AccountSecurityService — never selectable via configuration in the real
+  // app (see GifForgeBackendApp.Create's CreateAccountSecurityService, which
+  // always wires real validators). Mirrors the AcceptingAppAttestVerifier
+  // pattern used for App Attest tests.
+  private static AccountSecurityService CreateDemoAccountSecurity(string[] args)
+  {
+    var configuration = new ConfigurationBuilder().AddCommandLine(args).AddEnvironmentVariables().Build();
+    var options = AccountSecurityOptions.FromConfiguration(configuration);
+    return new AccountSecurityService(
+      options,
+      new DemoAppleIdentityTokenValidator(),
+      new DemoStoreKitTransactionVerifier(),
+      new DemoAppStoreServerNotificationVerifier(),
+      new DemoSignInWithAppleNotificationVerifier(),
+      new BackendTokenService(options),
+      new MemoryGifForgeAccountStore(),
+      NullLogger<AccountSecurityService>.Instance
+    );
+  }
+
+  private static WebApplication CreateAppWithDemoAuth(
+    string[]? extraArgs = null,
+    IGenerationProvider? provider = null,
+    IJobStore? jobStore = null,
+    IGenerationJobDispatcher? jobDispatcher = null
+  )
+  {
+    var args = AuthArgs(extraArgs ?? []);
+    return GifForgeBackendApp.Create(
+      args: args,
+      provider: provider ?? new FakeFrameSequenceProvider(),
+      jobStore: jobStore,
+      jobDispatcher: jobDispatcher,
+      accountSecurity: CreateDemoAccountSecurity(args)
+    );
+  }
 
   private static async Task<AuthResponse> SignInAsync(HttpClient client, string identityToken = "demo.apple-subject")
   {

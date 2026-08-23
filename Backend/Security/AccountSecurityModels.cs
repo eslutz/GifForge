@@ -210,8 +210,6 @@ public interface IGifForgeAccountStore
 public sealed class AccountSecurityOptions
 {
   public bool AuthRequired { get; init; }
-  public bool AuthDemoBypassEnabled { get; init; }
-  public bool IapDemoBypassEnabled { get; init; }
   public string Issuer { get; init; } = "gifforge-backend";
   public string Audience { get; init; } = "gifforge-ios";
   public required string SigningKey { get; init; }
@@ -233,7 +231,6 @@ public sealed class AccountSecurityOptions
   public static AccountSecurityOptions FromConfiguration(IConfiguration configuration)
   {
     var authRequired = string.Equals(configuration["GIFFORGE_AUTH_REQUIRED"], "true", StringComparison.OrdinalIgnoreCase);
-    var authDemoBypass = string.Equals(configuration["GIFFORGE_AUTH_DEMO_BYPASS"], "true", StringComparison.OrdinalIgnoreCase);
     var signingKey = configuration["GIFFORGE_AUTH_SIGNING_KEY"];
     if (string.IsNullOrWhiteSpace(signingKey))
     {
@@ -248,8 +245,6 @@ public sealed class AccountSecurityOptions
     return new()
     {
       AuthRequired = authRequired,
-      AuthDemoBypassEnabled = authDemoBypass,
-      IapDemoBypassEnabled = string.Equals(configuration["GIFFORGE_IAP_DEMO_BYPASS"], "true", StringComparison.OrdinalIgnoreCase),
       Issuer = configuration["GIFFORGE_AUTH_TOKEN_ISSUER"] ?? "gifforge-backend",
       Audience = configuration["GIFFORGE_AUTH_TOKEN_AUDIENCE"] ?? "gifforge-ios",
       SigningKey = signingKey,

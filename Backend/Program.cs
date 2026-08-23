@@ -385,18 +385,10 @@ public static class GifForgeBackendApp
   {
     var options = AccountSecurityOptions.FromConfiguration(configuration);
     var tokenService = new BackendTokenService(options);
-    IAppleIdentityTokenValidator appleValidator = options.AuthDemoBypassEnabled
-      ? new DemoAppleIdentityTokenValidator()
-      : new AppleIdentityTokenValidator(options, new HttpClient());
-    IStoreKitTransactionVerifier transactionVerifier = options.IapDemoBypassEnabled
-      ? new DemoStoreKitTransactionVerifier()
-      : new StoreKitJwsTransactionVerifier(options);
-    IAppStoreServerNotificationVerifier notificationVerifier = options.IapDemoBypassEnabled
-      ? new DemoAppStoreServerNotificationVerifier()
-      : new AppStoreServerNotificationJwsVerifier(options);
-    ISignInWithAppleNotificationVerifier signInWithAppleNotificationVerifier = options.AuthDemoBypassEnabled
-      ? new DemoSignInWithAppleNotificationVerifier()
-      : new SignInWithAppleNotificationJwtVerifier(options, new HttpClient());
+    var appleValidator = new AppleIdentityTokenValidator(options, new HttpClient());
+    var transactionVerifier = new StoreKitJwsTransactionVerifier(options);
+    var notificationVerifier = new AppStoreServerNotificationJwsVerifier(options);
+    var signInWithAppleNotificationVerifier = new SignInWithAppleNotificationJwtVerifier(options, new HttpClient());
 
     return new AccountSecurityService(
       options,

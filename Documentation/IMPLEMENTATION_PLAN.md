@@ -27,7 +27,7 @@ Status: implemented in this scaffold.
 
 - Deploy the ASP.NET Core Minimal API with Native AOT to Azure Container Apps.
 - Validate generation requests before provider submission, including supported modes, prompt/caption lengths, caption modes, output option ranges, processed JPEG source-image shape, base64 validity, source-image byte size, and source-image dimensions.
-- Require App Attest for deployed environments. The backend fails closed by default, supports an explicit `GIFFORGE_APP_ATTEST_DEMO_BYPASS=true` path for local smoke testing only, and verifies real App Attest attestation objects when the app identifier and Apple App Attest root certificate are configured.
+- Require App Attest for deployed environments. The backend fails closed by default and always verifies real App Attest attestation objects when the app identifier and Apple App Attest root certificate are configured — there is no bypass in any environment; local automated tests inject a test-double verifier in code instead.
 - Use Azure Table Storage for durable job state and App Attest challenge/session state.
 - Use Azure Queue Storage for long-running provider orchestration, including retrying transient provider/result-store failures through queue visibility semantics.
 - Store provider outputs and temporary download assets in Azure Blob Storage.
@@ -38,7 +38,7 @@ Status: implemented in this scaffold.
 - Operational generation logs are metadata-only and avoid prompt text, caption text, source-image bytes, provider result bytes, and provider error messages.
 - Keep `infra/main.subscription.bicep` as the bootstrap entry point for creating `nonprod` and `prod` resource groups, and keep `infra/main.bicep` as the source of truth for Container Apps, storage, Key Vault, managed identity, and role assignments. Use resource-group-scope deployments for normal environment updates so GitHub Actions identities can be scoped per environment.
 - Use `scripts/setup-azure-oidc.sh` as the reviewed setup path for per-environment GitHub OIDC federated credentials, GitHub environment secrets, and resource-group-scoped Azure RBAC grants. The helper is dry-run by default, supports `nonprod` and `prod`, and only mutates Azure/GitHub when run with `--apply`.
-- Keep `Deploy Nonprod` and `Deploy Prod` as manual GitHub Actions workflows. Deployed environments use the direct video router with real App Attest configuration; prod requires provider API keys in Key Vault, rejects `latest`, disables the demo bypass, and deploys only immutable image tags.
+- Keep `Deploy Nonprod` and `Deploy Prod` as manual GitHub Actions workflows. Deployed environments use the direct video router with real App Attest configuration; prod requires provider API keys in Key Vault, rejects `latest`, and deploys only immutable image tags.
 
 ## Phase 4: Real Provider Adapter
 

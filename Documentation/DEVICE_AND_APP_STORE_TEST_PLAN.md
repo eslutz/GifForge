@@ -23,7 +23,7 @@ Use this plan to collect the remaining evidence needed before treating GifForge 
 - Apple ID / tester type:
 - Backend URL:
 - Backend image tag:
-- App Attest mode: `development`, `production`, or demo bypass
+- App Attest mode: `development` or `production` (no bypass exists in any environment)
 - Account mode: local account, Apple recovery sandbox/review/production, or merged recovery
 - IAP environment: StoreKit local, sandbox, review, or production
 - Provider adapter: `fake` or provider name

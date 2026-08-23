@@ -28,7 +28,7 @@ param appleIdTokenAudiences string = 'dev.ericslutz.gifforge'
 @description('Apple bundle id expected in StoreKit transaction JWS payloads.')
 param appStoreBundleId string = 'dev.ericslutz.gifforge'
 
-@description('PEM-encoded Apple root certificate for StoreKit and App Store Server Notification JWS chain validation. Required when GIFFORGE_IAP_DEMO_BYPASS=false; empty fails closed.')
+@description('PEM-encoded Apple root certificate for StoreKit and App Store Server Notification JWS chain validation. Required; empty fails closed.')
 param appStoreJwsRootCertificatePem string = ''
 
 @description('Apple App Attest app identifier allowlist in TeamID.BundleID form. Use a comma-separated list when both the containing app and Messages extension need backend access.')
@@ -36,9 +36,6 @@ param appAttestAppIdentifier string = ''
 
 @description('PEM-encoded Apple App Attest root certificate. Public CA material; leave empty to fail closed until configured.')
 param appAttestRootCertificatePem string = ''
-
-@description('Enable demo App Attest session bypass for direct lower-environment experiments. GitHub deploy workflows pass false, and the value is ignored for prod.')
-param appAttestDemoBypassEnabled bool = false
 
 @description('Minimum Container Apps replicas. Use 0 for scale-to-zero in lower environments.')
 @minValue(0)
@@ -470,14 +467,6 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: 'true'
             }
             {
-              name: 'GIFFORGE_AUTH_DEMO_BYPASS'
-              value: 'false'
-            }
-            {
-              name: 'GIFFORGE_IAP_DEMO_BYPASS'
-              value: 'false'
-            }
-            {
               name: 'GIFFORGE_APPLE_ID_TOKEN_AUDIENCES'
               value: appleIdTokenAudiences
             }
@@ -488,10 +477,6 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
             {
               name: 'GIFFORGE_APP_STORE_JWS_ROOT_CERTIFICATE_PEM'
               value: appStoreJwsRootCertificatePem
-            }
-            {
-              name: 'GIFFORGE_APP_ATTEST_DEMO_BYPASS'
-              value: appAttestDemoBypassEnabled && environmentName != 'prod' ? 'true' : 'false'
             }
             {
               name: 'GIFFORGE_APP_ATTEST_APP_IDENTIFIER'
@@ -682,14 +667,6 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
               value: 'true'
             }
             {
-              name: 'GIFFORGE_AUTH_DEMO_BYPASS'
-              value: 'false'
-            }
-            {
-              name: 'GIFFORGE_IAP_DEMO_BYPASS'
-              value: 'false'
-            }
-            {
               name: 'GIFFORGE_APPLE_ID_TOKEN_AUDIENCES'
               value: appleIdTokenAudiences
             }
@@ -700,10 +677,6 @@ resource workerContainerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
             {
               name: 'GIFFORGE_APP_STORE_JWS_ROOT_CERTIFICATE_PEM'
               value: appStoreJwsRootCertificatePem
-            }
-            {
-              name: 'GIFFORGE_APP_ATTEST_DEMO_BYPASS'
-              value: appAttestDemoBypassEnabled && environmentName != 'prod' ? 'true' : 'false'
             }
             {
               name: 'GIFFORGE_APP_ATTEST_APP_IDENTIFIER'

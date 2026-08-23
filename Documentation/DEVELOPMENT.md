@@ -63,7 +63,7 @@ dotnet test Backend.Tests/GifForge.Backend.Tests.csproj
 
 ## Auth, IAP, and SQL
 
-Local backend tests use explicit demo Apple auth/IAP bypass flags. Deployed nonprod/prod must leave `GIFFORGE_AUTH_DEMO_BYPASS=false` and `GIFFORGE_IAP_DEMO_BYPASS=false`.
+There is no demo Apple auth/IAP bypass in any environment. Local backend tests that need deterministic Apple/StoreKit behavior inject a demo `AccountSecurityService` directly in test code (see `Backend.Tests/AuthAndIapRouteTests.cs`), not a runtime config flag.
 
 Required deployed settings:
 
@@ -77,7 +77,7 @@ Required deployed settings:
 
 Production must use a separate production SQL database before real users or live purchases.
 
-When `GIFFORGE_IAP_DEMO_BYPASS=false`, an empty or invalid `GIFFORGE_APP_STORE_JWS_ROOT_CERTIFICATE_PEM` makes StoreKit transaction and App Store Server Notification verification fail closed. Do not rely on the container OS trust store for StoreKit JWS validation.
+An empty or invalid `GIFFORGE_APP_STORE_JWS_ROOT_CERTIFICATE_PEM` makes StoreKit transaction and App Store Server Notification verification fail closed. Do not rely on the container OS trust store for StoreKit JWS validation.
 
 Apply the SQL migrations in order with a migration principal, not the runtime managed identity:
 
@@ -179,17 +179,7 @@ Real App Attest verification requires:
 - `GIFFORGE_APP_ATTEST_APP_IDENTIFIER`: `QS3GC3CT43.dev.ericslutz.gifforge,QS3GC3CT43.dev.ericslutz.gifforge.messagesextension`.
 - `GIFFORGE_APP_ATTEST_ROOT_CERTIFICATE_PEM`: PEM-encoded Apple App Attest root certificate.
 
-The scaffold includes a demo-only App Attest bypass for local smoke testing:
-
-```bash
-GIFFORGE_APP_ATTEST_REQUIRED=true \
-GIFFORGE_APP_ATTEST_DEMO_BYPASS=true \
-GIFFORGE_AUTH_SIGNING_KEY=local-dev-signing-key \
-ASPNETCORE_HTTP_PORTS=8787 \
-dotnet run --project Backend/GifForge.Backend.csproj
-```
-
-`GIFFORGE_APP_ATTEST_DEMO_BYPASS` lets the backend issue short-lived demo session tokens from placeholder attestation payloads. Do not set it in nonprod or production.
+There is no App Attest bypass in any environment, including local dev — session creation always requires a real attestation the configured verifier accepts. That means `GIFFORGE_APP_ATTEST_REQUIRED=true` against a bare `dotnet run` isn't testable end-to-end without a physical device (App Attest key generation isn't available in the Simulator at all). For automated testing of the enforcement flow without hardware, inject a test-double `IAppAttestVerifier` in code instead of a runtime flag — see `AcceptingAppAttestVerifier` in `Backend.Tests/AppAttestRouteTests.cs`. Everyday local development leaves `GIFFORGE_APP_ATTEST_REQUIRED` unset (defaults to not enforced).
 
 The Messages extension cannot generate App Attest keys directly; Apple only supports App Attest key generation in apps and watchOS extensions. For device testing with `Require App Attest` enabled, open the containing GifForge app first so Settings can prepare a short-lived App Attest-backed backend session in the shared app group. The Messages extension reuses that backend session token for generation requests.
 
