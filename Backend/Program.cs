@@ -12,6 +12,7 @@ using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
+using DotNetEnv;
 using GifForge.Backend.Configuration;
 using GifForge.Backend.Costs;
 using GifForge.Backend.Jobs;
@@ -28,6 +29,15 @@ using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+
+// Local-dev-only convenience: deployed environments (Container Apps) never
+// have this file and set real environment variables instead, so a missing
+// file here is expected and silently skipped rather than treated as an error.
+var envFilePath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+if (File.Exists(envFilePath))
+{
+  Env.Load(envFilePath);
+}
 
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")) &&
     string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS")))
@@ -81,7 +91,7 @@ public static class GifForgeBackendApp
         ));
     }
     builder.Services.AddSingleton(jobStore ?? CreateJobStore(builder.Configuration, retentionOptions));
-    builder.Services.AddSingleton(jobDispatcher ?? CreateJobDispatcher(builder.Configuration));
+    ConfigureJobDispatch(builder, jobDispatcher);
     if (generationEventSink is null)
     {
       builder.Services.AddSingleton<IGenerationEventSink, LoggingGenerationEventSink>();
@@ -191,7 +201,14 @@ public static class GifForgeBackendApp
     builder.Services.AddSingleton<ProviderPricingSource, FalPricingSource>();
     builder.Services.AddSingleton<ProviderPricingSource, LumaPricingSource>();
     builder.Services.AddSingleton(ProviderPricingRegistry.CreateDefault);
-    builder.Services.AddSingleton<IAppConfigurationCostStore, AzureAppConfigurationCostStore>();
+    if (string.IsNullOrWhiteSpace(builder.Configuration["AZURE_APP_CONFIG_ENDPOINT"]))
+    {
+      builder.Services.AddSingleton<IAppConfigurationCostStore, InMemoryAppConfigurationCostStore>();
+    }
+    else
+    {
+      builder.Services.AddSingleton<IAppConfigurationCostStore, AzureAppConfigurationCostStore>();
+    }
     builder.Services.AddSingleton<AppConfigurationCostWriter>();
     builder.Services.AddSingleton<IRefreshLeaseFactory>(serviceProvider => CreateRefreshLeaseFactory(builder.Configuration));
     builder.Services.AddSingleton(ModelCostCacheOptions.FromConfiguration(builder.Configuration));
@@ -201,7 +218,7 @@ public static class GifForgeBackendApp
   private static IRefreshLeaseFactory CreateRefreshLeaseFactory(IConfiguration configuration)
   {
     var storage = BackendStorageOptions.FromConfiguration(configuration);
-    if (!storage.IsConfigured) throw new InvalidOperationException("Model cost refresh requires configured Azure storage.");
+    if (!storage.IsConfigured) return new InMemoryRefreshLeaseFactory();
     var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions { ManagedIdentityClientId = storage.ManagedIdentityClientId });
     var endpoint = new Uri($"https://{storage.StorageAccountName}.blob.core.windows.net");
     return new AzureBlobRefreshLeaseFactory(new BlobServiceClient(endpoint, credential).GetBlobContainerClient(storage.ControlContainerName));
@@ -312,14 +329,42 @@ public static class GifForgeBackendApp
     return new AzureBlobGenerationResultStore(serviceClient.GetBlobContainerClient(storage.ResultsContainerName));
   }
 
-  private static IGenerationJobDispatcher CreateJobDispatcher(IConfiguration configuration)
+  private static void ConfigureJobDispatch(WebApplicationBuilder builder, IGenerationJobDispatcher? jobDispatcher)
   {
-    var storage = BackendStorageOptions.FromConfiguration(configuration);
-    if (!storage.IsConfigured)
+    if (jobDispatcher is not null)
     {
-      return new NoopGenerationJobDispatcher();
+      builder.Services.AddSingleton(jobDispatcher);
+      return;
     }
 
+    var storage = BackendStorageOptions.FromConfiguration(builder.Configuration);
+    if (storage.IsConfigured)
+    {
+      builder.Services.AddSingleton(CreateAzureJobDispatcher(storage));
+      return;
+    }
+
+    // Local-dev fallback: without Azure Storage there is no separate queue
+    // worker app to process jobs, so a submitted generation would otherwise sit
+    // "queued" forever behind NoopGenerationJobDispatcher. Run the same
+    // GenerationWorker logic in-process against an in-memory queue instead.
+    var localQueue = new InProcessGenerationJobQueue();
+    builder.Services.AddSingleton<IGenerationJobDispatcher>(localQueue);
+    builder.Services.AddSingleton<IGenerationJobQueueReader>(localQueue);
+    builder.Services.AddSingleton(GenerationQueueOptions.Default);
+    builder.Services.AddSingleton(serviceProvider => new GenerationWorker(
+      serviceProvider.GetRequiredService<IJobStore>(),
+      serviceProvider.GetRequiredService<IGenerationProvider>(),
+      serviceProvider.GetRequiredService<IGenerationResultStore>(),
+      serviceProvider.GetRequiredService<IGenerationEventSink>(),
+      serviceProvider.GetRequiredService<AccountSecurityService>(),
+      serviceProvider.GetService<IConfigurationRefresherProvider>()
+    ));
+    builder.Services.AddHostedService<GenerationQueueWorkerService>();
+  }
+
+  private static AzureQueueGenerationJobDispatcher CreateAzureJobDispatcher(BackendStorageOptions storage)
+  {
     var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
     {
       ManagedIdentityClientId = storage.ManagedIdentityClientId

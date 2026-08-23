@@ -18,7 +18,12 @@ After validation, moderation, and provider submission, persisted generation job 
 dotnet run --project Backend/GifForge.Backend.csproj
 ```
 
-The backend listens on `http://127.0.0.1:8787` by default when launched directly.
+The backend listens on `http://127.0.0.1:8787` by default when launched directly. Two environment variables are required to start at all, in every environment including local dev — there is no fallback for either:
+
+- `GIFFORGE_AUTH_SIGNING_KEY`: any string works locally.
+- `GIFFORGE_FAL_API_KEY` or `GIFFORGE_LUMA_API_KEY`: a real provider API key. There is no working fake/demo provider in this startup path (only in the test project), so at least one real key is required just to boot.
+
+Create `Backend/.env` (git-ignored) with both set — see `Documentation/DEVELOPMENT.md` for the full list of variables and a template. `dotnet run` loads it automatically.
 
 ## Tests
 

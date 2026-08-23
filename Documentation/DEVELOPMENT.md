@@ -143,10 +143,15 @@ The generated evidence directory is ignored by git. Use the template while testi
 ## Run the Local Backend
 
 ```bash
-GIFFORGE_AUTH_SIGNING_KEY=local-dev-signing-key ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/GifForge.Backend.csproj
+dotnet run --project Backend/GifForge.Backend.csproj
 ```
 
-The backend listens at `http://127.0.0.1:8787`. `GIFFORGE_AUTH_SIGNING_KEY` can be any string locally — it just needs to be set to *something*; there is no default.
+The backend listens at `http://127.0.0.1:8787`. Two environment variables are required to start at all, with no fallback in any environment:
+
+- `GIFFORGE_AUTH_SIGNING_KEY` — any string works locally.
+- `GIFFORGE_FAL_API_KEY` or `GIFFORGE_LUMA_API_KEY` — a real provider API key. There is no working fake/demo provider in this startup path (`FakeFrameSequenceProvider` is only reachable from the test project), so a real key is required just to boot, and a real generation request makes a real, billable provider call.
+
+Create `Backend/.env` (git-ignored) with both set; `dotnet run` loads it automatically. See `Backend/.env`'s comments for exactly which keys it expects.
 
 ## Backend Deployment Direction
 
@@ -258,14 +263,18 @@ GitHub Actions is split into path-scoped workflows:
 
 The client workflow also builds the containing app, Messages extension, and UI test target for iOS Simulator. Documentation-only changes do not run these workflows. Pushes to `main` that touch backend code also authenticate to GHCR and publish the backend image.
 
-## End-to-End Demo Flow
+## End-to-End Flow
 
-1. Start the local backend with `ASPNETCORE_HTTP_PORTS=8787 dotnet run --project Backend/GifForge.Backend.csproj`.
+This exercises the real provider (real cost, real latency) — see "Run the Local Backend" above for the required `.env` setup.
+
+1. Start the local backend with a real `GIFFORGE_FAL_API_KEY` or `GIFFORGE_LUMA_API_KEY` set (via `Backend/.env`): `dotnet run --project Backend/GifForge.Backend.csproj`.
 2. Launch the containing app once and confirm the backend URL in Settings.
 3. Open Messages, select the GifForge iMessage app, and enter a prompt.
 4. Optionally add an image with the Photos picker.
 5. Select a caption mode.
 6. Tap Generate.
-7. The extension plans a structured request, submits a backend job, polls until completion, downloads a fake frame sequence from the demo provider, renders a local GIF, and shows a preview.
+7. The extension plans a structured request, submits a backend job, polls until completion, downloads the real generated video, renders a local GIF, and shows a preview.
 8. Tap Insert to add the GIF to the Messages compose field.
 9. Send manually from Messages.
+
+For fast, free, deterministic iteration on everything *around* the provider call (UI flow, auth, job polling, retry/error handling, GIF rendering) without a real key, run the backend test suite instead — `Backend.Tests` injects `FakeFrameSequenceProvider` directly (see `dotnet test Backend.Tests/GifForge.Backend.Tests.csproj`), which has no path to a real `dotnet run` and needs no provider key.
