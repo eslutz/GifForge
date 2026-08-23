@@ -62,7 +62,7 @@ See [infra/README.md](infra/README.md) for the Azure resources and deployment no
 
 This project is configured for iOS 26.5+ and has been verified with Xcode 26.5/26.6 and the iOS 26.5 SDK. The scaffold keeps the Apple Foundation Models integration boundary explicit and provides a deterministic local fallback for development.
 
-A staged migration to an iOS 27.0 deployment target (Foundation Models `LanguageModel` protocol with Private Cloud Compute escalation, on-device image input, mandatory Liquid Glass) is planned; see the "iOS 27 migration" section in [Documentation/DEVELOPMENT.md](Documentation/DEVELOPMENT.md).
+The deployment target stays at iOS 26.5 deliberately: nothing in the app uses an iOS 27-exclusive API today. See the "Deployment target" section in [Documentation/DEVELOPMENT.md](Documentation/DEVELOPMENT.md).
 
 ## Documentation
 

@@ -10,16 +10,9 @@
 
 The current scaffold was generated and build-checked on Xcode 26.5 with the iOS 26.5 SDK, and re-verified on Xcode 26.6.
 
-### iOS 27 migration (staged)
+### Deployment target
 
-The project is migrating to an iOS 27.0 deployment target (Foundation Models `LanguageModel` protocol, `PrivateCloudComputeLanguageModel`, on-device image input, mandatory Liquid Glass). Until iOS 27 GA (~September 2026):
-
-1. Install the Xcode 27 beta **alongside** the release Xcode (for example at `/Applications/Xcode-27-beta.app`). Leave `xcode-select` pointing at the release Xcode.
-2. Use the beta per shell session: `export DEVELOPER_DIR=/Applications/Xcode-27-beta.app/Contents/Developer`.
-3. Enroll the test iPhone in the iOS 27 developer beta (Settings > General > Software Update > Beta Updates) only after a full validation pass on iOS 26.5 — the target bump makes iOS 27 mandatory on device.
-4. Bump `Client/project.yml` (`deploymentTarget.iOS`, `IPHONEOS_DEPLOYMENT_TARGET`, `xcodeVersion`) and `Client/Packages/GifForgeCore/Package.swift` (`.iOS("27.0")`, keep `.macOS("15.0")` so `swift test` runs on CI hosts), then `xcodegen generate` and commit.
-
-Xcode 27 requires an Apple silicon Mac on macOS 26.4+; GitHub-hosted runners may lack the iOS 27 SDK until GA, so the client workflow must tolerate a missing SDK (validators and package tests still run).
+GifForge targets iOS 26.5 (`Client/project.yml`) and stays there deliberately: nothing in the app uses an iOS 27-exclusive API today. All Foundation Models usage (`SystemLanguageModel`, `LanguageModelSession`, availability/error handling, `prewarm()`) is real iOS 26 API, annotated `@available(iOS 26.0, ...)`. The iOS 27-only capabilities that would justify a bump — Private Cloud Compute escalation via the new `LanguageModel` protocol, on-device image input to the model, and PCC quota visibility — are not required for the app to function, so there's no staged migration in progress. Revisit this only if one of those capabilities becomes a real product need.
 
 ## Generate the Xcode Project
 

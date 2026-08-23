@@ -17,7 +17,7 @@
 ## Future Items
 
 - Live fal.ai/Luma provider credentials and a preflight validation pass against the real fal.ai/Luma accounts. The `RoutedVideoGenerationProvider`/`FalVideoProvider`/`LumaVideoProvider` adapters are implemented and route by cheapest-cost model; see `Documentation/PROVIDER_ONBOARDING.md` for the required preflight evidence.
-- iOS 27 migration in progress, staged behind validation gates; see the "iOS 27 migration" section in `Documentation/DEVELOPMENT.md` for the authoritative sequencing.
+- Deployment target stays at iOS 26.5; see the "Deployment target" section in `Documentation/DEVELOPMENT.md`. Nothing in the app uses an iOS 27-exclusive API, so there is no migration in progress.
 - Production App Attest configuration, real production deployment evidence, and physical-device validation.
 - StoreKit sandbox/device validation, App Store Server Notification validation, and separate production SQL provisioning before live purchases.
 - Production signing, App Store Connect screenshots, and final submission evidence.
