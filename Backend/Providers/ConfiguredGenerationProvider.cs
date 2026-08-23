@@ -3,6 +3,7 @@ using GifForge.Backend.Jobs;
 using GifForge.Backend.Models;
 using GifForge.Backend.Costs;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace GifForge.Backend.Providers;
 
@@ -111,19 +112,30 @@ public sealed class ConfiguredGenerationProvider : IRetryAwareGenerationProvider
       Timeout = TimeSpan.FromSeconds(100)
     };
 
-  internal static IGenerationProvider CreateRoutedVideoProvider(IConfiguration configuration)
+  internal static IGenerationProvider CreateRoutedVideoProvider(IConfiguration configuration) =>
+    CreateRoutedVideoProvider(configuration, null);
+
+  internal static IGenerationProvider CreateRoutedVideoProvider(IConfiguration configuration, ILoggerFactory? loggerFactory)
   {
     var providers = new List<IVideoGenerationProvider>();
     if (VideoProviderConfiguration.IsEnabled(configuration, "FAL", "GIFFORGE_FAL_API_KEY"))
     {
-      providers.Add(new FalVideoProvider(VideoProviderConfiguration.Fal(configuration, allowMissingCosts: true), SharedFalHttpClient));
+      providers.Add(new FalVideoProvider(
+        VideoProviderConfiguration.Fal(configuration, allowMissingCosts: true),
+        SharedFalHttpClient,
+        loggerFactory?.CreateLogger<FalVideoProvider>()
+      ));
     }
 
     if (VideoProviderConfiguration.IsEnabled(configuration, "LUMA", "GIFFORGE_LUMA_API_KEY"))
     {
-      providers.Add(new LumaVideoProvider(VideoProviderConfiguration.Luma(configuration, allowMissingCosts: true), SharedLumaHttpClient));
+      providers.Add(new LumaVideoProvider(
+        VideoProviderConfiguration.Luma(configuration, allowMissingCosts: true),
+        SharedLumaHttpClient,
+        loggerFactory?.CreateLogger<LumaVideoProvider>()
+      ));
     }
 
-    return new RoutedVideoGenerationProvider(providers);
+    return new RoutedVideoGenerationProvider(providers, loggerFactory?.CreateLogger<RoutedVideoGenerationProvider>());
   }
 }

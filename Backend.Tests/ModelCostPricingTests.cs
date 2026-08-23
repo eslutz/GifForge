@@ -22,6 +22,32 @@ public sealed class ModelCostPricingTests
   }
 
   [Fact]
+  public async Task FalPricingParsesRealApiResponseShape()
+  {
+    // Matches fal.ai's actual GET /v1/models/pricing response: {"prices":[{"endpoint_id":...,"unit_price":...}]},
+    // and requires at least one endpoint_id query parameter or the real API returns HTTP 400.
+    HttpRequestMessage? capturedRequest = null;
+    var client = new HttpClient(new StaticHandler(request =>
+    {
+      capturedRequest = request;
+      return new HttpResponseMessage(HttpStatusCode.OK)
+      {
+        Content = new StringContent(
+          """{"prices":[{"endpoint_id":"fal-ai/wan/v2.2-a14b/text-to-video","unit_price":0.08,"unit":"seconds","currency":"USD"}],"next_cursor":null,"has_more":false}""")
+      };
+    })) { BaseAddress = new Uri("https://example.test/") };
+    var source = new FalPricingSource(new StaticHttpClientFactory(client), new ConfigurationBuilder().Build());
+
+    var updates = await source.GetModelCostsUsdAsync(
+      [new("fal.ai", "fal-ai/wan/v2.2-a14b/text-to-video", "GIFFORGE_MODEL_COST_USD_FAL_WAN22_TEXT_TO_VIDEO", "text")],
+      CancellationToken.None);
+
+    Assert.Equal(0.08m, Assert.Single(updates).CostUsd);
+    Assert.NotNull(capturedRequest);
+    Assert.Contains("endpoint_id=fal-ai", capturedRequest.RequestUri!.Query);
+  }
+
+  [Fact]
   public void LumaPricingRejectsAmbiguousMissingFixture()
   {
     Assert.Throws<InvalidOperationException>(() => LumaPricingSource.ParseHtml(

@@ -121,7 +121,7 @@ public sealed class ModelCostRefreshCoordinator(
     {
       var failedTimestamp = await ReadTimestampAsync(source.ProviderName, cancellationToken);
       var age = failedTimestamp is null ? "unknown" : (DateTimeOffset.UtcNow - failedTimestamp.Value).ToString();
-      logger.LogWarning("Model cost refresh failed for provider {ProviderName}; using cached values when available. Cached age: {CacheAge}.", source.ProviderName, age);
+      logger.LogWarning(error, "Model cost refresh failed for provider {ProviderName}; using cached values when available. Cached age: {CacheAge}.", source.ProviderName, age);
       return new ProviderRefreshResult(source.ProviderName, false, failedTimestamp is not null, 0, failedTimestamp, "Provider refresh failed.");
     }
   }

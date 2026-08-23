@@ -5,21 +5,27 @@ using System.Text.Json.Serialization;
 using GifForge.Backend.Jobs;
 using GifForge.Backend.Models;
 using GifForge.Backend.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace GifForge.Backend.Providers;
 
 public abstract class HttpVideoGenerationProvider : IVideoGenerationProvider
 {
+  private const int MaxLoggedBodyLength = 2000;
+
   private readonly HttpClient httpClient;
   private readonly HttpVideoGenerationProviderOptions options;
+  private readonly ILogger? logger;
 
   protected HttpVideoGenerationProvider(
     HttpVideoGenerationProviderOptions options,
-    HttpClient httpClient
+    HttpClient httpClient,
+    ILogger? logger = null
   )
   {
     this.options = options;
     this.httpClient = httpClient;
+    this.logger = logger;
   }
 
   public string Name => options.Name;
@@ -70,6 +76,7 @@ public abstract class HttpVideoGenerationProvider : IVideoGenerationProvider
         System.Net.HttpStatusCode.NotFound or
         System.Net.HttpStatusCode.UnprocessableEntity)
     {
+      await LogRejectionAsync("result retrieval", response, cancellationToken).ConfigureAwait(false);
       throw new GenerationPermanentFailureException(
         $"{Name} rejected result retrieval with HTTP {(int)response.StatusCode}."
       );
@@ -151,6 +158,7 @@ public abstract class HttpVideoGenerationProvider : IVideoGenerationProvider
         System.Net.HttpStatusCode.Forbidden or
         System.Net.HttpStatusCode.UnprocessableEntity)
     {
+      await LogRejectionAsync("generation submission", response, cancellationToken).ConfigureAwait(false);
       throw new GenerationPermanentFailureException(
         $"{Name} rejected generation submission with HTTP {(int)response.StatusCode}."
       );
@@ -171,6 +179,41 @@ public abstract class HttpVideoGenerationProvider : IVideoGenerationProvider
     }
 
     return new ProviderJob(Name, providerJobId);
+  }
+
+  // Server-side diagnostics only: the response body can explain a rejection
+  // (e.g. an exhausted provider account balance) that the generic client-facing
+  // 422 deliberately omits, since the backend never exposes raw provider errors
+  // to clients.
+  private async Task LogRejectionAsync(string operation, HttpResponseMessage response, CancellationToken cancellationToken)
+  {
+    if (logger is null)
+    {
+      return;
+    }
+
+    string body;
+    try
+    {
+      body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+    }
+    catch (Exception error) when (error is not OperationCanceledException)
+    {
+      body = $"<failed to read response body: {error.Message}>";
+    }
+
+    if (body.Length > MaxLoggedBodyLength)
+    {
+      body = body[..MaxLoggedBodyLength] + "...(truncated)";
+    }
+
+    logger.LogWarning(
+      "{ProviderName} rejected {Operation} with HTTP {StatusCode}: {ResponseBody}",
+      Name,
+      operation,
+      (int)response.StatusCode,
+      body
+    );
   }
 
   private void ApplyAuthorization(HttpRequestMessage request)

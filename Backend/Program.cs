@@ -86,7 +86,10 @@ public static class GifForgeBackendApp
       builder.Services.AddSingleton<IGenerationProvider>(serviceProvider =>
         new ConfiguredGenerationProvider(
           builder.Configuration,
-          ConfiguredGenerationProvider.CreateRoutedVideoProvider,
+          configuration => ConfiguredGenerationProvider.CreateRoutedVideoProvider(
+            configuration,
+            serviceProvider.GetRequiredService<ILoggerFactory>()
+          ),
           () => serviceProvider.GetRequiredService<ModelCostRefreshCoordinator>()
         ));
     }

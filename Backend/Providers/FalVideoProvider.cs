@@ -1,11 +1,12 @@
 using GifForge.Backend.Models;
+using Microsoft.Extensions.Logging;
 
 namespace GifForge.Backend.Providers;
 
 public sealed class FalVideoProvider : HttpVideoGenerationProvider
 {
-  public FalVideoProvider(HttpVideoGenerationProviderOptions options, HttpClient httpClient)
-    : base(options, httpClient)
+  public FalVideoProvider(HttpVideoGenerationProviderOptions options, HttpClient httpClient, ILogger? logger = null)
+    : base(options, httpClient, logger)
   {
   }
 

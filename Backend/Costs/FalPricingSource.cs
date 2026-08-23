@@ -16,7 +16,9 @@ public sealed class FalPricingSource(IHttpClientFactory httpClientFactory, IConf
     CancellationToken cancellationToken
   )
   {
-    using var request = new HttpRequestMessage(HttpMethod.Get, "v1/models/pricing");
+    // The endpoint requires at least one endpoint_id; a bare GET returns HTTP 400.
+    var query = string.Join('&', mappings.Select(mapping => $"endpoint_id={Uri.EscapeDataString(mapping.SourcePriceKey)}"));
+    using var request = new HttpRequestMessage(HttpMethod.Get, $"v1/models/pricing?{query}");
     var apiKey = configuration["GIFFORGE_FAL_PRICING_API_KEY"] ?? configuration["GIFFORGE_FAL_API_KEY"];
     if (!string.IsNullOrWhiteSpace(apiKey))
     {
@@ -85,7 +87,10 @@ public sealed class FalPricingSource(IHttpClientFactory httpClientFactory, IConf
   private static bool IsPriceProperty(string name) =>
     name.Equals("price", StringComparison.OrdinalIgnoreCase) || name.Equals("price_usd", StringComparison.OrdinalIgnoreCase) ||
     name.Equals("priceUsd", StringComparison.OrdinalIgnoreCase) || name.Equals("cost", StringComparison.OrdinalIgnoreCase) ||
-    name.Equals("cost_usd", StringComparison.OrdinalIgnoreCase) || name.Equals("costUsd", StringComparison.OrdinalIgnoreCase);
+    name.Equals("cost_usd", StringComparison.OrdinalIgnoreCase) || name.Equals("costUsd", StringComparison.OrdinalIgnoreCase) ||
+    // fal.ai's real /v1/models/pricing response uses unit_price (USD per the
+    // accompanying "unit", e.g. per second) rather than a flat "price" field.
+    name.Equals("unit_price", StringComparison.OrdinalIgnoreCase) || name.Equals("unitPrice", StringComparison.OrdinalIgnoreCase);
 
   private static bool TryReadDecimal(JsonElement element, out decimal value) => element.ValueKind switch
   {
