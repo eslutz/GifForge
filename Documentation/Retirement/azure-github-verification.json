@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-11-06T21:00:55.414440+00:00",
+  "checks": {
+    "resourceGroups": {
+      "success": true,
+      "result": [
+        {
+          "name": "rg-gifforge-nonprod",
+          "state": "Deleting"
+        }
+      ]
+    },
+    "activeResources": {
+      "success": true,
+      "result": [
+        {
+          "name": "gifforge-nonprod-tspytd5kseo66-env",
+          "resourceGroup": "rg-gifforge-nonprod",
+          "type": "Microsoft.App/managedEnvironments"
+        }
+      ]
+    },
+    "deletedVaults": {
+      "success": true,
+      "result": []
+    },
+    "deletedLogWorkspaces": {
+      "success": true,
+      "result": [
+        {
+          "name": "gifforge-nonprod-tspytd5kseo66-logs",
+          "resourceGroup": "rg-gifforge-nonprod"
+        }
+      ]
+    },
+    "applicationRegistrations": {
+      "success": true,
+      "result": []
+    },
+    "servicePrincipals": {
+      "success": true,
+      "result": []
+    },
+    "sharedDatabase": {
+      "success": true,
+      "result": {
+        "name": "ericslutz.dev.db",
+        "status": "Paused"
+      }
+    },
+    "actions": {
+      "success": true,
+      "result": {
+        "enabled": false,
+        "sha_pinning_required": false
+      }
+    }
+  }
+}

@@ -1,4 +1,6 @@
-# GifForge
+# GifForge — Retired
+
+Retired November 6, 2026. This repository is retained as a historical source archive. The app and hosted services are discontinued; deployment and onboarding instructions below are historical. See [retirement status](Documentation/Retirement/2026-11-06.md) for teardown verification and retained-service limitations.
 
 GifForge is an iOS 26.5+ iMessage app extension scaffold for generating custom animated GIFs with AI and inserting the finished GIF into Messages as a normal attachment.
 
