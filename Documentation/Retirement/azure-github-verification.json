@@ -1,24 +1,13 @@
 {
-  "checkedAt": "2026-11-06T21:00:55.414440+00:00",
+  "checkedAt": "2026-11-06T21:07:44.728793+00:00",
   "checks": {
     "resourceGroups": {
       "success": true,
-      "result": [
-        {
-          "name": "rg-gifforge-nonprod",
-          "state": "Deleting"
-        }
-      ]
+      "result": []
     },
     "activeResources": {
       "success": true,
-      "result": [
-        {
-          "name": "gifforge-nonprod-tspytd5kseo66-env",
-          "resourceGroup": "rg-gifforge-nonprod",
-          "type": "Microsoft.App/managedEnvironments"
-        }
-      ]
+      "result": []
     },
     "deletedVaults": {
       "success": true,
@@ -26,12 +15,7 @@
     },
     "deletedLogWorkspaces": {
       "success": true,
-      "result": [
-        {
-          "name": "gifforge-nonprod-tspytd5kseo66-logs",
-          "resourceGroup": "rg-gifforge-nonprod"
-        }
-      ]
+      "result": []
     },
     "applicationRegistrations": {
       "success": true,
@@ -53,6 +37,22 @@
       "result": {
         "enabled": false,
         "sha_pinning_required": false
+      }
+    },
+    "roleAssignments": {
+      "success": true,
+      "result": []
+    },
+    "artifacts": {
+      "success": true,
+      "result": {
+        "total_count": 0
+      }
+    },
+    "caches": {
+      "success": true,
+      "result": {
+        "total_count": 0
       }
     }
   }
